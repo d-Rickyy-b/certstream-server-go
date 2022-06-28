@@ -1,8 +1,32 @@
-package certificatetransparency
+package certstream
+
+import (
+	"bytes"
+	"encoding/json"
+	"log"
+)
 
 type Entry struct {
 	Data        Data   `json:"data"`
 	MessageType string `json:"message_type"`
+}
+
+// JSON returns the json encoded Entry as byte slice.
+func (e Entry) JSON() []byte {
+	buf := bytes.Buffer{}
+	enc := json.NewEncoder(&buf)
+	enc.SetEscapeHTML(false)
+	err := enc.Encode(e)
+	if err != nil {
+		log.Println(err)
+	}
+	return buf.Bytes()
+}
+
+func (e Entry) JSONLite() []byte {
+	e.Data.Chain = nil
+	e.Data.LeafCert.AsDER = ""
+	return e.JSON()
 }
 
 type Data struct {
@@ -41,8 +65,8 @@ type Subject struct {
 	O            *string `json:"O"`
 	OU           *string `json:"OU"`
 	ST           *string `json:"ST"`
-	EmailAddress *string `json:"email_address"`
 	Aggregated   *string `json:"aggregated"`
+	EmailAddress *string `json:"email_address"`
 }
 
 type Extensions struct {
