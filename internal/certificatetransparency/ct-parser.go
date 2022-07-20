@@ -9,6 +9,7 @@ import (
 	ct "github.com/google/certificate-transparency-go"
 	"github.com/google/certificate-transparency-go/x509"
 	"github.com/google/certificate-transparency-go/x509/pkix"
+	"go-certstream-server/internal/certstream"
 	"log"
 	"math/big"
 	"strings"
@@ -16,15 +17,15 @@ import (
 )
 
 // parseData converts a *ct.RawLogEntry struct into a Data struct by copying some values and calculating others
-func parseData(entry *ct.RawLogEntry, logName, ctUrl string) (Data, error) {
+func parseData(entry *ct.RawLogEntry, logName, ctUrl string) (certstream.Data, error) {
 	certLink := fmt.Sprintf("%s/ct/v1/get-entries?start=%d&end=%d", ctUrl, entry.Index, entry.Index)
 
 	// Create main data structure
-	data := Data{
+	data := certstream.Data{
 		CertIndex: entry.Index,
 		CertLink:  certLink,
 		Seen:      float64(time.Now().UnixMilli()) / 1_000,
-		Source: Source{
+		Source: certstream.Source{
 			Name: logName,
 			URL:  ctUrl,
 		},
@@ -35,7 +36,7 @@ func parseData(entry *ct.RawLogEntry, logName, ctUrl string) (Data, error) {
 	logEntry, conversionErr := entry.ToLogEntry()
 	if conversionErr != nil {
 		log.Println("Could not convert entry to LogEntry: ", conversionErr)
-		return Data{}, conversionErr
+		return certstream.Data{}, conversionErr
 	}
 
 	var cert *x509.Certificate
@@ -63,15 +64,15 @@ func parseData(entry *ct.RawLogEntry, logName, ctUrl string) (Data, error) {
 	data.Chain, parseErr = parseCertificateChain(logEntry)
 	if parseErr != nil {
 		log.Println("Could not parse certificate chain: ", parseErr)
-		return Data{}, parseErr
+		return certstream.Data{}, parseErr
 	}
 
 	return data, nil
 }
 
 // parseCertificateChain returns the certificate chain in form of a []LeafCert from the given *ct.LogEntry
-func parseCertificateChain(logEntry *ct.LogEntry) ([]LeafCert, error) {
-	var chain []LeafCert
+func parseCertificateChain(logEntry *ct.LogEntry) ([]certstream.LeafCert, error) {
+	var chain []certstream.LeafCert
 	for _, chainEntry := range logEntry.Chain {
 		myCert, parseErr := x509.ParseCertificate(chainEntry.Data)
 		if parseErr != nil {
@@ -86,10 +87,10 @@ func parseCertificateChain(logEntry *ct.LogEntry) ([]LeafCert, error) {
 }
 
 // leafCertFromX509cert converts a x509.Certificate to the custom LeafCert data structure
-func leafCertFromX509cert(cert x509.Certificate) LeafCert {
-	leafCert := LeafCert{
+func leafCertFromX509cert(cert x509.Certificate) certstream.LeafCert {
+	leafCert := certstream.LeafCert{
 		AllDomains:         cert.DNSNames,
-		Extensions:         Extensions{},
+		Extensions:         certstream.Extensions{},
 		NotAfter:           cert.NotAfter.Unix(),
 		NotBefore:          cert.NotBefore.Unix(),
 		SerialNumber:       formatSerialNumber(cert.SerialNumber),
@@ -162,8 +163,8 @@ func leafCertFromX509cert(cert x509.Certificate) LeafCert {
 }
 
 // buildSubject generates a Subject struct from the given pkix.Name
-func buildSubject(certSubject pkix.Name) Subject {
-	subject := Subject{
+func buildSubject(certSubject pkix.Name) certstream.Subject {
+	subject := certstream.Subject{
 		C:  parseName(certSubject.Country),
 		CN: &certSubject.CommonName,
 		L:  parseName(certSubject.Locality),
@@ -332,16 +333,16 @@ func keyUsageToString(k x509.KeyUsage) string {
 }
 
 // parseCertstreamEntry creates an Entry from a ct.RawLogEntry.
-func parseCertstreamEntry(rawEntry *ct.RawLogEntry, w *worker) Entry {
+func parseCertstreamEntry(rawEntry *ct.RawLogEntry, w *worker) certstream.Entry {
 	if rawEntry == nil {
 		log.Println("nil entry")
 	}
 
-	data, err := parseData(rawEntry, w.Name, w.CtURL)
+	data, err := parseData(rawEntry, w.name, w.ctURL)
 	if err != nil {
 		log.Println(err)
 	}
-	var entry = Entry{
+	var entry = certstream.Entry{
 		Data:        data,
 		MessageType: "certificate_update",
 	}
