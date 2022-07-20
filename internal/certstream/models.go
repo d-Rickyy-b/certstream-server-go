@@ -7,12 +7,58 @@ import (
 )
 
 type Entry struct {
-	Data        Data   `json:"data"`
-	MessageType string `json:"message_type"`
+	Data           Data   `json:"data"`
+	MessageType    string `json:"message_type"`
+	cachedJSON     []byte
+	cachedJSONLite []byte
+}
+
+func (e Entry) Clone() Entry {
+	return Entry{
+		Data:           e.Data,
+		MessageType:    e.MessageType,
+		cachedJSON:     e.cachedJSON,
+		cachedJSONLite: e.cachedJSONLite,
+	}
 }
 
 // JSON returns the json encoded Entry as byte slice.
-func (e Entry) JSON() []byte {
+func (e *Entry) JSON() []byte {
+	if len(e.cachedJSON) > 0 {
+		return e.cachedJSON
+	}
+	e.cachedJSON = entryToJSONBytes(*e)
+
+	return e.cachedJSON
+}
+
+// JSONNoCache returns the json encoded Entry as byte slice without caching it.
+func (e Entry) JSONNoCache() []byte {
+	return entryToJSONBytes(e)
+}
+
+// JSONLite does the same as JSON but removes the chain and cert's DER representation.
+func (e *Entry) JSONLite() []byte {
+	if len(e.cachedJSONLite) > 0 {
+		return e.cachedJSONLite
+	}
+	newEntry := e.Clone()
+	newEntry.Data.Chain = nil
+	newEntry.Data.LeafCert.AsDER = ""
+	e.cachedJSONLite = entryToJSONBytes(*e)
+
+	return e.cachedJSONLite
+}
+
+// JSONLiteNoCache does the same as JSONNoCache but removes the chain and cert's DER representation.
+func (e Entry) JSONLiteNoCache() []byte {
+	e.Data.Chain = nil
+	e.Data.LeafCert.AsDER = ""
+	return entryToJSONBytes(e)
+}
+
+// entryToJSONBytes encodes an Entry to a JSON byte slice.
+func entryToJSONBytes(e Entry) []byte {
 	buf := bytes.Buffer{}
 	enc := json.NewEncoder(&buf)
 	enc.SetEscapeHTML(false)
@@ -21,12 +67,6 @@ func (e Entry) JSON() []byte {
 		log.Println(err)
 	}
 	return buf.Bytes()
-}
-
-func (e Entry) JSONLite() []byte {
-	e.Data.Chain = nil
-	e.Data.LeafCert.AsDER = ""
-	return e.JSON()
 }
 
 type Data struct {
