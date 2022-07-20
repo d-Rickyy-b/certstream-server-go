@@ -4,6 +4,7 @@
 *.dll
 *.so
 *.dylib
+certstream-server-go
 
 # Test binary, built with `go test -c`
 *.test
