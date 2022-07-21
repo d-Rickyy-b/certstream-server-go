@@ -3,6 +3,7 @@ package web
 import (
 	"github.com/gorilla/websocket"
 	"log"
+	"strings"
 	"time"
 )
 
@@ -61,7 +62,14 @@ func (c *client) listenWebsocket() {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseNormalClosure) {
 				log.Printf("error: %v", err)
 			}
-			log.Println("Disconnecting client!")
+			if strings.Contains(strings.ToLower(err.Error()), "i/o timeout") {
+				log.Printf("No ping received from client: %v\n", c.conn.RemoteAddr())
+				message := websocket.FormatCloseMessage(websocket.CloseNoStatusReceived, "No ping received!")
+				c.conn.WriteControl(websocket.CloseMessage, message, time.Now().Add(5*time.Second)) //nolint:errcheck
+			} else if strings.Contains(strings.ToLower(err.Error()), "an existing connection was forcibly closed by the remote host") {
+				log.Printf("Connection to client lost: %v\n", c.conn.RemoteAddr())
+			}
+			log.Printf("Disconnecting client %v!\n", c.conn.RemoteAddr())
 			break
 		}
 		// ignore any message sent from clients - we only handle errors (aka. disconnects)
