@@ -35,7 +35,6 @@ func (bm *BroadcastManager) unregisterClient(c *client) {
 			break
 		}
 	}
-	log.Printf("Clients: %d, Capacity: %d\n", len(bm.clients), cap(bm.clients))
 	bm.clientLock.Unlock()
 }
 
