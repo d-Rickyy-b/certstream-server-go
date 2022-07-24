@@ -5,6 +5,7 @@ import (
 	"crypto/sha1" //nolint:gosec
 	"encoding/base64"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	ct "github.com/google/certificate-transparency-go"
 	"github.com/google/certificate-transparency-go/x509"
@@ -16,7 +17,7 @@ import (
 	"time"
 )
 
-// parseData converts a *ct.RawLogEntry struct into a Data struct by copying some values and calculating others
+// parseData converts a *ct.RawLogEntry struct into a certstream.Data struct by copying some values and calculating others
 func parseData(entry *ct.RawLogEntry, logName, ctUrl string) (certstream.Data, error) {
 	certLink := fmt.Sprintf("%s/ct/v1/get-entries?start=%d&end=%d", ctUrl, entry.Index, entry.Index)
 
@@ -49,7 +50,7 @@ func parseData(entry *ct.RawLogEntry, logName, ctUrl string) (certstream.Data, e
 		cert = logEntry.Precert.TBSCertificate
 		rawData = logEntry.Precert.Submitted.Data
 	default:
-		log.Println("Could not find certificate in entry")
+		return certstream.Data{}, errors.New("could not parse entry: no certificate found")
 	}
 
 	// Calculate certificate hash from the raw DER bytes of the certificate
@@ -333,19 +334,19 @@ func keyUsageToString(k x509.KeyUsage) string {
 }
 
 // parseCertstreamEntry creates an Entry from a ct.RawLogEntry.
-func parseCertstreamEntry(rawEntry *ct.RawLogEntry, w *worker) certstream.Entry {
+func parseCertstreamEntry(rawEntry *ct.RawLogEntry, w *worker) (certstream.Entry, error) {
 	if rawEntry == nil {
-		log.Println("nil entry")
+		return certstream.Entry{}, errors.New("certstream entry is nil")
 	}
 
 	data, err := parseData(rawEntry, w.name, w.ctURL)
 	if err != nil {
-		log.Println(err)
+		return certstream.Entry{}, err
 	}
 	var entry = certstream.Entry{
 		Data:        data,
 		MessageType: "certificate_update",
 	}
 	// TODO implement dns_entries message_type
-	return entry
+	return entry, nil
 }

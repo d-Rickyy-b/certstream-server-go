@@ -118,14 +118,22 @@ func (w *worker) startDownloadingCerts() {
 
 // foundCertCallback is the callback that handles cases where new regular certs are found.
 func (w *worker) foundCertCallback(rawEntry *ct.RawLogEntry) {
-	entry := parseCertstreamEntry(rawEntry, w)
+	entry, parseErr := parseCertstreamEntry(rawEntry, w)
+	if parseErr != nil {
+		log.Println("Error parsing certstream entry: ", parseErr)
+		return
+	}
 	entry.Data.UpdateType = "X509LogEntry"
 	w.entryChan <- entry
 }
 
 // foundPrecertCallback is the callback that handles cases where new precerts are found.
 func (w *worker) foundPrecertCallback(rawEntry *ct.RawLogEntry) {
-	entry := parseCertstreamEntry(rawEntry, w)
+	entry, parseErr := parseCertstreamEntry(rawEntry, w)
+	if parseErr != nil {
+		log.Println("Error parsing certstream entry: ", parseErr)
+		return
+	}
 	entry.Data.UpdateType = "PrecertLogEntry"
 	w.entryChan <- entry
 }
