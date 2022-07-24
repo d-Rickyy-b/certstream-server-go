@@ -138,8 +138,7 @@ func certHandler(entryChan chan certstream.Entry) {
 		processed++
 
 		if processed%1000 == 0 {
-			log.Printf("Processed %d entries\n", processed)
-			log.Printf("Queue length: %d\n", len(entryChan))
+			log.Printf("Processed %d entries | Queue length: %d\n", processed, len(entryChan))
 			// Every thousandth entry, we store one certificate as example
 			web.SetExampleCert(entry)
 		}
