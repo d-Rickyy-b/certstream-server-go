@@ -334,12 +334,12 @@ func keyUsageToString(k x509.KeyUsage) string {
 }
 
 // parseCertstreamEntry creates an Entry from a ct.RawLogEntry.
-func parseCertstreamEntry(rawEntry *ct.RawLogEntry, w *worker) (certstream.Entry, error) {
+func parseCertstreamEntry(rawEntry *ct.RawLogEntry, logname, ctURL string) (certstream.Entry, error) {
 	if rawEntry == nil {
 		return certstream.Entry{}, errors.New("certstream entry is nil")
 	}
 
-	data, err := parseData(rawEntry, w.name, w.ctURL)
+	data, err := parseData(rawEntry, logname, ctURL)
 	if err != nil {
 		return certstream.Entry{}, err
 	}
