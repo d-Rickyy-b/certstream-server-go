@@ -45,7 +45,7 @@ func (e *Entry) JSONLite() []byte {
 	newEntry := e.Clone()
 	newEntry.Data.Chain = nil
 	newEntry.Data.LeafCert.AsDER = ""
-	e.cachedJSONLite = entryToJSONBytes(*e)
+	e.cachedJSONLite = entryToJSONBytes(newEntry)
 
 	return e.cachedJSONLite
 }
