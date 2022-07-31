@@ -52,9 +52,10 @@ func (e *Entry) JSONLite() []byte {
 
 // JSONLiteNoCache does the same as JSONNoCache but removes the chain and cert's DER representation.
 func (e *Entry) JSONLiteNoCache() []byte {
-	e.Data.Chain = nil
-	e.Data.LeafCert.AsDER = ""
-	return entryToJSONBytes(e)
+	newEntry := e.Clone()
+	newEntry.Data.Chain = nil
+	newEntry.Data.LeafCert.AsDER = ""
+	return entryToJSONBytes(newEntry)
 }
 
 // entryToJSONBytes encodes an Entry to a JSON byte slice.
