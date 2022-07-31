@@ -13,7 +13,7 @@ type Entry struct {
 	cachedJSONLite []byte
 }
 
-func (e Entry) Clone() Entry {
+func (e *Entry) Clone() Entry {
 	return Entry{
 		Data:           e.Data,
 		MessageType:    e.MessageType,
@@ -33,8 +33,8 @@ func (e *Entry) JSON() []byte {
 }
 
 // JSONNoCache returns the json encoded Entry as byte slice without caching it.
-func (e Entry) JSONNoCache() []byte {
-	return entryToJSONBytes(e)
+func (e *Entry) JSONNoCache() []byte {
+	return entryToJSONBytes(*e)
 }
 
 // JSONLite does the same as JSON but removes the chain and cert's DER representation.
@@ -51,7 +51,7 @@ func (e *Entry) JSONLite() []byte {
 }
 
 // JSONLiteNoCache does the same as JSONNoCache but removes the chain and cert's DER representation.
-func (e Entry) JSONLiteNoCache() []byte {
+func (e *Entry) JSONLiteNoCache() []byte {
 	e.Data.Chain = nil
 	e.Data.LeafCert.AsDER = ""
 	return entryToJSONBytes(e)
