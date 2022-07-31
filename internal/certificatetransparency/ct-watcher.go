@@ -3,6 +3,7 @@ package certificatetransparency
 import (
 	"context"
 	"errors"
+	"fmt"
 	ct "github.com/google/certificate-transparency-go"
 	"github.com/google/certificate-transparency-go/client"
 	"github.com/google/certificate-transparency-go/jsonclient"
@@ -84,7 +85,8 @@ func (w *worker) startDownloadingCerts() {
 		w.ctURL = "https://" + w.ctURL
 	}
 
-	jsonClient, e := client.New(w.ctURL, nil, jsonclient.Options{})
+	userAgent := fmt.Sprintf("Certstream Server v%s (github.com/d-Rickyy-b/certstream-server-go)", config.Version)
+	jsonClient, e := client.New(w.ctURL, nil, jsonclient.Options{UserAgent: userAgent})
 	if e != nil {
 		log.Println("Error creating JSON client: ", e)
 		return
