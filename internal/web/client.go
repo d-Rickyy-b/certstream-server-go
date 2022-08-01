@@ -7,12 +7,20 @@ import (
 	"time"
 )
 
+const (
+	SubTypeFull = iota
+	SubTypeLite
+	SubTypeDomain
+)
+
+type SubscriptionType int
+
 // client represents a single client's connection to the server.
 type client struct {
 	conn          *websocket.Conn
 	broadcastChan chan []byte
 	name          string
-	fullStream    bool
+	subType       SubscriptionType
 }
 
 // Each client has a broadcastHandler that runs in the background and sends out the broadcast messages to the client.
