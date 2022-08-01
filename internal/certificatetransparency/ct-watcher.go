@@ -10,6 +10,7 @@ import (
 	"github.com/google/certificate-transparency-go/loglist"
 	"github.com/google/certificate-transparency-go/scanner"
 	"go-certstream-server/internal/certstream"
+	"go-certstream-server/internal/config"
 	"go-certstream-server/internal/web"
 	"io"
 	"log"
