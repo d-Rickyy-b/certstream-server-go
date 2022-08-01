@@ -1,9 +1,13 @@
 package web
 
 import (
+	"crypto/tls"
 	"fmt"
+	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/middleware"
 	"github.com/gorilla/websocket"
 	"go-certstream-server/internal/certstream"
+	"go-certstream-server/internal/config"
 	"log"
 	"net/http"
 	"time"
@@ -13,7 +17,9 @@ var ClientHandler = BroadcastManager{}
 var exampleCert certstream.Entry
 var upgrader = websocket.Upgrader{} // use default options
 
-// initWebsocket is called when a client connects to the websocket endpoint.
+type WebsocketServer struct {
+	Routes *chi.Mux
+}
 // It upgrades the connection to a websocket and starts a goroutine to listen for messages from the client.
 func initWebsocket(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/" {
@@ -61,20 +67,62 @@ func SetExampleCert(cert certstream.Entry) {
 	exampleCert = cert
 }
 
+func setupRoutes() *chi.Mux {
+	r := chi.NewRouter()
+	r.Use(middleware.RequestID)
+	r.Use(middleware.RealIP)
+	r.Use(middleware.Logger)
+	r.Use(middleware.Recoverer)
+	r.Route("/", func(r chi.Router) {
+		r.Route(config.AppConfig.Webserver.FullURL, func(r chi.Router) {
+			r.HandleFunc("/", initFullWebsocket)
+			r.HandleFunc("/example", exampleFull)
+		})
+
+		r.Route(config.AppConfig.Webserver.LiteURL, func(r chi.Router) {
+			r.HandleFunc("/", initLiteWebsocket)
+			r.HandleFunc("/example", exampleLite)
+		})
+
+		r.Route(config.AppConfig.Webserver.DomainsOnlyURL, func(r chi.Router) {
+			r.HandleFunc("/", initDomainWebsocket)
+			r.HandleFunc("/example", exampleDomains)
+		})
+	})
+	return r
+}
+
 // StartServer initializes the webserver and starts listening for connections.
 func StartServer(networkIf string, port int) {
 	var addr = fmt.Sprintf("%s:%d", networkIf, port)
 	log.Printf("Starting webserver on %s\n", addr)
 
-	http.HandleFunc("/", initWebsocket)
-	http.HandleFunc("/full-stream", initWebsocket)
-	http.HandleFunc("/example.json", example)
-	http.HandleFunc("/full-example.json", exampleFull)
+	r := setupRoutes()
+
+	tlsConfig := &tls.Config{
+		MinVersion:       tls.VersionTLS12,
+		CurvePreferences: []tls.CurveID{tls.CurveP521, tls.CurveP384, tls.CurveP256, tls.X25519},
+		CipherSuites: []uint16{
+			tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+			tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
+			tls.TLS_RSA_WITH_AES_256_GCM_SHA384,
+			tls.TLS_RSA_WITH_AES_256_CBC_SHA,
+		},
+	}
 
 	ClientHandler.Broadcast = make(chan certstream.Entry, 10_000)
 	go ClientHandler.broadcaster()
 
-	err := http.ListenAndServe(addr, nil)
+	httpServer := &http.Server{
+		Addr:              addr,
+		Handler:           r,
+		TLSConfig:         tlsConfig,
+		IdleTimeout:       time.Minute,
+		ReadTimeout:       10 * time.Second,
+		ReadHeaderTimeout: 2 * time.Second,
+		WriteTimeout:      10 * time.Second,
+	}
+	err := httpServer.ListenAndServe()
 	if err != nil {
 		log.Fatal("ListenAndServe: ", err)
 	}
