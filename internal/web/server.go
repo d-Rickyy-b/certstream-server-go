@@ -20,47 +20,88 @@ var upgrader = websocket.Upgrader{} // use default options
 type WebsocketServer struct {
 	Routes *chi.Mux
 }
+
+// initFullWebsocket is called when a client connects to the /full-stream endpoint.
 // It upgrades the connection to a websocket and starts a goroutine to listen for messages from the client.
-func initWebsocket(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path != "/" {
-		w.WriteHeader(http.StatusNotFound)
-		return
-	}
+func initFullWebsocket(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Starting new websocket for '%s'\n", r.RemoteAddr)
 	connection, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Println("Error while trying to upgrade connection:", err)
-		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	connection.EnableWriteCompression(true)
-	// TODO connection.SetCompressionLevel(flate.BestCompression)
 	connection.SetCloseHandler(func(code int, text string) error {
 		log.Printf("Stopping websocket for '%s'\n", r.RemoteAddr)
 		message := websocket.FormatCloseMessage(code, "Connection closed")
 		return connection.WriteControl(websocket.CloseMessage, message, time.Now().Add(time.Second))
 	})
-	client := &client{
-		conn:          connection,
-		broadcastChan: make(chan []byte, 100),
-		fullStream:    r.URL.Path == "/full-stream",
-		name:          r.RemoteAddr,
-	}
-	go client.broadcastHandler()
-	go client.listenWebsocket()
-
-	ClientHandler.registerClient(client)
+	setupClient(connection, SubTypeFull, r.RemoteAddr)
 }
 
-func example(w http.ResponseWriter, _ *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	w.Write(exampleCert.JSONLite()) //nolint:errcheck
+// initLiteWebsocket is called when a client connects to the / endpoint.
+// It upgrades the connection to a websocket and starts a goroutine to listen for messages from the client.
+func initLiteWebsocket(w http.ResponseWriter, r *http.Request) {
+	log.Printf("Starting new websocket for '%s'\n", r.RemoteAddr)
+	connection, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Println("Error while trying to upgrade connection:", err)
+		return
+	}
+
+	connection.SetCloseHandler(func(code int, text string) error {
+		log.Printf("Stopping websocket for '%s'\n", r.RemoteAddr)
+		message := websocket.FormatCloseMessage(code, "Connection closed")
+		return connection.WriteControl(websocket.CloseMessage, message, time.Now().Add(time.Second))
+	})
+	setupClient(connection, SubTypeLite, r.RemoteAddr)
+}
+
+// initDomainWebsocket is called when a client connects to the /domains-only endpoint.
+// It upgrades the connection to a websocket and starts a goroutine to listen for messages from the client.
+func initDomainWebsocket(w http.ResponseWriter, r *http.Request) {
+	log.Printf("Starting new websocket for '%s'\n", r.RemoteAddr)
+	connection, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Println("Error while trying to upgrade connection:", err)
+		return
+	}
+
+	connection.SetCloseHandler(func(code int, text string) error {
+		log.Printf("Stopping websocket for '%s'\n", r.RemoteAddr)
+		message := websocket.FormatCloseMessage(code, "Connection closed")
+		return connection.WriteControl(websocket.CloseMessage, message, time.Now().Add(time.Second))
+	})
+	setupClient(connection, SubTypeDomain, r.RemoteAddr)
+}
+
+// setupClient initializes a client struct and starts the broadcastHandler and websocket listener.
+func setupClient(connection *websocket.Conn, subscriptionType SubscriptionType, name string) {
+	c := &client{
+		conn:          connection,
+		broadcastChan: make(chan []byte, 100),
+		name:          name,
+		subType:       subscriptionType,
+	}
+	go c.broadcastHandler()
+	go c.listenWebsocket()
+
+	ClientHandler.registerClient(c)
 }
 
 func exampleFull(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(exampleCert.JSON()) //nolint:errcheck
+}
+
+func exampleLite(w http.ResponseWriter, _ *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(exampleCert.JSONLite()) //nolint:errcheck
+}
+
+func exampleDomains(w http.ResponseWriter, _ *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(exampleCert.JSONDomains()) //nolint:errcheck
 }
 
 func SetExampleCert(cert certstream.Entry) {
