@@ -44,19 +44,22 @@ func (bm *BroadcastManager) broadcaster() {
 		entry := <-bm.Broadcast
 		dataLite := entry.JSONLite()
 		dataFull := entry.JSON()
+		dataDomain := entry.JSONDomains()
+		var data []byte
 
 		bm.clientLock.RLock()
 		for _, client := range bm.clients {
-			if client.fullStream {
-				select {
-				case client.broadcastChan <- dataFull:
-				default:
-					log.Printf("Skipping client '%s' because it's full\n", client.name)
-				}
-				continue
+			switch client.subType {
+			case SubTypeLite:
+				data = dataLite
+			case SubTypeFull:
+				data = dataFull
+			case SubTypeDomain:
+				data = dataDomain
 			}
+
 			select {
-			case client.broadcastChan <- dataLite:
+			case client.broadcastChan <- data:
 			default:
 				log.Printf("Skipping client '%s' because it's full\n", client.name)
 			}
