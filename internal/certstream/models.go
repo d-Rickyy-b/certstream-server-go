@@ -55,6 +55,18 @@ func (e *Entry) JSONLiteNoCache() []byte {
 	return entryToJSONBytes(newEntry)
 }
 
+func (e *Entry) JSONDomains() []byte {
+	domainsEntry := DomainsEntry{
+		Data:        e.Data.LeafCert.AllDomains,
+		MessageType: "dns_entries",
+	}
+	domainsEntryBytes, err := json.Marshal(domainsEntry)
+	if err != nil {
+		log.Println(err)
+	}
+	return domainsEntryBytes
+}
+
 // entryToJSONBytes encodes an Entry to a JSON byte slice.
 func entryToJSONBytes(e Entry) []byte {
 	buf := bytes.Buffer{}
@@ -118,4 +130,9 @@ type Extensions struct {
 	SubjectAltName                *string `json:"subjectAltName,omitempty"`
 	SubjectKeyIdentifier          *string `json:"subjectKeyIdentifier,omitempty"`
 	CTLPoisonByte                 bool    `json:"ctlPoisonByte,omitempty"`
+}
+
+type DomainsEntry struct {
+	Data        []string `json:"data"`
+	MessageType string   `json:"message_type"`
 }
