@@ -117,17 +117,17 @@ func setupRoutes() *chi.Mux {
 	r.Route("/", func(r chi.Router) {
 		r.Route(config.AppConfig.Webserver.FullURL, func(r chi.Router) {
 			r.HandleFunc("/", initFullWebsocket)
-			r.HandleFunc("/example", exampleFull)
+			r.HandleFunc("/example.json", exampleFull)
 		})
 
 		r.Route(config.AppConfig.Webserver.LiteURL, func(r chi.Router) {
 			r.HandleFunc("/", initLiteWebsocket)
-			r.HandleFunc("/example", exampleLite)
+			r.HandleFunc("/example.json", exampleLite)
 		})
 
 		r.Route(config.AppConfig.Webserver.DomainsOnlyURL, func(r chi.Router) {
 			r.HandleFunc("/", initDomainWebsocket)
-			r.HandleFunc("/example", exampleDomains)
+			r.HandleFunc("/example.json", exampleDomains)
 		})
 	})
 	return r
