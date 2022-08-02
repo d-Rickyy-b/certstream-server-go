@@ -101,7 +101,7 @@ func (w *worker) startDownloadingCerts() {
 
 	certScanner := scanner.NewScanner(jsonClient, scanner.ScannerOptions{
 		FetcherOptions: scanner.FetcherOptions{
-			BatchSize:     10,
+			BatchSize:     100,
 			ParallelFetch: 1,
 			StartIndex:    int64(sth.TreeSize), // Start at the latest STH to skip all the past certificates
 			Continuous:    true,
@@ -109,7 +109,7 @@ func (w *worker) startDownloadingCerts() {
 		Matcher:     scanner.MatchAll{},
 		PrecertOnly: false,
 		NumWorkers:  1,
-		BufferSize:  100,
+		BufferSize:  1000,
 	})
 
 	scanErr := certScanner.Scan(w.context, w.foundCertCallback, w.foundPrecertCallback)
