@@ -24,55 +24,51 @@ type WebsocketServer struct {
 // initFullWebsocket is called when a client connects to the /full-stream endpoint.
 // It upgrades the connection to a websocket and starts a goroutine to listen for messages from the client.
 func initFullWebsocket(w http.ResponseWriter, r *http.Request) {
-	log.Printf("Starting new websocket for '%s'\n", r.RemoteAddr)
-	connection, err := upgrader.Upgrade(w, r, nil)
+	connection, err := upgradeConnection(w, r)
 	if err != nil {
 		log.Println("Error while trying to upgrade connection:", err)
 		return
 	}
-
-	connection.SetCloseHandler(func(code int, text string) error {
-		log.Printf("Stopping websocket for '%s'\n", r.RemoteAddr)
-		message := websocket.FormatCloseMessage(code, "Connection closed")
-		return connection.WriteControl(websocket.CloseMessage, message, time.Now().Add(time.Second))
-	})
 	setupClient(connection, SubTypeFull, r.RemoteAddr)
 }
 
 // initLiteWebsocket is called when a client connects to the / endpoint.
 // It upgrades the connection to a websocket and starts a goroutine to listen for messages from the client.
 func initLiteWebsocket(w http.ResponseWriter, r *http.Request) {
-	log.Printf("Starting new websocket for '%s'\n", r.RemoteAddr)
-	connection, err := upgrader.Upgrade(w, r, nil)
+	connection, err := upgradeConnection(w, r)
 	if err != nil {
 		log.Println("Error while trying to upgrade connection:", err)
 		return
 	}
 
-	connection.SetCloseHandler(func(code int, text string) error {
-		log.Printf("Stopping websocket for '%s'\n", r.RemoteAddr)
-		message := websocket.FormatCloseMessage(code, "Connection closed")
-		return connection.WriteControl(websocket.CloseMessage, message, time.Now().Add(time.Second))
-	})
 	setupClient(connection, SubTypeLite, r.RemoteAddr)
 }
 
 // initDomainWebsocket is called when a client connects to the /domains-only endpoint.
 // It upgrades the connection to a websocket and starts a goroutine to listen for messages from the client.
 func initDomainWebsocket(w http.ResponseWriter, r *http.Request) {
-	log.Printf("Starting new websocket for '%s'\n", r.RemoteAddr)
-	connection, err := upgrader.Upgrade(w, r, nil)
+	connection, err := upgradeConnection(w, r)
 	if err != nil {
 		log.Println("Error while trying to upgrade connection:", err)
 		return
 	}
+	setupClient(connection, SubTypeDomain, r.RemoteAddr)
+}
+
+// upgradeConnection upgrades the connection to a websocket and returns the connection.
+func upgradeConnection(w http.ResponseWriter, r *http.Request) (*websocket.Conn, error) {
+	log.Printf("Starting new websocket for '%s' - %s\n", r.RemoteAddr, r.URL)
+	connection, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		return nil, err
+	}
 
 	connection.SetCloseHandler(func(code int, text string) error {
-		log.Printf("Stopping websocket for '%s'\n", r.RemoteAddr)
+		log.Printf("Stopping websocket for '%s' - %s\n", r.RemoteAddr, r.URL)
 		message := websocket.FormatCloseMessage(code, "Connection closed")
 		return connection.WriteControl(websocket.CloseMessage, message, time.Now().Add(time.Second))
 	})
-	setupClient(connection, SubTypeDomain, r.RemoteAddr)
+	return connection, nil
 }
 
 // setupClient initializes a client struct and starts the broadcastHandler and websocket listener.
