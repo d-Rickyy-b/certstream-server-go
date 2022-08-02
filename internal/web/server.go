@@ -113,9 +113,6 @@ func SetExampleCert(cert certstream.Entry) {
 // setupRoutes configures all the routes necessary for the webserver
 func setupRoutes() *chi.Mux {
 	r := chi.NewRouter()
-	r.Use(middleware.RequestID)
-	r.Use(middleware.RealIP)
-	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 	r.Route("/", func(r chi.Router) {
 		r.Route(config.AppConfig.Webserver.FullURL, func(r chi.Router) {
