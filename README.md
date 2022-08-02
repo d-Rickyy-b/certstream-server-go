@@ -21,11 +21,11 @@ Setting up an instance of the certstream server is simple. You can either downlo
 ## Connecting
 certstream-server-go offers multiple endpoints to connect to.
 
-| Config             | Default         | Function                                                                                |
-|--------------------|-----------------|-----------------------------------------------------------------------------------------|
-| `full_url`         | `/full-stream`  | Constant stream of new certificates with all details available                          |
-| `lite_url`         | `/`             | Constant stream of new certificates with reduced details (no `as_der` and chain fields) |
-| `domains_only_url` | `/domains-only` | Constant stream of domains found in new certificates                                    |
+| Config             | Default         | Function                                                                                  |
+|--------------------|-----------------|-------------------------------------------------------------------------------------------|
+| `full_url`         | `/full-stream`  | Constant stream of new certificates with all details available                            |
+| `lite_url`         | `/`             | Constant stream of new certificates with reduced details (no `as_der` and `chain` fields) |
+| `domains_only_url` | `/domains-only` | Constant stream of domains found in new certificates                                      |
 
 You can connect to the certstream-server by opening a **websocket connection** to any of the aforementioned endpoints.
 After you're connected, certificate information will be streamed to your websocket.
