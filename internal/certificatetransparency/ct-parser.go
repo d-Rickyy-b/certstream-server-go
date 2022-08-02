@@ -347,6 +347,5 @@ func parseCertstreamEntry(rawEntry *ct.RawLogEntry, logname, ctURL string) (cert
 		Data:        data,
 		MessageType: "certificate_update",
 	}
-	// TODO implement dns_entries message_type
 	return entry, nil
 }
