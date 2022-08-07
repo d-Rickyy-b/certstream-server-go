@@ -11,8 +11,6 @@ import (
 // main is the entry point for the application.
 func main() {
 	// var configFile = flag.String("config", "config.yml", "Path to config file")
-	var port = flag.Int("port", 8080, "port to listen on")
-	var networkIf = flag.String("interface", "127.0.0.1", "interface to listen on")
 	var configFile = flag.String("config", "config.yaml", "path to the config file")
 	flag.Parse()
 
@@ -23,7 +21,7 @@ func main() {
 		log.Fatalln("Error while parsing yaml file:", err)
 	}
 
-	webserver := web.NewWebsocketServer(*networkIf, *port, conf.Webserver.CertPath, conf.Webserver.CertKeyPath)
+	webserver := web.NewWebsocketServer(conf.Webserver.ListenAddr, conf.Webserver.ListenPort, conf.Webserver.CertPath, conf.Webserver.CertKeyPath)
 	go webserver.Start()
 
 	watcher := certificatetransparency.Watcher{}
