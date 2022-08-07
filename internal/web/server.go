@@ -137,6 +137,22 @@ func (ws *WebServer) initServer() {
 	}
 }
 
+// NewWebsocketServer starts a new webserver and initialized it with the necessary routes.
+// It also starts the broadcaster in ClientHandler as a background job.
+func NewWebsocketServer(networkIf string, port int, certPath, keyPath string) *WebServer {
+	server := &WebServer{
+		networkIf: networkIf,
+		port:      port,
+		routes:    setupWebsocketRoutes(),
+		certPath:  certPath,
+		keyPath:   keyPath,
+	}
+	server.initServer()
+	ClientHandler.Broadcast = make(chan certstream.Entry, 10_000)
+	go ClientHandler.broadcaster()
+	return server
+}
+
 // Start initializes the webserver and starts listening for connections.
 func (ws *WebServer) Start() {
 	var addr = fmt.Sprintf("%s:%d", ws.networkIf, ws.port)
