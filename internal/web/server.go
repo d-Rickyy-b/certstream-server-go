@@ -89,8 +89,8 @@ func setupClient(connection *websocket.Conn, subscriptionType SubscriptionType, 
 	ClientHandler.registerClient(c)
 }
 
-// setupRoutes configures all the routes necessary for the webserver
-func setupRoutes() *chi.Mux {
+// setupWebsocketRoutes configures all the routes necessary for the websocket webserver
+func setupWebsocketRoutes() *chi.Mux {
 	r := chi.NewRouter()
 	r.Use(middleware.Recoverer)
 	r.Route("/", func(r chi.Router) {
