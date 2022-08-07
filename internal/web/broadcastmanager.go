@@ -38,6 +38,33 @@ func (bm *BroadcastManager) unregisterClient(c *client) {
 	bm.clientLock.Unlock()
 }
 
+// ClientFullCount returns the current number of clients connected to the service on the `full` endpoint.
+func (bm *BroadcastManager) ClientFullCount() (count int64) {
+	return bm.clientCountByType(SubTypeFull)
+}
+
+// ClientLiteCount returns the current number of clients connected to the service on the `lite` endpoint.
+func (bm *BroadcastManager) ClientLiteCount() (count int64) {
+	return bm.clientCountByType(SubTypeLite)
+}
+
+// ClientDomainsCount returns the current number of clients connected to the service on the `domains-only` endpoint.
+func (bm *BroadcastManager) ClientDomainsCount() (count int64) {
+	return bm.clientCountByType(SubTypeDomain)
+}
+
+// clientCountByType returns the current number of clients connected to the service on the endpoint matching the specified SubscriptionType.
+func (bm *BroadcastManager) clientCountByType(subType SubscriptionType) (count int64) {
+	bm.clientLock.RLock()
+	defer bm.clientLock.RUnlock()
+	for _, c := range bm.clients {
+		if c.subType == subType {
+			count++
+		}
+	}
+	return count
+}
+
 // broadcaster is run in a goroutine and handles the dispatching of entries to clients.
 func (bm *BroadcastManager) broadcaster() {
 	for {

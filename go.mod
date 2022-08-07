@@ -3,6 +3,7 @@ module go-certstream-server
 go 1.18
 
 require (
+	github.com/VictoriaMetrics/metrics v1.19.3
 	github.com/go-chi/chi v1.5.4
 	github.com/google/certificate-transparency-go v1.1.2
 	github.com/gorilla/websocket v1.5.0
@@ -58,6 +59,8 @@ require (
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/tmc/grpc-websocket-proxy v0.0.0-20201229170055-e5319fda7802 // indirect
 	github.com/urfave/cli v1.22.4 // indirect
+	github.com/valyala/fastrand v1.1.0 // indirect
+	github.com/valyala/histogram v1.2.0 // indirect
 	github.com/xiang90/probing v0.0.0-20190116061207-43a291ad63a2 // indirect
 	go.etcd.io/bbolt v1.3.6 // indirect
 	go.etcd.io/etcd/api/v3 v3.5.0 // indirect
