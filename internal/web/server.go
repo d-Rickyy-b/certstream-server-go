@@ -17,7 +17,12 @@ var ClientHandler = BroadcastManager{}
 var upgrader = websocket.Upgrader{} // use default options
 
 type WebsocketServer struct {
-	Routes *chi.Mux
+	networkIf string
+	port      int
+	routes    *chi.Mux
+	server    *http.Server
+	certPath  string
+	keyPath   string
 }
 
 // initFullWebsocket is called when a client connects to the /full-stream endpoint.
