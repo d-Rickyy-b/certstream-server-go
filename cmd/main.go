@@ -23,7 +23,8 @@ func main() {
 		log.Fatalln("Error while parsing yaml file:", err)
 	}
 
-	go web.StartServer(*networkIf, *port)
+	webserver := web.NewWebsocketServer(*networkIf, *port, conf.Webserver.CertPath, conf.Webserver.CertKeyPath)
+	go webserver.Start()
 
 	watcher := certificatetransparency.Watcher{}
 	watcher.Start()

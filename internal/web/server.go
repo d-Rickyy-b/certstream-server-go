@@ -16,7 +16,7 @@ import (
 var ClientHandler = BroadcastManager{}
 var upgrader = websocket.Upgrader{} // use default options
 
-type WebsocketServer struct {
+type WebServer struct {
 	networkIf string
 	port      int
 	routes    *chi.Mux
@@ -112,12 +112,8 @@ func setupRoutes() *chi.Mux {
 	return r
 }
 
-// StartServer initializes the webserver and starts listening for connections.
-func StartServer(networkIf string, port int) {
-	var addr = fmt.Sprintf("%s:%d", networkIf, port)
-	log.Printf("Starting webserver on %s\n", addr)
-
-	r := setupRoutes()
+func (ws *WebServer) initServer() {
+	var addr = fmt.Sprintf("%s:%d", ws.networkIf, ws.port)
 
 	tlsConfig := &tls.Config{
 		MinVersion:       tls.VersionTLS12,
@@ -130,20 +126,29 @@ func StartServer(networkIf string, port int) {
 		},
 	}
 
-	ClientHandler.Broadcast = make(chan certstream.Entry, 10_000)
-	go ClientHandler.broadcaster()
-
-	httpServer := &http.Server{
+	ws.server = &http.Server{
 		Addr:              addr,
-		Handler:           r,
+		Handler:           ws.routes,
 		TLSConfig:         tlsConfig,
 		IdleTimeout:       time.Minute,
 		ReadTimeout:       10 * time.Second,
 		ReadHeaderTimeout: 2 * time.Second,
 		WriteTimeout:      10 * time.Second,
 	}
-	err := httpServer.ListenAndServe()
+}
+
+// Start initializes the webserver and starts listening for connections.
+func (ws *WebServer) Start() {
+	var addr = fmt.Sprintf("%s:%d", ws.networkIf, ws.port)
+	log.Printf("Starting webserver on %s\n", addr)
+
+	var err error
+	if ws.keyPath != "" && ws.certPath != "" {
+		err = ws.server.ListenAndServeTLS(ws.certPath, ws.keyPath)
+	} else {
+		err = ws.server.ListenAndServe()
+	}
 	if err != nil {
-		log.Fatal("ListenAndServe: ", err)
+		log.Fatal("Error while serving webserver: ", err)
 	}
 }
