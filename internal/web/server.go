@@ -67,10 +67,10 @@ func upgradeConnection(w http.ResponseWriter, r *http.Request) (*websocket.Conn,
 		return nil, err
 	}
 
+	defaultCloseHandler := connection.CloseHandler()
 	connection.SetCloseHandler(func(code int, text string) error {
 		log.Printf("Stopping websocket for '%s' - %s\n", r.RemoteAddr, r.URL)
-		message := websocket.FormatCloseMessage(code, "Connection closed")
-		return connection.WriteControl(websocket.CloseMessage, message, time.Now().Add(time.Second))
+		return defaultCloseHandler(code, text)
 	})
 	return connection, nil
 }
