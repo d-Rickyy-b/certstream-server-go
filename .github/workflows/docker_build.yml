@@ -23,4 +23,4 @@ jobs:
         run: docker build . --file Dockerfile --tag ${{ secrets.DOCKERHUB_USERNAME }}/certstream-server-go:latest --tag ${{ secrets.DOCKERHUB_USERNAME }}/certstream-server-go:${{ env.TAG }}
 
       - name: Push the Docker image
-        run: docker push ${{ secrets.DOCKERHUB_USERNAME }}/certstream-server-go
+        run: docker push ${{ secrets.DOCKERHUB_USERNAME }}/certstream-server-go --all-tags
