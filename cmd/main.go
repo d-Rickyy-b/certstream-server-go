@@ -25,8 +25,8 @@ func main() {
 	webserver := web.NewWebsocketServer(conf.Webserver.ListenAddr, conf.Webserver.ListenPort, conf.Webserver.CertPath, conf.Webserver.CertKeyPath)
 	if conf.Prometheus.Enabled {
 		// If prometheus is enabled, and interface is either unconfigured or same as webserver config, use existing webserver
-		if (conf.Prometheus.ListenAddr == "" || conf.Prometheus.ListenAddr == *networkIf) &&
-			(conf.Prometheus.ListenPort == 0 || conf.Prometheus.ListenPort == *port) {
+		if (conf.Prometheus.ListenAddr == "" || conf.Prometheus.ListenAddr == conf.Webserver.ListenAddr) &&
+			(conf.Prometheus.ListenPort == 0 || conf.Prometheus.ListenPort == conf.Webserver.ListenPort) {
 			log.Println("Starting prometheus server on same interface as webserver")
 			webserver.RegisterPrometheus(conf.Prometheus.MetricsURL, prometheus.WritePrometheus)
 		} else {
