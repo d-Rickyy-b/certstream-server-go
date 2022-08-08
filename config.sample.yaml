@@ -1,5 +1,5 @@
 webserver:
-  listen_addr: "127.0.0.1"
+  listen_addr: "0.0.0.0"
   listen_port: 8080
   full_url: "/full-stream"
   lite_url: "/"
