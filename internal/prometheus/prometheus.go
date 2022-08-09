@@ -31,7 +31,7 @@ var (
 func WritePrometheus(w io.Writer, exposeProcessMetrics bool) {
 	if !ctLogsInitialized {
 		logs := certificatetransparency.GetLogs()
-		for key := range logs {
+		for i := 0; i < len(logs); i++ {
 			url := logs[i]
 			metrics.NewGauge(fmt.Sprintf("certstreamservergo_certs_by_log_total{url=\"%s\"}", url), func() float64 {
 				return float64(certificatetransparency.GetCertCountForLog(url))
