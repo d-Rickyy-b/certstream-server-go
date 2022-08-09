@@ -11,13 +11,13 @@ import (
 
 var (
 	ctLogsInitialized = false
-	fullClientCount   = metrics.NewGauge("certstreamservergo_full_clients_total", func() float64 {
+	fullClientCount   = metrics.NewGauge("certstreamservergo_clients_total{type=\"full\"}", func() float64 {
 		return float64(web.ClientHandler.ClientFullCount())
 	})
-	liteClientCount = metrics.NewGauge("certstreamservergo_lite_clients_total", func() float64 {
+	liteClientCount = metrics.NewGauge("certstreamservergo_clients_total{type=\"lite\"}", func() float64 {
 		return float64(web.ClientHandler.ClientLiteCount())
 	})
-	domainClientCount = metrics.NewGauge("certstreamservergo_domain_clients_total", func() float64 {
+	domainClientCount = metrics.NewGauge("certstreamservergo_clients_total{type=\"domain\"}", func() float64 {
 		return float64(web.ClientHandler.ClientDomainsCount())
 	})
 	processedCertificates = metrics.NewGauge("certstreamservergo_certificates_total{type=\"regular\"}", func() float64 {
