@@ -18,6 +18,14 @@ I quickly thought about running my own instance of certstream. I didn't want to 
 ## Getting started
 Setting up an instance of the certstream server is simple. You can either download and compile the code by yourself or use one of our [precompiled binaries](https://github.com/d-Rickyy-b/certstream-server-go/releases).
 
+### Docker
+There's also a prebuild [Docker image](https://hub.docker.com/repository/docker/0rickyy0/certstream-server-go) available.
+You can use it by running this command: 
+
+`docker run -v /path/to/config.yaml:/app/config.yaml -p 8080:8080 0rickyy0/certstream-server-go -d`
+
+If you don't mount your own config file, the default config (config.sample.yaml) will be used.
+
 ## Connecting
 certstream-server-go offers multiple endpoints to connect to.
 
