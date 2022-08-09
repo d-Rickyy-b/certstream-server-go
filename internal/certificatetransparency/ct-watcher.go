@@ -23,10 +23,8 @@ import (
 var (
 	processedCerts    int64
 	processedPrecerts int64
-	urlMapMutex       sync.Mutex
+	urlMapMutex       sync.RWMutex
 	urlMap            = make(map[string]int64)
-	ownerMapMutex     sync.Mutex
-	ownerMap          = make(map[string]int64)
 )
 
 func GetProcessedCerts() int64 {
@@ -38,13 +36,23 @@ func GetProcessedPrecerts() int64 {
 }
 
 func GetCertCountForLog(logname string) int64 {
-	urlMapMutex.Lock()
-	defer urlMapMutex.Unlock()
+	urlMapMutex.RLock()
+	defer urlMapMutex.RUnlock()
 	return urlMap[logname]
 }
 
-func GetLogs() map[string]int64 {
-	return urlMap
+func GetLogs() []string {
+	urlMapMutex.RLock()
+	defer urlMapMutex.RUnlock()
+
+	urls := make([]string, len(urlMap))
+
+	counter := 0
+	for key := range urlMap {
+		urls[counter] = key
+		counter++
+	}
+	return urls
 }
 
 // Watcher describes a component that watches for new certificates in a CT log.
