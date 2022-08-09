@@ -1,4 +1,4 @@
-![test](https://github.com/d-Rickyy-b/certstream-server-go/blob/master/docs/img/certstream-server-go_logo.png?raw=true)
+![certstream-server-go logo](https://github.com/d-Rickyy-b/certstream-server-go/blob/master/docs/img/certstream-server-go_logo.png?raw=true)
 
 # Certstream Server Go
 
