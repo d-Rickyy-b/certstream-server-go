@@ -6,7 +6,6 @@ import (
 	"go-certstream-server/internal/certificatetransparency"
 	"go-certstream-server/internal/web"
 	"io"
-	"strings"
 )
 
 var (
@@ -33,10 +32,7 @@ func WritePrometheus(w io.Writer, exposeProcessMetrics bool) {
 	if !ctLogsInitialized {
 		logs := certificatetransparency.GetLogs()
 		for key := range logs {
-			var url string
-			url = strings.ReplaceAll(key, "http://", "")
-			url = strings.ReplaceAll(url, "https://", "")
-			url = strings.TrimSuffix(url, "/")
+			url := logs[i]
 			metrics.NewGauge(fmt.Sprintf("certstreamservergo_certs_by_log_total{url=\"%s\"}", url), func() float64 {
 				return float64(certificatetransparency.GetCertCountForLog(url))
 			})
