@@ -1,6 +1,8 @@
-![test](https://github.com/d-Rickyy-b/certstream-server-go/blob/master/docs/img/certstream-server-go_logo.png?raw=true)
+![certstream-server-go logo](https://github.com/d-Rickyy-b/certstream-server-go/blob/master/docs/img/certstream-server-go_logo.png?raw=true)
 
 # Certstream Server Go
+[![build](https://github.com/d-Rickyy-b/certstream-server-go/actions/workflows/release_build.yml/badge.svg)](https://github.com/d-Rickyy-b/certstream-server-go/actions/workflows/release_build.yml)
+[![Docker Image Version (latest semver)](https://img.shields.io/docker/v/0rickyy0/certstream-server-go?label=docker&sort=semver)](https://hub.docker.com/repository/docker/0rickyy0/certstream-server-go)
 
 This project aims to be a drop-in replacement for the [official certstream server](https://github.com/CaliDog/certstream-server/) by Calidog. This tool aggregates, parses, and streams certificate data from multiple [certificate transparency logs](https://www.certificate-transparency.org/what-is-ct) via websocket connections to the clients.
 
@@ -18,6 +20,14 @@ I quickly thought about running my own instance of certstream. I didn't want to 
 ## Getting started
 Setting up an instance of the certstream server is simple. You can either download and compile the code by yourself or use one of our [precompiled binaries](https://github.com/d-Rickyy-b/certstream-server-go/releases).
 
+### Docker
+There's also a prebuild [Docker image](https://hub.docker.com/repository/docker/0rickyy0/certstream-server-go) available.
+You can use it by running this command: 
+
+`docker run -v /path/to/config.yaml:/app/config.yaml -p 8080:8080 0rickyy0/certstream-server-go -d`
+
+If you don't mount your own config file, the default config (config.sample.yaml) will be used.
+
 ## Connecting
 certstream-server-go offers multiple endpoints to connect to.
 
@@ -30,7 +40,7 @@ certstream-server-go offers multiple endpoints to connect to.
 You can connect to the certstream-server by opening a **websocket connection** to any of the aforementioned endpoints.
 After you're connected, certificate information will be streamed to your websocket.
 
-The server requires you to send a ping message at least every `ping_interval` seconds. If the server did not receive a ping message for `ping_interval` seconds, the server will disconnect you. The server will **not** send out ping messages to your client.  
+The server requires you to send a ping message at least every 60 seconds (it's recommended to use an interval of 30s for pings). If the server did not receive a ping message for more than this time, the server will disconnect you. The server will **not** send out ping messages to your client.  
  
 ### Example
 To receive a live example of any of the endpoints, just send a HTTP GET request to the endpoints with `/example.json` appended to the endpoint. So for example `/full-stream/example.json`. This example shows the lite format of a certificate update.

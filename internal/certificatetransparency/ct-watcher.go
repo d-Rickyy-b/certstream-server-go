@@ -7,7 +7,7 @@ import (
 	ct "github.com/google/certificate-transparency-go"
 	"github.com/google/certificate-transparency-go/client"
 	"github.com/google/certificate-transparency-go/jsonclient"
-	"github.com/google/certificate-transparency-go/loglist"
+	"github.com/google/certificate-transparency-go/loglist3"
 	"github.com/google/certificate-transparency-go/scanner"
 	"go-certstream-server/internal/certstream"
 	"go-certstream-server/internal/config"
@@ -76,15 +76,18 @@ func (w *Watcher) Start() {
 	certChan := make(chan certstream.Entry, 5000)
 
 	// For each CT log, create a worker and start downloading certs
-	for _, transparencyLog := range logList.Logs {
-		ctWorker := worker{
-			name:      transparencyLog.Description,
-			ctURL:     transparencyLog.URL,
-			entryChan: certChan,
-			context:   ctx,
+	for _, operator := range logList.Operators {
+		for _, transparencyLog := range operator.Logs {
+			ctWorker := worker{
+				name:         transparencyLog.Description,
+				operatorName: operator.Name,
+				ctURL:        transparencyLog.URL,
+				entryChan:    certChan,
+				context:      ctx,
+			}
+			w.workers = append(w.workers, &ctWorker)
+			go ctWorker.startDownloadingCerts()
 		}
-		w.workers = append(w.workers, &ctWorker)
-		go ctWorker.startDownloadingCerts()
 	}
 
 	certHandler(certChan)
@@ -98,12 +101,13 @@ func (w *Watcher) Stop() {
 
 // A worker processes a single CT log.
 type worker struct {
-	name      string
-	ctURL     string
-	context   context.Context
-	entryChan chan certstream.Entry
-	mu        sync.Mutex
-	running   bool
+	name         string
+	operatorName string
+	ctURL        string
+	context      context.Context
+	entryChan    chan certstream.Entry
+	mu           sync.Mutex
+	running      bool
 }
 
 func (w *worker) startDownloadingCerts() {
@@ -204,16 +208,16 @@ func certHandler(entryChan chan certstream.Entry) {
 }
 
 // getAllLogs returns a list of all CT logs.
-func getAllLogs() (loglist.LogList, error) {
+func getAllLogs() (loglist3.LogList, error) {
 	// Download the list of all logs from ctLogInfo and decode json
-	resp, err := http.Get(loglist.LogListURL)
+	resp, err := http.Get(loglist3.LogListURL)
 	if err != nil {
-		return loglist.LogList{}, err
+		return loglist3.LogList{}, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return loglist.LogList{}, errors.New("failed to download loglist")
+		return loglist3.LogList{}, errors.New("failed to download loglist")
 	}
 
 	bodyBytes, readErr := io.ReadAll(resp.Body)
@@ -221,17 +225,20 @@ func getAllLogs() (loglist.LogList, error) {
 		log.Panic(readErr)
 	}
 
-	allLogs, parseErr := loglist.NewFromJSON(bodyBytes)
+	allLogs, parseErr := loglist3.NewFromJSON(bodyBytes)
 	if parseErr != nil {
-		return loglist.LogList{}, parseErr
+		return loglist3.LogList{}, parseErr
 	}
 
 	// Initial setup of the urlMap
 	urlMapMutex.Lock()
-	for _, ctlog := range allLogs.Logs {
-		url := normalizeCtlogURL(ctlog.URL)
-		urlMap[url] = 0
+	for _, operator := range allLogs.Operators {
+		for _, ctlog := range operator.Logs {
+			url := normalizeCtlogURL(ctlog.URL)
+			urlMap[url] = 0
+		}
 	}
+
 	urlMapMutex.Unlock()
 
 	return *allLogs, nil
