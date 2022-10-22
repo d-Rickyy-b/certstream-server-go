@@ -20,6 +20,12 @@ type Config struct {
 		CertPath       string `yaml:"cert_path"`
 		CertKeyPath    string `yaml:"cert_key_path"`
 	}
+	Prometheus struct {
+		Enabled    bool   `yaml:"enabled"`
+		MetricsURL string `yaml:"metrics_url"`
+		ListenAddr string `yaml:"listen_addr"`
+		ListenPort int    `yaml:"listen_port"`
+	}
 }
 
 // ReadConfig reads the config file and returns a filled Config struct.
@@ -100,5 +106,15 @@ func validateConfig(config Config) bool {
 		config.Webserver.FullURL = "/domains-only"
 	}
 
+	if config.Prometheus.Enabled {
+		if config.Prometheus.ListenAddr == "" || !IPRegex.MatchString(config.Prometheus.ListenAddr) {
+			log.Fatalln("Prometheus export IP does not match pattern 'x.x.x.x'")
+			return false
+		}
+		if config.Prometheus.ListenPort == 0 {
+			log.Fatalln("Prometheus export port is not set")
+			return false
+		}
+	}
 	return true
 }

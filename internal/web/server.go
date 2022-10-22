@@ -8,6 +8,7 @@ import (
 	"github.com/gorilla/websocket"
 	"go-certstream-server/internal/certstream"
 	"go-certstream-server/internal/config"
+	"io"
 	"log"
 	"net/http"
 	"time"
@@ -23,6 +24,15 @@ type WebServer struct {
 	server    *http.Server
 	certPath  string
 	keyPath   string
+}
+
+// RegisterPrometheus registers a new handler that listens on the given url and calls the given function
+// in order to provide metrics for a prometheus server. This function signature was used, because VictoriaMetrics
+// offers exactly this function signature.
+func (ws *WebServer) RegisterPrometheus(url string, callback func(w io.Writer, exposeProcessMetrics bool)) {
+	ws.routes.HandleFunc(url, func(w http.ResponseWriter, r *http.Request) {
+		callback(w, false)
+	})
 }
 
 // initFullWebsocket is called when a client connects to the /full-stream endpoint.
@@ -136,6 +146,20 @@ func (ws *WebServer) initServer() {
 		ReadHeaderTimeout: 2 * time.Second,
 		WriteTimeout:      10 * time.Second,
 	}
+}
+
+// NewMetricsServer creates a new webserver that listens on the given port and provides metrics for a prometheus server.
+func NewMetricsServer(networkIf string, port int, certPath, keyPath string) *WebServer {
+	server := &WebServer{
+		networkIf: networkIf,
+		port:      port,
+		routes:    chi.NewRouter(),
+		certPath:  certPath,
+		keyPath:   keyPath,
+	}
+	server.initServer()
+	server.routes.Use(middleware.Recoverer)
+	return server
 }
 
 // NewWebsocketServer starts a new webserver and initialized it with the necessary routes.

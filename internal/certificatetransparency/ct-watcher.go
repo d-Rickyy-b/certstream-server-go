@@ -17,7 +17,43 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"sync/atomic"
 )
+
+var (
+	processedCerts    int64
+	processedPrecerts int64
+	urlMapMutex       sync.RWMutex
+	urlMap            = make(map[string]int64)
+)
+
+func GetProcessedCerts() int64 {
+	return processedCerts
+}
+
+func GetProcessedPrecerts() int64 {
+	return processedPrecerts
+}
+
+func GetCertCountForLog(logname string) int64 {
+	urlMapMutex.RLock()
+	defer urlMapMutex.RUnlock()
+	return urlMap[logname]
+}
+
+func GetLogs() []string {
+	urlMapMutex.RLock()
+	defer urlMapMutex.RUnlock()
+
+	urls := make([]string, len(urlMap))
+
+	counter := 0
+	for key := range urlMap {
+		urls[counter] = key
+		counter++
+	}
+	return urls
+}
 
 // Watcher describes a component that watches for new certificates in a CT log.
 type Watcher struct {
@@ -132,6 +168,7 @@ func (w *worker) foundCertCallback(rawEntry *ct.RawLogEntry) {
 	}
 	entry.Data.UpdateType = "X509LogEntry"
 	w.entryChan <- entry
+	atomic.AddInt64(&processedCerts, 1)
 }
 
 // foundPrecertCallback is the callback that handles cases where new precerts are found.
@@ -143,9 +180,10 @@ func (w *worker) foundPrecertCallback(rawEntry *ct.RawLogEntry) {
 	}
 	entry.Data.UpdateType = "PrecertLogEntry"
 	w.entryChan <- entry
+	atomic.AddInt64(&processedPrecerts, 1)
 }
 
-// certHandler takes the entries out of the channel and broadcasts them to all clients.
+// certHandler takes the entries out of the entryChan channel and broadcasts them to all clients.
 func certHandler(entryChan chan certstream.Entry) {
 	var processed int64
 	for {
@@ -160,6 +198,12 @@ func certHandler(entryChan chan certstream.Entry) {
 
 		// Run json encoding in the background and send the result to the clients.
 		web.ClientHandler.Broadcast <- entry
+
+		url := normalizeCtlogURL(entry.Data.Source.URL)
+
+		urlMapMutex.Lock()
+		urlMap[url] += 1
+		urlMapMutex.Unlock()
 	}
 }
 
@@ -198,4 +242,11 @@ func getAllLogs() (loglist3.LogList, error) {
 	urlMapMutex.Unlock()
 
 	return *allLogs, nil
+}
+
+func normalizeCtlogURL(input string) string {
+	input = strings.TrimPrefix(input, "http://")
+	input = strings.TrimPrefix(input, "https://")
+	input = strings.TrimSuffix(input, "/")
+	return input
 }

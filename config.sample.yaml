@@ -6,3 +6,9 @@ webserver:
   domains_only_url: "/domains-only"
   cert_path: ""
   cert_key_path: ""
+
+prometheus:
+  enabled: true
+  listen_addr: "127.0.0.1"
+  listen_port: 8080
+  metrics_url: "/metrics"
