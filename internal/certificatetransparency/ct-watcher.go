@@ -89,6 +89,7 @@ func (w *Watcher) Start() {
 			go ctWorker.startDownloadingCerts()
 		}
 	}
+	log.Println("Started CT watcher")
 
 	certHandler(certChan)
 }
@@ -135,7 +136,7 @@ func (w *worker) startDownloadingCerts() {
 
 	sth, getSTHerr := jsonClient.GetSTH(w.context)
 	if getSTHerr != nil {
-		log.Println("Error retreiving STH: ", getSTHerr)
+		log.Printf("Error retreiving STH for %s: %s\n", w.ctURL, getSTHerr)
 		return
 	}
 
