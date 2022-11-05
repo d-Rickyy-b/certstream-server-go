@@ -71,7 +71,14 @@ func initDomainWebsocket(w http.ResponseWriter, r *http.Request) {
 
 // upgradeConnection upgrades the connection to a websocket and returns the connection.
 func upgradeConnection(w http.ResponseWriter, r *http.Request) (*websocket.Conn, error) {
-	log.Printf("Starting new websocket for '%s' - %s\n", r.RemoteAddr, r.URL)
+	var remoteAddr string
+	xForwardedFor := r.Header.Get("X-Forwarded-For")
+	if xForwardedFor != "" {
+		remoteAddr = fmt.Sprintf("'%s' (X-Forwarded-For: '%s')", r.RemoteAddr, xForwardedFor)
+	} else {
+		remoteAddr = fmt.Sprintf("'%s'", r.RemoteAddr)
+	}
+	log.Printf("Starting new websocket for %s - %s\n", remoteAddr, r.URL)
 	connection, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		return nil, err
@@ -79,7 +86,7 @@ func upgradeConnection(w http.ResponseWriter, r *http.Request) (*websocket.Conn,
 
 	defaultCloseHandler := connection.CloseHandler()
 	connection.SetCloseHandler(func(code int, text string) error {
-		log.Printf("Stopping websocket for '%s' - %s\n", r.RemoteAddr, r.URL)
+		log.Printf("Stopping websocket for %s - %s\n", remoteAddr, r.URL)
 		return defaultCloseHandler(code, text)
 	})
 	return connection, nil
