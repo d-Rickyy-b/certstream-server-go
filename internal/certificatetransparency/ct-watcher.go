@@ -112,6 +112,7 @@ type worker struct {
 }
 
 func (w *worker) startDownloadingCerts() {
+	log.Printf("Starting worker for CT log: %s\n", w.ctURL)
 	w.mu.Lock()
 	if w.running {
 		log.Println("Worker already running")
@@ -156,6 +157,7 @@ func (w *worker) startDownloadingCerts() {
 	scanErr := certScanner.Scan(w.context, w.foundCertCallback, w.foundPrecertCallback)
 	if scanErr != nil {
 		log.Println("Scan error: ", scanErr)
+		log.Printf("Stopping worker for CT log: %s\n", w.ctURL)
 		return
 	}
 }
