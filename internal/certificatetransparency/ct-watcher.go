@@ -24,7 +24,7 @@ var (
 	processedCerts    int64
 	processedPrecerts int64
 	urlMapMutex       sync.RWMutex
-	urlMap            = make(map[string]int64)
+	urlMetricsMap     = make(map[string]int64)
 )
 
 func GetProcessedCerts() int64 {
@@ -38,17 +38,17 @@ func GetProcessedPrecerts() int64 {
 func GetCertCountForLog(logname string) int64 {
 	urlMapMutex.RLock()
 	defer urlMapMutex.RUnlock()
-	return urlMap[logname]
+	return urlMetricsMap[logname]
 }
 
 func GetLogs() []string {
 	urlMapMutex.RLock()
 	defer urlMapMutex.RUnlock()
 
-	urls := make([]string, len(urlMap))
+	urls := make([]string, len(urlMetricsMap))
 
 	counter := 0
-	for key := range urlMap {
+	for key := range urlMetricsMap {
 		urls[counter] = key
 		counter++
 	}
@@ -205,7 +205,7 @@ func certHandler(entryChan chan certstream.Entry) {
 		url := normalizeCtlogURL(entry.Data.Source.URL)
 
 		urlMapMutex.Lock()
-		urlMap[url] += 1
+		urlMetricsMap[url] += 1
 		urlMapMutex.Unlock()
 	}
 }
@@ -213,7 +213,7 @@ func certHandler(entryChan chan certstream.Entry) {
 // getAllLogs returns a list of all CT logs.
 func getAllLogs() (loglist3.LogList, error) {
 	// Download the list of all logs from ctLogInfo and decode json
-	resp, err := http.Get(loglist3.LogListURL)
+	resp, err := http.Get(loglist3.AllLogListURL)
 	if err != nil {
 		return loglist3.LogList{}, err
 	}
@@ -233,12 +233,12 @@ func getAllLogs() (loglist3.LogList, error) {
 		return loglist3.LogList{}, parseErr
 	}
 
-	// Initial setup of the urlMap
+	// Initial setup of the urlMetricsMap
 	urlMapMutex.Lock()
 	for _, operator := range allLogs.Operators {
 		for _, ctlog := range operator.Logs {
 			url := normalizeCtlogURL(ctlog.URL)
-			urlMap[url] = 0
+			urlMetricsMap[url] = 0
 		}
 	}
 
