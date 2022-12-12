@@ -79,6 +79,7 @@ func (c *client) listenWebsocket() {
 				log.Printf("Connection to client lost: %v\n", c.conn.RemoteAddr())
 			}
 			log.Printf("Disconnecting client %v!\n", c.conn.RemoteAddr())
+
 			break
 		}
 		// ignore any message sent from clients - we only handle errors (aka. disconnects)

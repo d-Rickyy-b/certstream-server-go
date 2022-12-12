@@ -209,6 +209,7 @@ func formatKeyID(keyId []byte) *string {
 
 	digest = strings.TrimLeft(digest, ":")
 	digest = fmt.Sprintf("keyid:%s", digest)
+
 	return &digest
 }
 
@@ -332,6 +333,7 @@ func keyUsageToString(k x509.KeyUsage) string {
 	if k&x509.KeyUsageDecipherOnly != 0 {
 		commaAppend(&buf, "Decipher Only")
 	}
+
 	return buf.String()
 }
 
@@ -349,5 +351,6 @@ func parseCertstreamEntry(rawEntry *ct.RawLogEntry, logname, ctURL string) (cert
 		Data:        data,
 		MessageType: "certificate_update",
 	}
+
 	return entry, nil
 }

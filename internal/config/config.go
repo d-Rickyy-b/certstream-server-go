@@ -54,6 +54,7 @@ func parseConfigFromFile(configFile string) (Config, error) {
 	if parseErr != nil {
 		return Config{}, parseErr
 	}
+
 	return conf, nil
 }
 
@@ -117,5 +118,6 @@ func validateConfig(config Config) bool {
 			return false
 		}
 	}
+
 	return true
 }

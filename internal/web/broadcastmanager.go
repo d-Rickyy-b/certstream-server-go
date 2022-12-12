@@ -33,6 +33,7 @@ func (bm *BroadcastManager) unregisterClient(c *client) {
 			bm.clients[i] = bm.clients[len(bm.clients)-1]
 			bm.clients[len(bm.clients)-1] = nil
 			bm.clients = bm.clients[:len(bm.clients)-1]
+
 			break
 		}
 	}
@@ -63,6 +64,7 @@ func (bm *BroadcastManager) clientCountByType(subType SubscriptionType) (count i
 			count++
 		}
 	}
+
 	return count
 }
 
