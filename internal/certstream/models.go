@@ -52,6 +52,7 @@ func (e *Entry) JSONLiteNoCache() []byte {
 	newEntry := e.Clone()
 	newEntry.Data.Chain = nil
 	newEntry.Data.LeafCert.AsDER = ""
+
 	return entryToJSONBytes(newEntry)
 }
 
@@ -60,10 +61,12 @@ func (e *Entry) JSONDomains() []byte {
 		Data:        e.Data.LeafCert.AllDomains,
 		MessageType: "dns_entries",
 	}
+
 	domainsEntryBytes, err := json.Marshal(domainsEntry)
 	if err != nil {
 		log.Println(err)
 	}
+
 	return domainsEntryBytes
 }
 
@@ -72,10 +75,12 @@ func entryToJSONBytes(e Entry) []byte {
 	buf := bytes.Buffer{}
 	enc := json.NewEncoder(&buf)
 	enc.SetEscapeHTML(false)
+
 	err := enc.Encode(e)
 	if err != nil {
 		log.Println(err)
 	}
+
 	return buf.Bytes()
 }
 
