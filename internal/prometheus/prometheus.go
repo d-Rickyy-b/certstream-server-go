@@ -21,6 +21,8 @@ var (
 	domainClientCount = metrics.NewGauge("certstreamservergo_clients_total{type=\"domain\"}", func() float64 {
 		return float64(web.ClientHandler.ClientDomainsCount())
 	})
+
+	// Number of certificates processed by the CT watcher
 	processedCertificates = metrics.NewGauge("certstreamservergo_certificates_total{type=\"regular\"}", func() float64 {
 		return float64(certificatetransparency.GetProcessedCerts())
 	})

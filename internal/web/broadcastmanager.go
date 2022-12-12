@@ -55,7 +55,8 @@ func (bm *BroadcastManager) ClientDomainsCount() (count int64) {
 	return bm.clientCountByType(SubTypeDomain)
 }
 
-// clientCountByType returns the current number of clients connected to the service on the endpoint matching the specified SubscriptionType.
+// clientCountByType returns the current number of clients connected to the service on the endpoint matching
+// the specified SubscriptionType.
 func (bm *BroadcastManager) clientCountByType(subType SubscriptionType) (count int64) {
 	bm.clientLock.RLock()
 	defer bm.clientLock.RUnlock()

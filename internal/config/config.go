@@ -43,7 +43,8 @@ func ReadConfig(configPath string) (Config, error) {
 	return conf, nil
 }
 
-// parseConfigFromFile reads the config file as bytes and passes it to parseConfigFromBytes. It returns a filled Config struct.
+// parseConfigFromFile reads the config file as bytes and passes it to parseConfigFromBytes.
+// It returns a filled Config struct.
 func parseConfigFromFile(configFile string) (Config, error) {
 	yamlFileContent, readErr := os.ReadFile(configFile)
 	if readErr != nil {
