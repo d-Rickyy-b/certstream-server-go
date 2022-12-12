@@ -1,9 +1,10 @@
 package web
 
 import (
-	"go-certstream-server/internal/certstream"
 	"log"
 	"sync"
+
+	"go-certstream-server/internal/certstream"
 )
 
 type BroadcastManager struct {

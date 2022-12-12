@@ -3,15 +3,17 @@ package web
 import (
 	"crypto/tls"
 	"fmt"
-	"github.com/go-chi/chi"
-	"github.com/go-chi/chi/middleware"
-	"github.com/gorilla/websocket"
-	"go-certstream-server/internal/certstream"
-	"go-certstream-server/internal/config"
 	"io"
 	"log"
 	"net/http"
 	"time"
+
+	"go-certstream-server/internal/certstream"
+	"go-certstream-server/internal/config"
+
+	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/middleware"
+	"github.com/gorilla/websocket"
 )
 
 var ClientHandler = BroadcastManager{}

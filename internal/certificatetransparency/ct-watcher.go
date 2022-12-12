@@ -4,20 +4,22 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	ct "github.com/google/certificate-transparency-go"
-	"github.com/google/certificate-transparency-go/client"
-	"github.com/google/certificate-transparency-go/jsonclient"
-	"github.com/google/certificate-transparency-go/loglist3"
-	"github.com/google/certificate-transparency-go/scanner"
-	"go-certstream-server/internal/certstream"
-	"go-certstream-server/internal/config"
-	"go-certstream-server/internal/web"
 	"io"
 	"log"
 	"net/http"
 	"strings"
 	"sync"
 	"sync/atomic"
+
+	"go-certstream-server/internal/certstream"
+	"go-certstream-server/internal/config"
+	"go-certstream-server/internal/web"
+
+	ct "github.com/google/certificate-transparency-go"
+	"github.com/google/certificate-transparency-go/client"
+	"github.com/google/certificate-transparency-go/jsonclient"
+	"github.com/google/certificate-transparency-go/loglist3"
+	"github.com/google/certificate-transparency-go/scanner"
 )
 
 var (

@@ -2,11 +2,12 @@ package main
 
 import (
 	"flag"
+	"log"
+
 	"go-certstream-server/internal/certificatetransparency"
 	"go-certstream-server/internal/config"
 	"go-certstream-server/internal/prometheus"
 	"go-certstream-server/internal/web"
-	"log"
 )
 
 // main is the entry point for the application.

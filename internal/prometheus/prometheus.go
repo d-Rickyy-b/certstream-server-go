@@ -2,10 +2,12 @@ package prometheus
 
 import (
 	"fmt"
-	"github.com/VictoriaMetrics/metrics"
+	"io"
+
 	"go-certstream-server/internal/certificatetransparency"
 	"go-certstream-server/internal/web"
-	"io"
+
+	"github.com/VictoriaMetrics/metrics"
 )
 
 var (

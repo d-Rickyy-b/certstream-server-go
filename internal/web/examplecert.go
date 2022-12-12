@@ -1,8 +1,9 @@
 package web
 
 import (
-	"go-certstream-server/internal/certstream"
 	"net/http"
+
+	"go-certstream-server/internal/certstream"
 )
 
 var exampleCert certstream.Entry

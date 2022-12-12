@@ -1,10 +1,11 @@
 package config
 
 import (
-	"gopkg.in/yaml.v3"
 	"io/ioutil"
 	"log"
 	"regexp"
+
+	"gopkg.in/yaml.v3"
 )
 
 var AppConfig Config

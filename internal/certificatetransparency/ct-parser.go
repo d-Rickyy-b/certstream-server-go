@@ -7,14 +7,16 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	ct "github.com/google/certificate-transparency-go"
-	"github.com/google/certificate-transparency-go/x509"
-	"github.com/google/certificate-transparency-go/x509/pkix"
-	"go-certstream-server/internal/certstream"
 	"log"
 	"math/big"
 	"strings"
 	"time"
+
+	"go-certstream-server/internal/certstream"
+
+	ct "github.com/google/certificate-transparency-go"
+	"github.com/google/certificate-transparency-go/x509"
+	"github.com/google/certificate-transparency-go/x509/pkix"
 )
 
 // parseData converts a *ct.RawLogEntry struct into a certstream.Data struct by copying some values and calculating others
