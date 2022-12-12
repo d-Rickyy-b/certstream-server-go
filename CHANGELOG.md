@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Fix for missing loglist urls.
 
 ### Fixed
-Fixed the connection issue due to the offline google loglist urls.
+Fixed the connection issue due to the offline Google loglist urls.
 
 ## [1.0.0] - 2022-08-08
 Initial release! First stable version of certstream-server-go is published as v1.0.0 
