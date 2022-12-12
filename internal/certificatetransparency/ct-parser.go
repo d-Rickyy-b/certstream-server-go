@@ -200,8 +200,8 @@ func buildSubject(certSubject pkix.Name) certstream.Subject {
 }
 
 // formatKeyID transforms the AuthorityKeyIdentifier to be more readable
-func formatKeyID(keyId []byte) *string {
-	tmp := hex.EncodeToString(keyId)
+func formatKeyID(keyID []byte) *string {
+	tmp := hex.EncodeToString(keyID)
 	var digest string
 	for i := 0; i < len(tmp); i += 2 {
 		digest = digest + ":" + tmp[i:i+2]
