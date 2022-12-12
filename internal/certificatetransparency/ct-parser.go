@@ -20,8 +20,8 @@ import (
 )
 
 // parseData converts a *ct.RawLogEntry struct into a certstream.Data struct by copying some values and calculating others
-func parseData(entry *ct.RawLogEntry, logName, ctUrl string) (certstream.Data, error) {
-	certLink := fmt.Sprintf("%s/ct/v1/get-entries?start=%d&end=%d", ctUrl, entry.Index, entry.Index)
+func parseData(entry *ct.RawLogEntry, logName, ctURL string) (certstream.Data, error) {
+	certLink := fmt.Sprintf("%s/ct/v1/get-entries?start=%d&end=%d", ctURL, entry.Index, entry.Index)
 
 	// Create main data structure
 	data := certstream.Data{
@@ -30,7 +30,7 @@ func parseData(entry *ct.RawLogEntry, logName, ctUrl string) (certstream.Data, e
 		Seen:      float64(time.Now().UnixMilli()) / 1_000,
 		Source: certstream.Source{
 			Name: logName,
-			URL:  ctUrl,
+			URL:  ctURL,
 		},
 		UpdateType: "X509LogEntry",
 	}
