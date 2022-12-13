@@ -114,6 +114,12 @@ type worker struct {
 }
 
 func (w *worker) startDownloadingCerts() {
+	// Normalize CT URL. We remove trailing slashes and prepend "https://" if it's not already there.
+	w.ctURL = strings.TrimRight(w.ctURL, "/")
+	if !strings.HasPrefix(w.ctURL, "https://") && !strings.HasPrefix(w.ctURL, "http://") {
+		w.ctURL = "https://" + w.ctURL
+	}
+
 	log.Printf("Starting worker for CT log: %s\n", w.ctURL)
 	defer log.Printf("Stopping worker for CT log: %s\n", w.ctURL)
 
@@ -127,12 +133,6 @@ func (w *worker) startDownloadingCerts() {
 
 	w.running = true
 	w.mu.Unlock()
-
-	// Normalize CT URL. We remove trailing slashes and prepend "https://" if it's not already there.
-	w.ctURL = strings.TrimRight(w.ctURL, "/")
-	if !strings.HasPrefix(w.ctURL, "https://") && !strings.HasPrefix(w.ctURL, "http://") {
-		w.ctURL = "https://" + w.ctURL
-	}
 
 	userAgent := fmt.Sprintf("Certstream Server v%s (github.com/d-Rickyy-b/certstream-server-go)", config.Version)
 	jsonClient, e := client.New(w.ctURL, nil, jsonclient.Options{UserAgent: userAgent})
