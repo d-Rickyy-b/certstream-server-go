@@ -16,8 +16,10 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-var ClientHandler = BroadcastManager{}
-var upgrader = websocket.Upgrader{} // use default options
+var (
+	ClientHandler = BroadcastManager{}
+	upgrader      = websocket.Upgrader{} // use default options
+)
 
 type WebServer struct {
 	networkIf string
@@ -91,6 +93,7 @@ func upgradeConnection(w http.ResponseWriter, r *http.Request) (*websocket.Conn,
 		log.Printf("Stopping websocket for %s - %s\n", remoteAddr, r.URL)
 		return defaultCloseHandler(code, text)
 	})
+
 	return connection, nil
 }
 
@@ -108,7 +111,7 @@ func setupClient(connection *websocket.Conn, subscriptionType SubscriptionType, 
 	ClientHandler.registerClient(c)
 }
 
-// setupWebsocketRoutes configures all the routes necessary for the websocket webserver
+// setupWebsocketRoutes configures all the routes necessary for the websocket webserver.
 func setupWebsocketRoutes() *chi.Mux {
 	r := chi.NewRouter()
 	r.Use(middleware.Recoverer)
@@ -128,11 +131,12 @@ func setupWebsocketRoutes() *chi.Mux {
 			r.HandleFunc("/example.json", exampleDomains)
 		})
 	})
+
 	return r
 }
 
 func (ws *WebServer) initServer() {
-	var addr = fmt.Sprintf("%s:%d", ws.networkIf, ws.port)
+	addr := fmt.Sprintf("%s:%d", ws.networkIf, ws.port)
 
 	tlsConfig := &tls.Config{
 		MinVersion:       tls.VersionTLS12,
@@ -168,6 +172,7 @@ func NewMetricsServer(networkIf string, port int, certPath, keyPath string) *Web
 	}
 	server.initServer()
 	server.routes.Use(middleware.Recoverer)
+
 	return server
 }
 
@@ -184,12 +189,13 @@ func NewWebsocketServer(networkIf string, port int, certPath, keyPath string) *W
 	server.initServer()
 	ClientHandler.Broadcast = make(chan certstream.Entry, 10_000)
 	go ClientHandler.broadcaster()
+
 	return server
 }
 
 // Start initializes the webserver and starts listening for connections.
 func (ws *WebServer) Start() {
-	var addr = fmt.Sprintf("%s:%d", ws.networkIf, ws.port)
+	addr := fmt.Sprintf("%s:%d", ws.networkIf, ws.port)
 	log.Printf("Starting webserver on %s\n", addr)
 
 	var err error

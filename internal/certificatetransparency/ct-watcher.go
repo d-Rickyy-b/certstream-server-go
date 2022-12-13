@@ -116,12 +116,15 @@ type worker struct {
 func (w *worker) startDownloadingCerts() {
 	log.Printf("Starting worker for CT log: %s\n", w.ctURL)
 	defer log.Printf("Stopping worker for CT log: %s\n", w.ctURL)
+
 	w.mu.Lock()
 	if w.running {
 		log.Println("Worker already running")
 		w.mu.Unlock()
+
 		return
 	}
+
 	w.running = true
 	w.mu.Unlock()
 
@@ -171,6 +174,7 @@ func (w *worker) foundCertCallback(rawEntry *ct.RawLogEntry) {
 		log.Println("Error parsing certstream entry: ", parseErr)
 		return
 	}
+
 	entry.Data.UpdateType = "X509LogEntry"
 	w.entryChan <- entry
 	atomic.AddInt64(&processedCerts, 1)
@@ -183,6 +187,7 @@ func (w *worker) foundPrecertCallback(rawEntry *ct.RawLogEntry) {
 		log.Println("Error parsing certstream entry: ", parseErr)
 		return
 	}
+
 	entry.Data.UpdateType = "PrecertLogEntry"
 	w.entryChan <- entry
 	atomic.AddInt64(&processedPrecerts, 1)

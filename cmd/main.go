@@ -13,7 +13,7 @@ import (
 // main is the entry point for the application.
 func main() {
 	// var configFile = flag.String("config", "config.yml", "Path to config file")
-	var configFile = flag.String("config", "config.yaml", "path to the config file")
+	configFile := flag.String("config", "config.yaml", "path to the config file")
 	flag.Parse()
 
 	log.SetFlags(log.LstdFlags | log.Lshortfile)

@@ -19,8 +19,8 @@ import (
 	"github.com/google/certificate-transparency-go/x509/pkix"
 )
 
-// parseData converts a *ct.RawLogEntry struct into a certstream.Data struct by copying some values and calculating others
 func parseData(entry *ct.RawLogEntry, logName, ctURL string) (certstream.Data, error) {
+// parseData converts a *ct.RawLogEntry struct into a certstream.Data struct by copying some values and calculating others.
 	certLink := fmt.Sprintf("%s/ct/v1/get-entries?start=%d&end=%d", ctURL, entry.Index, entry.Index)
 
 	// Create main data structure
@@ -73,7 +73,7 @@ func parseData(entry *ct.RawLogEntry, logName, ctURL string) (certstream.Data, e
 	return data, nil
 }
 
-// parseCertificateChain returns the certificate chain in form of a []LeafCert from the given *ct.LogEntry
+// parseCertificateChain returns the certificate chain in form of a []LeafCert from the given *ct.LogEntry.
 func parseCertificateChain(logEntry *ct.LogEntry) ([]certstream.LeafCert, error) {
 	var chain []certstream.LeafCert
 	for _, chainEntry := range logEntry.Chain {
@@ -86,10 +86,11 @@ func parseCertificateChain(logEntry *ct.LogEntry) ([]certstream.LeafCert, error)
 		leafCert := leafCertFromX509cert(*myCert)
 		chain = append(chain, leafCert)
 	}
+
 	return chain, nil
 }
 
-// leafCertFromX509cert converts a x509.Certificate to the custom LeafCert data structure
+// leafCertFromX509cert converts a x509.Certificate to the custom LeafCert data structure.
 func leafCertFromX509cert(cert x509.Certificate) certstream.LeafCert {
 	leafCert := certstream.LeafCert{
 		AllDomains:         cert.DNSNames,
@@ -165,7 +166,7 @@ func leafCertFromX509cert(cert x509.Certificate) certstream.LeafCert {
 	return leafCert
 }
 
-// buildSubject generates a Subject struct from the given pkix.Name
+// buildSubject generates a Subject struct from the given pkix.Name.
 func buildSubject(certSubject pkix.Name) certstream.Subject {
 	subject := certstream.Subject{
 		C:  parseName(certSubject.Country),
@@ -196,10 +197,11 @@ func buildSubject(certSubject pkix.Name) certstream.Subject {
 		aggregated += fmt.Sprintf("/ST=%s", *subject.ST)
 	}
 	subject.Aggregated = &aggregated
+
 	return subject
 }
 
-// formatKeyID transforms the AuthorityKeyIdentifier to be more readable
+// formatKeyID transforms the AuthorityKeyIdentifier to be more readable.
 func formatKeyID(keyID []byte) *string {
 	tmp := hex.EncodeToString(keyID)
 	var digest string
@@ -233,10 +235,11 @@ func parseName(input []string) *string {
 		}
 		result += s
 	}
+
 	return &result
 }
 
-// calculateSHA1 calculates the SHA1 fingerprint of the given data
+// calculateSHA1 calculates the SHA1 fingerprint of the given data.
 func calculateSHA1(data []byte) string {
 	certHasher := sha1.New() //nolint:gosec
 	_, e := certHasher.Write(data)
@@ -254,6 +257,7 @@ func calculateSHA1(data []byte) string {
 		c := certHash[i]
 		result.WriteByte(c)
 	}
+
 	return result.String()
 }
 
@@ -296,7 +300,7 @@ func parseSignatureAlgorithm(signatureAlgoritm x509.SignatureAlgorithm) string {
 	}
 }
 
-// commaAppend lets you append a string with a comma prepended to a buffer
+// commaAppend lets you append a string with a comma prepended to a buffer.
 func commaAppend(buf *bytes.Buffer, s string) {
 	if buf.Len() > 0 {
 		buf.WriteString(", ")
