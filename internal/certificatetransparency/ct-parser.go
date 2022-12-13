@@ -351,7 +351,7 @@ func parseCertstreamEntry(rawEntry *ct.RawLogEntry, logname, ctURL string) (cert
 	if err != nil {
 		return certstream.Entry{}, err
 	}
-	var entry = certstream.Entry{
+	entry := certstream.Entry{
 		Data:        data,
 		MessageType: "certificate_update",
 	}
