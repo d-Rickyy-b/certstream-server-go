@@ -19,8 +19,8 @@ import (
 	"github.com/google/certificate-transparency-go/x509/pkix"
 )
 
-func parseData(entry *ct.RawLogEntry, logName, ctURL string) (certstream.Data, error) {
 // parseData converts a *ct.RawLogEntry struct into a certstream.Data struct by copying some values and calculating others.
+func parseData(entry *ct.RawLogEntry, operatorName, logName, ctURL string) (certstream.Data, error) {
 	certLink := fmt.Sprintf("%s/ct/v1/get-entries?start=%d&end=%d", ctURL, entry.Index, entry.Index)
 
 	// Create main data structure
@@ -29,8 +29,9 @@ func parseData(entry *ct.RawLogEntry, logName, ctURL string) (certstream.Data, e
 		CertLink:  certLink,
 		Seen:      float64(time.Now().UnixMilli()) / 1_000,
 		Source: certstream.Source{
-			Name: logName,
-			URL:  ctURL,
+			Name:     logName,
+			URL:      ctURL,
+			Operator: operatorName,
 		},
 		UpdateType: "X509LogEntry",
 	}
@@ -342,12 +343,12 @@ func keyUsageToString(k x509.KeyUsage) string {
 }
 
 // parseCertstreamEntry creates an Entry from a ct.RawLogEntry.
-func parseCertstreamEntry(rawEntry *ct.RawLogEntry, logname, ctURL string) (certstream.Entry, error) {
+func parseCertstreamEntry(rawEntry *ct.RawLogEntry, operatorName, logname, ctURL string) (certstream.Entry, error) {
 	if rawEntry == nil {
 		return certstream.Entry{}, errors.New("certstream entry is nil")
 	}
 
-	data, err := parseData(rawEntry, logname, ctURL)
+	data, err := parseData(rawEntry, operatorName, logname, ctURL)
 	if err != nil {
 		return certstream.Entry{}, err
 	}
