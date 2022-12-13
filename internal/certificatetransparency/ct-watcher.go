@@ -255,8 +255,8 @@ func getAllLogs() (loglist3.LogList, error) {
 }
 
 func normalizeCtlogURL(input string) string {
-	input = strings.TrimPrefix(input, "http://")
 	input = strings.TrimPrefix(input, "https://")
+	input = strings.TrimPrefix(input, "http://")
 	input = strings.TrimSuffix(input, "/")
 
 	return input
