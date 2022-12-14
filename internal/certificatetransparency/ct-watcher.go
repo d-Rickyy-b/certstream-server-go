@@ -294,7 +294,7 @@ func certHandler(entryChan chan certstream.Entry) {
 // getAllLogs returns a list of all CT logs.
 func getAllLogs() (loglist3.LogList, error) {
 	// Download the list of all logs from ctLogInfo and decode json
-	resp, err := http.Get(loglist3.AllLogListURL)
+	resp, err := http.Get(loglist3.LogListURL)
 	if err != nil {
 		return loglist3.LogList{}, err
 	}
