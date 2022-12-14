@@ -125,7 +125,7 @@ func (w *worker) startDownloadingCerts() {
 
 	w.mu.Lock()
 	if w.running {
-		log.Println("Worker already running")
+		log.Printf("Worker for '%s' already running\n", w.ctURL)
 		w.mu.Unlock()
 
 		return
