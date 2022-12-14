@@ -161,10 +161,9 @@ func (w *Watcher) Start() {
 				operatorName: operator.Name,
 				ctURL:        transparencyLog.URL,
 				entryChan:    certChan,
-				context:      ctx,
 			}
 			w.workers = append(w.workers, &ctWorker)
-			go ctWorker.startDownloadingCerts()
+			go ctWorker.startDownloadingCerts(ctx)
 		}
 	}
 	log.Println("Started CT watcher")
@@ -183,13 +182,13 @@ type worker struct {
 	name         string
 	operatorName string
 	ctURL        string
-	context      context.Context
 	entryChan    chan certstream.Entry
 	mu           sync.Mutex
 	running      bool
 }
 
-func (w *worker) startDownloadingCerts() {
+// startDownloadingCerts starts downloading certificates from the CT log. This method is blocking.
+func (w *worker) startDownloadingCerts(ctx context.Context) {
 	// Normalize CT URL. We remove trailing slashes and prepend "https://" if it's not already there.
 	w.ctURL = strings.TrimRight(w.ctURL, "/")
 	if !strings.HasPrefix(w.ctURL, "https://") && !strings.HasPrefix(w.ctURL, "http://") {
@@ -217,7 +216,7 @@ func (w *worker) startDownloadingCerts() {
 		return
 	}
 
-	sth, getSTHerr := jsonClient.GetSTH(w.context)
+	sth, getSTHerr := jsonClient.GetSTH(ctx)
 	if getSTHerr != nil {
 		log.Printf("Error retreiving STH for %s: %s\n", w.ctURL, getSTHerr)
 		return
@@ -236,7 +235,7 @@ func (w *worker) startDownloadingCerts() {
 		BufferSize:  1000,
 	})
 
-	scanErr := certScanner.Scan(w.context, w.foundCertCallback, w.foundPrecertCallback)
+	scanErr := certScanner.Scan(ctx, w.foundCertCallback, w.foundPrecertCallback)
 	if scanErr != nil {
 		log.Println("Scan error: ", scanErr)
 		return
