@@ -25,9 +25,97 @@ import (
 var (
 	processedCerts    int64
 	processedPrecerts int64
-	urlMapMutex       sync.RWMutex
-	urlMetricsMap     = make(map[string]int64)
+	metrics           = LogMetrics{metrics: make(CTMetrics)}
 )
+
+type (
+	// OperatorLogs is a map of operator names to a list of CT log urls, operated by said operator.
+	OperatorLogs map[string][]string
+	// OperatorMetric is a map of CT log urls to the number of certs processed by said log.
+	OperatorMetric map[string]int64
+	// CTMetrics is a map of operator names to a map of CT log urls to the number of certs processed by said log.
+	CTMetrics map[string]OperatorMetric
+)
+
+// LogMetrics is a struct that holds a map of metrics for each CT log grouped by operator.
+// Metrics can be accessed and written concurrently through the Get, Set and Inc methods.
+type LogMetrics struct {
+	mutex   sync.RWMutex
+	metrics CTMetrics
+}
+
+// GetCTMetrics returns a copy of the internal metrics map.
+func (m *LogMetrics) GetCTMetrics() CTMetrics {
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
+
+	copiedMap := make(CTMetrics)
+
+	for operator, urls := range m.metrics {
+		copiedMap[operator] = make(OperatorMetric)
+		for url, count := range urls {
+			copiedMap[operator][url] = count
+		}
+	}
+
+	return copiedMap
+}
+
+// OperatorLogMapping returns a map of operator names to a list of CT logs.
+func (m *LogMetrics) OperatorLogMapping() OperatorLogs {
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
+
+	logOperators := make(map[string][]string, len(m.metrics))
+
+	for operator, urls := range m.metrics {
+		urlList := make([]string, len(urls))
+		counter := 0
+		for url := range urls {
+			urlList[counter] = url
+			counter++
+		}
+		logOperators[operator] = urlList
+	}
+
+	return logOperators
+}
+
+// Get the metric for a given operator and ct url.
+func (m *LogMetrics) Get(operator, url string) int64 {
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
+
+	if _, ok := m.metrics[operator]; !ok {
+		m.metrics[operator] = make(OperatorMetric)
+	}
+
+	return m.metrics[operator][url]
+}
+
+// Set the metric for a given operator and ct url.
+func (m *LogMetrics) Set(operator, url string, value int64) {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
+	if _, ok := m.metrics[operator]; !ok {
+		m.metrics[operator] = make(OperatorMetric)
+	}
+
+	m.metrics[operator][url] = value
+}
+
+// Inc the metric for a given operator and ct url.
+func (m *LogMetrics) Inc(operator, url string) {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
+	if _, ok := m.metrics[operator]; !ok {
+		m.metrics[operator] = make(OperatorMetric)
+	}
+
+	m.metrics[operator][url]++
+}
 
 func GetProcessedCerts() int64 {
 	return processedCerts
@@ -37,24 +125,12 @@ func GetProcessedPrecerts() int64 {
 	return processedPrecerts
 }
 
-func GetCertCountForLog(logname string) int64 {
-	urlMapMutex.RLock()
-	defer urlMapMutex.RUnlock()
-	return urlMetricsMap[logname]
+func GetCertMetrics() CTMetrics {
+	return metrics.GetCTMetrics()
 }
 
-func GetLogs() []string {
-	urlMapMutex.RLock()
-	defer urlMapMutex.RUnlock()
-
-	urls := make([]string, len(urlMetricsMap))
-
-	counter := 0
-	for key := range urlMetricsMap {
-		urls[counter] = key
-		counter++
-	}
-	return urls
+func GetLogOperators() map[string][]string {
+	return metrics.OperatorLogMapping()
 }
 
 // Watcher describes a component that watches for new certificates in a CT log.
@@ -211,9 +287,7 @@ func certHandler(entryChan chan certstream.Entry) {
 
 		url := normalizeCtlogURL(entry.Data.Source.URL)
 
-		urlMapMutex.Lock()
-		urlMetricsMap[url] += 1
-		urlMapMutex.Unlock()
+		metrics.Inc(operator, url)
 	}
 }
 
@@ -241,15 +315,12 @@ func getAllLogs() (loglist3.LogList, error) {
 	}
 
 	// Initial setup of the urlMetricsMap
-	urlMapMutex.Lock()
 	for _, operator := range allLogs.Operators {
 		for _, ctlog := range operator.Logs {
 			url := normalizeCtlogURL(ctlog.URL)
-			urlMetricsMap[url] = 0
+			metrics.Set(operator.Name, url, 0)
 		}
 	}
-
-	urlMapMutex.Unlock()
 
 	return *allLogs, nil
 }
