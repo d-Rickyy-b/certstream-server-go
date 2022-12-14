@@ -269,6 +269,7 @@ func (w *worker) foundPrecertCallback(rawEntry *ct.RawLogEntry) {
 }
 
 // certHandler takes the entries out of the entryChan channel and broadcasts them to all clients.
+// Only a single instance of the certHandler runs per certstream server.
 func certHandler(entryChan chan certstream.Entry) {
 	var processed int64
 	for {
