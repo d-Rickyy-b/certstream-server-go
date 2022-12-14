@@ -29,9 +29,10 @@ func parseData(entry *ct.RawLogEntry, operatorName, logName, ctURL string) (cert
 		CertLink:  certLink,
 		Seen:      float64(time.Now().UnixMilli()) / 1_000,
 		Source: certstream.Source{
-			Name:     logName,
-			URL:      ctURL,
-			Operator: operatorName,
+			Name:          logName,
+			URL:           ctURL,
+			Operator:      operatorName,
+			NormalizedURL: normalizeCtlogURL(ctURL),
 		},
 		UpdateType: "X509LogEntry",
 	}
