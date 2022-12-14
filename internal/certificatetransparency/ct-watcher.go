@@ -284,7 +284,8 @@ func certHandler(entryChan chan certstream.Entry) {
 		// Run json encoding in the background and send the result to the clients.
 		web.ClientHandler.Broadcast <- entry
 
-		url := normalizeCtlogURL(entry.Data.Source.URL)
+		url := entry.Data.Source.NormalizedURL
+		operator := entry.Data.Source.Operator
 
 		metrics.Inc(operator, url)
 	}
