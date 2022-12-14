@@ -4,10 +4,10 @@ import (
 	"flag"
 	"log"
 
-	"go-certstream-server/internal/certificatetransparency"
-	"go-certstream-server/internal/config"
-	"go-certstream-server/internal/prometheus"
-	"go-certstream-server/internal/web"
+	"certstream-server-go/internal/certificatetransparency"
+	"certstream-server-go/internal/config"
+	"certstream-server-go/internal/prometheus"
+	"certstream-server-go/internal/web"
 )
 
 // main is the entry point for the application.

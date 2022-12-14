@@ -11,9 +11,9 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"go-certstream-server/internal/certstream"
-	"go-certstream-server/internal/config"
-	"go-certstream-server/internal/web"
+	"certstream-server-go/internal/certstream"
+	"certstream-server-go/internal/config"
+	"certstream-server-go/internal/web"
 
 	ct "github.com/google/certificate-transparency-go"
 	"github.com/google/certificate-transparency-go/client"

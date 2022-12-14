@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"go-certstream-server/internal/certstream"
+	"certstream-server-go/internal/certstream"
 
 	ct "github.com/google/certificate-transparency-go"
 	"github.com/google/certificate-transparency-go/x509"

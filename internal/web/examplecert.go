@@ -3,7 +3,7 @@ package web
 import (
 	"net/http"
 
-	"go-certstream-server/internal/certstream"
+	"certstream-server-go/internal/certstream"
 )
 
 var exampleCert certstream.Entry

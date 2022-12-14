@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"io"
 
-	"go-certstream-server/internal/certificatetransparency"
-	"go-certstream-server/internal/web"
+	"certstream-server-go/internal/certificatetransparency"
+	"certstream-server-go/internal/web"
 
 	"github.com/VictoriaMetrics/metrics"
 )

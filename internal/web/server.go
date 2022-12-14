@@ -8,8 +8,8 @@ import (
 	"net/http"
 	"time"
 
-	"go-certstream-server/internal/certstream"
-	"go-certstream-server/internal/config"
+	"certstream-server-go/internal/certstream"
+	"certstream-server-go/internal/config"
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"

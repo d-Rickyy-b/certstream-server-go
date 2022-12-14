@@ -1,4 +1,4 @@
-module go-certstream-server
+module certstream-server-go
 
 go 1.18
 
