@@ -47,6 +47,7 @@ func initFullWebsocket(w http.ResponseWriter, r *http.Request) {
 		log.Println("Error while trying to upgrade connection:", err)
 		return
 	}
+
 	setupClient(connection, SubTypeFull, r.RemoteAddr)
 }
 
@@ -70,19 +71,23 @@ func initDomainWebsocket(w http.ResponseWriter, r *http.Request) {
 		log.Println("Error while trying to upgrade connection:", err)
 		return
 	}
+
 	setupClient(connection, SubTypeDomain, r.RemoteAddr)
 }
 
 // upgradeConnection upgrades the connection to a websocket and returns the connection.
 func upgradeConnection(w http.ResponseWriter, r *http.Request) (*websocket.Conn, error) {
 	var remoteAddr string
+
 	xForwardedFor := r.Header.Get("X-Forwarded-For")
 	if xForwardedFor != "" {
 		remoteAddr = fmt.Sprintf("'%s' (X-Forwarded-For: '%s')", r.RemoteAddr, xForwardedFor)
 	} else {
 		remoteAddr = fmt.Sprintf("'%s'", r.RemoteAddr)
 	}
+
 	log.Printf("Starting new websocket for %s - %s\n", remoteAddr, r.URL)
+
 	connection, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		return nil, err
@@ -187,6 +192,7 @@ func NewWebsocketServer(networkIf string, port int, certPath, keyPath string) *W
 		keyPath:   keyPath,
 	}
 	server.initServer()
+
 	ClientHandler.Broadcast = make(chan certstream.Entry, 10_000)
 	go ClientHandler.broadcaster()
 
@@ -204,6 +210,7 @@ func (ws *WebServer) Start() {
 	} else {
 		err = ws.server.ListenAndServe()
 	}
+
 	if err != nil {
 		log.Fatal("Error while serving webserver: ", err)
 	}

@@ -46,6 +46,7 @@ func parseData(entry *ct.RawLogEntry, operatorName, logName, ctURL string) (cert
 
 	var cert *x509.Certificate
 	var rawData []byte
+
 	switch {
 	case logEntry.X509Cert != nil:
 		cert = logEntry.X509Cert
@@ -114,6 +115,7 @@ func leafCertFromX509cert(cert x509.Certificate) certstream.LeafCert {
 				break
 			}
 		}
+
 		if !domainAlreadyAdded {
 			leafCert.AllDomains = append(leafCert.AllDomains, *leafCert.Subject.CN)
 		}
@@ -142,12 +144,15 @@ func leafCertFromX509cert(cert x509.Certificate) certstream.LeafCert {
 			for _, name := range cert.DNSNames {
 				commaAppend(&buf, "DNS:"+name)
 			}
+
 			for _, email := range cert.EmailAddresses {
 				commaAppend(&buf, "email:"+email)
 			}
+
 			for _, ip := range cert.IPAddresses {
 				commaAppend(&buf, "IP Address:"+ip.String())
 			}
+
 			subjectAltName := buf.String()
 			leafCert.Extensions.SubjectAltName = &subjectAltName
 		case extension.Id.Equal(x509.OIDExtensionAuthorityInfoAccess):
@@ -155,9 +160,11 @@ func leafCertFromX509cert(cert x509.Certificate) certstream.LeafCert {
 			for _, issuer := range cert.IssuingCertificateURL {
 				commaAppend(&buf, "URI:"+issuer)
 			}
+
 			for _, ocsp := range cert.OCSPServer {
 				commaAppend(&buf, "URI:"+ocsp)
 			}
+
 			result := buf.String()
 			leafCert.Extensions.AuthorityInfoAccess = &result
 		case extension.Id.Equal(x509.OIDExtensionCTPoison):
@@ -180,24 +187,31 @@ func buildSubject(certSubject pkix.Name) certstream.Subject {
 	}
 
 	var aggregated string
+
 	if subject.C != nil {
 		aggregated += fmt.Sprintf("/C=%s", *subject.C)
 	}
+
 	if subject.CN != nil {
 		aggregated += fmt.Sprintf("/CN=%s", *subject.CN)
 	}
+
 	if subject.L != nil {
 		aggregated += fmt.Sprintf("/L=%s", *subject.L)
 	}
+
 	if subject.O != nil {
 		aggregated += fmt.Sprintf("/O=%s", *subject.O)
 	}
+
 	if subject.OU != nil {
 		aggregated += fmt.Sprintf("/OU=%s", *subject.OU)
 	}
+
 	if subject.ST != nil {
 		aggregated += fmt.Sprintf("/ST=%s", *subject.ST)
 	}
+
 	subject.Aggregated = &aggregated
 
 	return subject
@@ -207,6 +221,7 @@ func buildSubject(certSubject pkix.Name) certstream.Subject {
 func formatKeyID(keyID []byte) *string {
 	tmp := hex.EncodeToString(keyID)
 	var digest string
+
 	for i := 0; i < len(tmp); i += 2 {
 		digest = digest + ":" + tmp[i:i+2]
 	}
@@ -230,11 +245,13 @@ func parseName(input []string) *string {
 	if input == nil {
 		return nil
 	}
+
 	var result string
 	for _, s := range input {
 		if len(result) > 0 {
 			result += ","
 		}
+
 		result += s
 	}
 
@@ -244,13 +261,16 @@ func parseName(input []string) *string {
 // calculateSHA1 calculates the SHA1 fingerprint of the given data.
 func calculateSHA1(data []byte) string {
 	certHasher := sha1.New() //nolint:gosec
+
 	_, e := certHasher.Write(data)
 	if e != nil {
 		log.Printf("Error while hashing cert: %s\n", e)
 		return ""
 	}
+
 	certHash := fmt.Sprintf("%02x", certHasher.Sum(nil))
 	certHash = strings.ToUpper(certHash)
+
 	var result bytes.Buffer
 	for i := 0; i < len(certHash); i++ {
 		if i%2 == 0 && i > 0 {
@@ -307,6 +327,7 @@ func commaAppend(buf *bytes.Buffer, s string) {
 	if buf.Len() > 0 {
 		buf.WriteString(", ")
 	}
+
 	buf.WriteString(s)
 }
 
@@ -315,27 +336,35 @@ func keyUsageToString(k x509.KeyUsage) string {
 	if k&x509.KeyUsageDigitalSignature != 0 {
 		commaAppend(&buf, "Digital Signature")
 	}
+
 	if k&x509.KeyUsageContentCommitment != 0 {
 		commaAppend(&buf, "Content Commitment")
 	}
+
 	if k&x509.KeyUsageKeyEncipherment != 0 {
 		commaAppend(&buf, "Key Encipherment")
 	}
+
 	if k&x509.KeyUsageDataEncipherment != 0 {
 		commaAppend(&buf, "Data Encipherment")
 	}
+
 	if k&x509.KeyUsageKeyAgreement != 0 {
 		commaAppend(&buf, "Key Agreement")
 	}
+
 	if k&x509.KeyUsageCertSign != 0 {
 		commaAppend(&buf, "Certificate Signing")
 	}
+
 	if k&x509.KeyUsageCRLSign != 0 {
 		commaAppend(&buf, "CRL Signing")
 	}
+
 	if k&x509.KeyUsageEncipherOnly != 0 {
 		commaAppend(&buf, "Encipher Only")
 	}
+
 	if k&x509.KeyUsageDecipherOnly != 0 {
 		commaAppend(&buf, "Decipher Only")
 	}
@@ -353,6 +382,7 @@ func parseCertstreamEntry(rawEntry *ct.RawLogEntry, operatorName, logname, ctURL
 	if err != nil {
 		return certstream.Entry{}, err
 	}
+
 	entry := certstream.Entry{
 		Data:        data,
 		MessageType: "certificate_update",

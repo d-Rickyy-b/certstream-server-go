@@ -35,11 +35,12 @@ func ReadConfig(configPath string) (Config, error) {
 	if parseErr != nil {
 		log.Fatalln("Error while parsing yaml file:", parseErr)
 	}
+
 	if !validateConfig(conf) {
 		log.Fatalln("Invalid config")
 	}
-
 	AppConfig = conf
+
 	return conf, nil
 }
 
@@ -82,10 +83,12 @@ func validateConfig(config Config) bool {
 		log.Fatalln("Webhook listen IP is does not match pattern 'x.x.x.x'")
 		return false
 	}
+
 	if config.Webserver.ListenPort == 0 {
 		log.Fatalln("Webhook listen port is not set")
 		return false
 	}
+
 	if config.Webserver.FullURL == "" || !URLRegex.MatchString(config.Webserver.FullURL) {
 		log.Println("Webhook full URL is not set or does not match pattern '/...'")
 		config.Webserver.FullURL = "/full-stream"
@@ -114,6 +117,7 @@ func validateConfig(config Config) bool {
 			log.Fatalln("Prometheus export IP does not match pattern 'x.x.x.x'")
 			return false
 		}
+
 		if config.Prometheus.ListenPort == 0 {
 			log.Fatalln("Prometheus export port is not set")
 			return false

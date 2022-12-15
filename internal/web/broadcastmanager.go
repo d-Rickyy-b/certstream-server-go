@@ -60,6 +60,7 @@ func (bm *BroadcastManager) ClientDomainsCount() (count int64) {
 func (bm *BroadcastManager) clientCountByType(subType SubscriptionType) (count int64) {
 	bm.clientLock.RLock()
 	defer bm.clientLock.RUnlock()
+
 	for _, c := range bm.clients {
 		if c.subType == subType {
 			count++

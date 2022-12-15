@@ -33,7 +33,9 @@ func (c *client) broadcastHandler() {
 		if err != nil {
 			return
 		}
+
 		w.Write(message) //nolint:errcheck
+
 		if err := w.Close(); err != nil {
 			return
 		}
@@ -71,6 +73,7 @@ func (c *client) listenWebsocket() {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseNormalClosure) {
 				log.Printf("error: %v", err)
 			}
+
 			if strings.Contains(strings.ToLower(err.Error()), "i/o timeout") {
 				log.Printf("No ping received from client: %v\n", c.conn.RemoteAddr())
 				message := websocket.FormatCloseMessage(websocket.CloseNoStatusReceived, "No ping received!")
@@ -78,6 +81,7 @@ func (c *client) listenWebsocket() {
 			} else if strings.Contains(strings.ToLower(err.Error()), "an existing connection was forcibly closed by the remote host") {
 				log.Printf("Connection to client lost: %v\n", c.conn.RemoteAddr())
 			}
+
 			log.Printf("Disconnecting client %v!\n", c.conn.RemoteAddr())
 
 			break

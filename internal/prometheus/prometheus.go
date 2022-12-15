@@ -58,6 +58,7 @@ func initCtLogMetrics() {
 
 	for operator, urls := range logs {
 		operator := operator // Copy variable to new scope
+
 		for i := 0; i < len(urls); i++ {
 			url := urls[i]
 			name := fmt.Sprintf("certstreamservergo_certs_by_log_total{url=\"%s\",operator=\"%s\"}", url, operator)

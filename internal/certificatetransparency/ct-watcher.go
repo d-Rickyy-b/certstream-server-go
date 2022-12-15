@@ -71,6 +71,7 @@ func (m *LogMetrics) OperatorLogMapping() OperatorLogs {
 	for operator, urls := range m.metrics {
 		urlList := make([]string, len(urls))
 		counter := 0
+
 		for url := range urls {
 			urlList[counter] = url
 			counter++
@@ -163,11 +164,12 @@ func (w *Watcher) Start() {
 				entryChan:    certChan,
 			}
 			w.workers = append(w.workers, &ctWorker)
+
 			go ctWorker.startDownloadingCerts(ctx)
 		}
 	}
-	log.Println("Started CT watcher")
 
+	log.Println("Started CT watcher")
 	certHandler(certChan)
 }
 
@@ -210,6 +212,7 @@ func (w *worker) startDownloadingCerts(ctx context.Context) {
 	w.mu.Unlock()
 
 	userAgent := fmt.Sprintf("Certstream Server v%s (github.com/d-Rickyy-b/certstream-server-go)", config.Version)
+
 	jsonClient, e := client.New(w.ctURL, nil, jsonclient.Options{UserAgent: userAgent})
 	if e != nil {
 		log.Println("Error creating JSON client: ", e)
@@ -252,6 +255,7 @@ func (w *worker) foundCertCallback(rawEntry *ct.RawLogEntry) {
 
 	entry.Data.UpdateType = "X509LogEntry"
 	w.entryChan <- entry
+
 	atomic.AddInt64(&processedCerts, 1)
 }
 
@@ -265,6 +269,7 @@ func (w *worker) foundPrecertCallback(rawEntry *ct.RawLogEntry) {
 
 	entry.Data.UpdateType = "PrecertLogEntry"
 	w.entryChan <- entry
+
 	atomic.AddInt64(&processedPrecerts, 1)
 }
 
@@ -272,6 +277,7 @@ func (w *worker) foundPrecertCallback(rawEntry *ct.RawLogEntry) {
 // Only a single instance of the certHandler runs per certstream server.
 func certHandler(entryChan chan certstream.Entry) {
 	var processed int64
+
 	for {
 		entry := <-entryChan
 		processed++
