@@ -7,8 +7,8 @@ import (
 	"sync"
 	"time"
 
-	"certstream-server-go/internal/certificatetransparency"
-	"certstream-server-go/internal/web"
+	"github.com/d-Rickyy-b/certstream-server-go/internal/certificatetransparency"
+	"github.com/d-Rickyy-b/certstream-server-go/internal/web"
 
 	"github.com/VictoriaMetrics/metrics"
 )
