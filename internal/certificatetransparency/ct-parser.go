@@ -78,8 +78,9 @@ func parseData(entry *ct.RawLogEntry, operatorName, logName, ctURL string) (cert
 
 // parseCertificateChain returns the certificate chain in form of a []LeafCert from the given *ct.LogEntry.
 func parseCertificateChain(logEntry *ct.LogEntry) ([]certstream.LeafCert, error) {
-	var chain []certstream.LeafCert
-	for _, chainEntry := range logEntry.Chain {
+	chain := make([]certstream.LeafCert, len(logEntry.Chain))
+
+	for i, chainEntry := range logEntry.Chain {
 		myCert, parseErr := x509.ParseCertificate(chainEntry.Data)
 		if parseErr != nil {
 			log.Println("Error parsing certificate: ", parseErr)
@@ -87,7 +88,7 @@ func parseCertificateChain(logEntry *ct.LogEntry) ([]certstream.LeafCert, error)
 		}
 
 		leafCert := leafCertFromX509cert(*myCert)
-		chain = append(chain, leafCert)
+		chain[i] = leafCert
 	}
 
 	return chain, nil
