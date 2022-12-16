@@ -1,4 +1,4 @@
-module certstream-server-go
+module github.com/d-Rickyy-b/certstream-server-go
 
 go 1.18
 

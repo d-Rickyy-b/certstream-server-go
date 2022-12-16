@@ -4,7 +4,7 @@ import (
 	"log"
 	"sync"
 
-	"certstream-server-go/internal/certstream"
+	"github.com/d-Rickyy-b/certstream-server-go/internal/certstream"
 )
 
 type BroadcastManager struct {
