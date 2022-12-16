@@ -318,6 +318,8 @@ func parseSignatureAlgorithm(signatureAlgoritm x509.SignatureAlgorithm) string {
 		return "ecdsa, sha512"
 	case x509.PureEd25519:
 		return "ed25519"
+	case x509.UnknownSignatureAlgorithm:
+		fallthrough
 	default:
 		return "unknown"
 	}
