@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Log x-Forwarded-For header for requests
 - More logging for certain error situations
+- Add operator to ct log cert count metrics
 
 ### Changed
 - Updated certificate-transparency-go dependency to v1.1.4
