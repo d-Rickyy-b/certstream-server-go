@@ -11,6 +11,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 ### Docs
 
+## [1.2.1]
+### Changed
+- Updated ci pipeline to use new setup-go and checkout actions
+- Use correct package name `github.com/d-Rickyy-b/certstream-server-go`
+
 ## [1.2.0] - 2022-12-15
 ### Added
 - Log x-Forwarded-For header for requests
@@ -32,7 +37,8 @@ Fixed the connection issue due to the offline Google loglist urls.
 ## [1.0.0] - 2022-08-08
 Initial release! First stable version of certstream-server-go is published as v1.0.0 
 
-[unreleased]: https://github.com/d-Rickyy-b/certstream-server-go/compare/v1.2.0...HEAD
+[unreleased]: https://github.com/d-Rickyy-b/certstream-server-go/compare/v1.2.1...HEAD
+[1.2.1]: https://github.com/d-Rickyy-b/certstream-server-go/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/d-Rickyy-b/certstream-server-go/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/d-Rickyy-b/certstream-server-go/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/d-Rickyy-b/certstream-server-go/tree/v1.0.0
