@@ -3,7 +3,9 @@ package config
 import (
 	"log"
 	"os"
+	"path/filepath"
 	"regexp"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -31,6 +33,8 @@ type Config struct {
 
 // ReadConfig reads the config file and returns a filled Config struct.
 func ReadConfig(configPath string) (Config, error) {
+	log.Printf("Reading config file '%s'...\n", configPath)
+
 	conf, parseErr := parseConfigFromFile(configPath)
 	if parseErr != nil {
 		log.Fatalln("Error while parsing yaml file:", parseErr)
@@ -47,7 +51,42 @@ func ReadConfig(configPath string) (Config, error) {
 // parseConfigFromFile reads the config file as bytes and passes it to parseConfigFromBytes.
 // It returns a filled Config struct.
 func parseConfigFromFile(configFile string) (Config, error) {
-	yamlFileContent, readErr := os.ReadFile(configFile)
+	if configFile == "" {
+		configFile = "config.yml"
+	}
+
+	// Check if the file exists
+	absPath, err := filepath.Abs(configFile)
+	if err != nil {
+		log.Printf("Couldn't convert to absolute path: '%s'\n", configFile)
+		return Config{}, err
+	}
+
+	if _, statErr := os.Stat(absPath); os.IsNotExist(statErr) {
+		log.Printf("Config file '%s' does not exist\n", absPath)
+		ext := filepath.Ext(absPath)
+		absPath = strings.TrimSuffix(absPath, ext)
+
+		switch ext {
+		case ".yaml":
+			absPath += ".yml"
+		case ".yml":
+			absPath += ".yaml"
+		default:
+			log.Printf("Config file '%s' does not have a valid extension\n", configFile)
+			return Config{}, statErr
+		}
+
+		log.Printf("Check if '%s' exists\n", absPath)
+
+		if _, secondStatErr := os.Stat(absPath); os.IsNotExist(secondStatErr) {
+			log.Printf("Config file '%s' does not exist\n", absPath)
+			return Config{}, secondStatErr
+		}
+	}
+	log.Printf("File '%s' exists\n", absPath)
+
+	yamlFileContent, readErr := os.ReadFile(absPath)
 	if readErr != nil {
 		return Config{}, readErr
 	}
