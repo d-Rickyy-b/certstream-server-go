@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/d-Rickyy-b/certstream-server-go/internal/certstream"
 	"github.com/d-Rickyy-b/certstream-server-go/internal/config"
@@ -211,18 +212,38 @@ func (w *worker) startDownloadingCerts(ctx context.Context) {
 	w.running = true
 	w.mu.Unlock()
 
+	for {
+		workerErr := w.runWorker(ctx)
+		if workerErr != nil {
+			log.Printf("Worker for '%s' failed: %s - sleeping for 5 seconds\n", w.ctURL, workerErr)
+			log.Printf("Restarting worker for '%s'\n", w.ctURL)
+		}
+
+		time.Sleep(5 * time.Second)
+
+		// Check if the context was cancelled
+		select {
+		case <-ctx.Done():
+			log.Printf("Context was cancelled; Stopping worker for '%s'\n", w.ctURL)
+			return
+		}
+	}
+}
+
+// runWorker runs a single worker for a single CT log. This method is blocking.
+func (w *worker) runWorker(ctx context.Context) error {
 	userAgent := fmt.Sprintf("Certstream Server v%s (github.com/d-Rickyy-b/certstream-server-go)", config.Version)
 
 	jsonClient, e := client.New(w.ctURL, nil, jsonclient.Options{UserAgent: userAgent})
 	if e != nil {
 		log.Println("Error creating JSON client: ", e)
-		return
+		return e
 	}
 
 	sth, getSTHerr := jsonClient.GetSTH(ctx)
 	if getSTHerr != nil {
 		log.Printf("Error retreiving STH for %s: %s\n", w.ctURL, getSTHerr)
-		return
+		return getSTHerr
 	}
 
 	certScanner := scanner.NewScanner(jsonClient, scanner.ScannerOptions{
@@ -241,8 +262,10 @@ func (w *worker) startDownloadingCerts(ctx context.Context) {
 	scanErr := certScanner.Scan(ctx, w.foundCertCallback, w.foundPrecertCallback)
 	if scanErr != nil {
 		log.Println("Scan error: ", scanErr)
-		return
+		return scanErr
 	}
+
+	return nil
 }
 
 // foundCertCallback is the callback that handles cases where new regular certs are found.
