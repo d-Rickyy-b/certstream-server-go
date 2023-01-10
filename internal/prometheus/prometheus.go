@@ -3,7 +3,6 @@ package prometheus
 import (
 	"fmt"
 	"io"
-	"log"
 	"sync"
 	"time"
 
@@ -78,7 +77,6 @@ func initCtLogMetrics() {
 func getCertCountForLog(operatorName, logname string) int64 {
 	// Add some caching to avoid having to lock the mutex every time
 	if time.Since(tempCertMetricsLastRefreshed) > time.Second*5 {
-		log.Println("Refreshing tempCertMetrics")
 		tempCertMetricsLastRefreshed = time.Now()
 		tempCertMetrics = certificatetransparency.GetCertMetrics()
 	}
