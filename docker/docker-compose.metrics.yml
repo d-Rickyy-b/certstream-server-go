@@ -1,0 +1,69 @@
+version: '2'
+
+# Make sure to create the sub directories "prometheus", "prometheus_data", "grafana", "grafana_data" and "certstream"
+# and create the config files for all three services. For further details please refer to https://github.com/d-Rickyy-b/certstream-server-go/wiki/Collecting-and-Visualizing-Metrics
+
+networks:
+  monitoring:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.90.0.0/24
+          gateway: 172.90.0.1
+
+services:
+  prometheus:
+    image: prom/prometheus:v2.40.5
+    restart: always
+    # Configure the service to run as specific user.
+    # user: "1000:1000"
+    volumes:
+      - ./prometheus/:/etc/prometheus/
+      - ./prometheus_data:/prometheus/
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=1y'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    ports:
+      # Exposing Prometheus is NOT required, if you don't want to access it from outside the Docker network.
+      # Using localhost enables you to use a reverse proxy (e.g. with basic auth) to access Prometheus in a more secure way.
+      - 127.0.0.1:9090:9090
+    networks:
+      - monitoring
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  grafana:
+    image: grafana/grafana:9.3.1
+    restart: always
+    # Configure the service to run as specific user.
+    # user: "1000:1000"
+    depends_on:
+      - prometheus
+    ports:
+      - 127.0.0.1:8082:3000
+    volumes:
+      - ./grafana_data:/var/lib/grafana
+      - ./grafana/provisioning/:/etc/grafana/provisioning/
+    env_file:
+      # changes to the grafana env file require a rebuild of the container.
+      - ./grafana/config.monitoring
+    networks:
+      - monitoring
+
+  certstream:
+    image: 0rickyy0/certstream-server-go:latest
+    restart: always
+    # Configure the service to run as specific user.
+    # user: "1000:1000"
+    ports:
+      - 127.0.0.1:8080:80
+      # Don't forget to open the other port in case you run the Prometheus endpoint on another port than the websocket server.
+      # - 127.0.0.1:8081:81
+    volumes:
+      - ./certstream/config.yml:/app/config.yml
+    networks:
+      - monitoring
