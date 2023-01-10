@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 ### Docs
 
-## [1.2.2]
+## [1.2.2] - 2023-01-10
 ### Added
 - Two docker-compose files
 - Check for presence of .yml or .yaml files in the current directory
@@ -22,7 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Docs
 - Added [wiki entry for docker-compose](https://github.com/d-Rickyy-b/certstream-server-go/wiki/Collecting-and-Visualizing-Metrics) 
 
-## [1.2.1]
+## [1.2.1] - 2022-12-16
 ### Changed
 - Updated ci pipeline to use new setup-go and checkout actions
 - Use correct package name `github.com/d-Rickyy-b/certstream-server-go`
