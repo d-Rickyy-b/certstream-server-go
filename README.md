@@ -41,7 +41,11 @@ certstream-server-go offers multiple endpoints to connect to.
 You can connect to the certstream-server by opening a **websocket connection** to any of the aforementioned endpoints.
 After you're connected, certificate information will be streamed to your websocket.
 
-The server requires you to send a ping message at least every 60 seconds (it's recommended to use an interval of 30s for pings). If the server did not receive a ping message for more than this time, the server will disconnect you. The server will **not** send out ping messages to your client.  
+The server requires you to send a **ping message** at least every 60 seconds (it's recommended to use an interval of 30s for pings). 
+If the server did not receive a ping message for more than this time, the server will disconnect you. 
+The server will **not** send out ping messages to your client.
+
+Read more about ping/pong WebSocket messages in the [Mozilla Developer Docs](https://developer.mozilla.org/en-US/docs/Web/API/WebSockets_API/Writing_WebSocket_servers#pings_and_pongs_the_heartbeat_of_websockets).
  
 ### Example
 To receive a live example of any of the endpoints, just send an HTTP GET request to the endpoints with `/example.json` appended to the endpoint. So for example `/full-stream/example.json`. This example shows the lite format of a certificate update.
