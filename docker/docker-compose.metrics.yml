@@ -64,6 +64,6 @@ services:
       # Don't forget to open the other port in case you run the Prometheus endpoint on another port than the websocket server.
       # - 127.0.0.1:8081:81
     volumes:
-      - ./certstream/config.yml:/app/config.yml
+      - ./certstream/config.yaml:/app/config.yml
     networks:
       - monitoring
