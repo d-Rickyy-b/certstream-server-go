@@ -10,8 +10,10 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-var AppConfig Config
-var Version string = "0.0.1"
+var (
+	AppConfig Config
+	Version   = "1.2.3"
+)
 
 type Config struct {
 	Webserver struct {

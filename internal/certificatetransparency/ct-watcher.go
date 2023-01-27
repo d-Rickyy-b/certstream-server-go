@@ -215,11 +215,12 @@ func (w *worker) startDownloadingCerts(ctx context.Context) {
 	for {
 		workerErr := w.runWorker(ctx)
 		if workerErr != nil {
-			log.Printf("Worker for '%s' failed: %s - sleeping for 5 seconds\n", w.ctURL, workerErr)
-			log.Printf("Restarting worker for '%s'\n", w.ctURL)
+			log.Printf("Worker for '%s' failed: %s\n", w.ctURL, workerErr)
 		}
 
+		log.Println("Sleeping for 5 seconds")
 		time.Sleep(5 * time.Second)
+		log.Printf("Restarting worker for '%s'\n", w.ctURL)
 
 		// Check if the context was cancelled
 		select {
