@@ -160,9 +160,12 @@ func (w *Watcher) Start() {
 	w.cancelFunc = cancel
 	certChan := make(chan certstream.Entry, 5000)
 
+	var wg sync.WaitGroup
+
 	// For each CT log, create a worker and start downloading certs
 	for _, operator := range logList.Operators {
 		for _, transparencyLog := range operator.Logs {
+			wg.Add(1)
 			ctWorker := worker{
 				name:         transparencyLog.Description,
 				operatorName: operator.Name,
@@ -171,12 +174,19 @@ func (w *Watcher) Start() {
 			}
 			w.workers = append(w.workers, &ctWorker)
 
-			go ctWorker.startDownloadingCerts(ctx)
+			// Start a goroutine for each worker
+			go func() {
+				defer wg.Done()
+				ctWorker.startDownloadingCerts(ctx)
+			}()
 		}
 	}
 
 	log.Println("Started CT watcher")
-	certHandler(certChan)
+	go certHandler(certChan)
+
+	wg.Wait()
+	close(certChan)
 }
 
 // Stop stops the watcher.
