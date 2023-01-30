@@ -38,6 +38,11 @@ type (
 	CTMetrics map[string]OperatorMetric
 )
 
+var (
+	errCreatingClient    = errors.New("failed to create JSON client")
+	errFetchingSTHFailed = errors.New("failed to fetch STH")
+)
+
 // LogMetrics is a struct that holds a map of metrics for each CT log grouped by operator.
 // Metrics can be accessed and written concurrently through the Get, Set and Inc methods.
 type LogMetrics struct {
@@ -215,18 +220,30 @@ func (w *worker) startDownloadingCerts(ctx context.Context) {
 	for {
 		workerErr := w.runWorker(ctx)
 		if workerErr != nil {
-			log.Printf("Worker for '%s' failed: %s\n", w.ctURL, workerErr)
-		}
+			if errors.Is(workerErr, errFetchingSTHFailed) {
+				log.Printf("Worker for '%s' failed - could not fetch STH\n", w.ctURL)
+				return
+			} else if errors.Is(workerErr, errCreatingClient) {
+				log.Printf("Worker for '%s' failed - could not create client\n", w.ctURL)
+				return
+			} else if strings.Contains(workerErr.Error(), "no such host") {
+				log.Printf("Worker for '%s' failed to resolve host: %s\n", w.ctURL, workerErr)
+				return
+			}
 
-		log.Println("Sleeping for 5 seconds")
-		time.Sleep(5 * time.Second)
-		log.Printf("Restarting worker for '%s'\n", w.ctURL)
+			log.Printf("Worker for '%s' failed with unexpected error: %s\n", w.ctURL, workerErr)
+		}
 
 		// Check if the context was cancelled
 		select {
 		case <-ctx.Done():
 			log.Printf("Context was cancelled; Stopping worker for '%s'\n", w.ctURL)
 			return
+		default:
+			log.Println("Sleeping for 5 seconds")
+			time.Sleep(5 * time.Second)
+			log.Printf("Restarting worker for '%s'\n", w.ctURL)
+			continue
 		}
 	}
 }
@@ -237,14 +254,14 @@ func (w *worker) runWorker(ctx context.Context) error {
 
 	jsonClient, e := client.New(w.ctURL, nil, jsonclient.Options{UserAgent: userAgent})
 	if e != nil {
-		log.Println("Error creating JSON client: ", e)
-		return e
+		log.Printf("Error creating JSON client: %s\n", e)
+		return errCreatingClient
 	}
 
 	sth, getSTHerr := jsonClient.GetSTH(ctx)
 	if getSTHerr != nil {
-		log.Printf("Error retreiving STH for %s: %s\n", w.ctURL, getSTHerr)
-		return getSTHerr
+		log.Printf("Could not get STH for '%s': %s\n", w.ctURL, getSTHerr)
+		return errFetchingSTHFailed
 	}
 
 	certScanner := scanner.NewScanner(jsonClient, scanner.ScannerOptions{
@@ -265,6 +282,8 @@ func (w *worker) runWorker(ctx context.Context) error {
 		log.Println("Scan error: ", scanErr)
 		return scanErr
 	}
+
+	log.Println("No error from certScanner!")
 
 	return nil
 }
