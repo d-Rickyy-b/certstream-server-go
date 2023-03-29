@@ -68,6 +68,8 @@ To receive a live example of any of the endpoints, just send an HTTP GET request
                 "subjectKeyIdentifier": "keyid:4e:cb:ae:47:84:a8:92:f7:e7:de:78:d1:00:9e:d9:cc:80:ac:0b:ce"
             },
             "fingerprint": "27:58:3D:01:3D:71:B8:D3:A6:6E:2C:7A:86:3A:E9:1F:DB:F0:1B:5D",
+            "sha1": "27:58:3D:01:3D:71:B8:D3:A6:6E:2C:7A:86:3A:E9:1F:DB:F0:1B:5D",
+            "sha256": "57:61:38:C0:3C:03:A3:34:6A:0B:32:89:11:1B:74:AB:8A:DF:A5:02:9F:06:43:E6:F3:0E:69:F3:0E:4E:4E:FC",
             "not_after": 1667028404,
             "not_before": 1659252405,
             "serial_number": "0498BDF812FAF923FEBD5EF7B374899FC61A",
