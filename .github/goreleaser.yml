@@ -7,6 +7,8 @@ before:
 builds:
   - main: ./cmd/main.go
     ldflags: -s -w
+    env:
+      - CGO_ENABLED=0
     goos:
       - linux
       - darwin
@@ -37,4 +39,3 @@ archives:
     replacements:
       386: i386
       darwin: macOS
-    name_template:
