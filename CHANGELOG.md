@@ -11,6 +11,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 ### Docs
 
+## [1.3.0]
+### Added
+- Calculate and display Sha256 sum of certificate
+
+### Changed
+- Update dependencies
+- Better logging for CT log errors
+
+### Fixed
+- End execution after all workers stopped
+- Implement timeout for the http client
+- Keep ct watcher from crashing upon a connection reset from server
+
 ## [1.2.2] - 2023-01-10
 ### Added
 - Two docker-compose files
@@ -48,7 +61,8 @@ Fixed the connection issue due to the offline Google loglist urls.
 ## [1.0.0] - 2022-08-08
 Initial release! First stable version of certstream-server-go is published as v1.0.0 
 
-[unreleased]: https://github.com/d-Rickyy-b/certstream-server-go/compare/v1.2.2...HEAD
+[unreleased]: https://github.com/d-Rickyy-b/certstream-server-go/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/d-Rickyy-b/certstream-server-go/compare/v1.2.2...v1.3.0
 [1.2.2]: https://github.com/d-Rickyy-b/certstream-server-go/compare/v1.2.1...v1.2.2
 [1.2.1]: https://github.com/d-Rickyy-b/certstream-server-go/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/d-Rickyy-b/certstream-server-go/compare/v1.1.0...v1.2.0

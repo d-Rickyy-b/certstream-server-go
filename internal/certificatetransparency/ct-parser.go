@@ -3,10 +3,12 @@ package certificatetransparency
 import (
 	"bytes"
 	"crypto/sha1" //nolint:gosec
+	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"hash"
 	"log"
 	"math/big"
 	"strings"
@@ -46,22 +48,31 @@ func parseData(entry *ct.RawLogEntry, operatorName, logName, ctURL string) (cert
 
 	var cert *x509.Certificate
 	var rawData []byte
+	var isPrecert bool
 
 	switch {
 	case logEntry.X509Cert != nil:
 		cert = logEntry.X509Cert
 		rawData = logEntry.X509Cert.Raw
+		isPrecert = false
 	case logEntry.Precert != nil:
 		cert = logEntry.Precert.TBSCertificate
 		rawData = logEntry.Precert.Submitted.Data
+		isPrecert = true
 	default:
 		return certstream.Data{}, errors.New("could not parse entry: no certificate found")
 	}
 
 	// Calculate certificate hash from the raw DER bytes of the certificate
 	data.LeafCert = leafCertFromX509cert(*cert)
-	calculatedHash := calculateSHA1(rawData)
-	data.LeafCert.Fingerprint = calculatedHash
+
+	// recalculate hashes if the certificate is a precertificate
+	if isPrecert {
+		calculatedHash := calculateSHA1(rawData)
+		data.LeafCert.Fingerprint = calculatedHash
+		data.LeafCert.SHA1 = calculatedHash
+		data.LeafCert.SHA256 = calculateSHA256(rawData)
+	}
 
 	certAsDER := base64.StdEncoding.EncodeToString(entry.Cert.Data)
 	data.LeafCert.AsDER = certAsDER
@@ -126,6 +137,8 @@ func leafCertFromX509cert(cert x509.Certificate) certstream.LeafCert {
 
 	leafCert.AsDER = base64.StdEncoding.EncodeToString(cert.Raw)
 	leafCert.Fingerprint = calculateSHA1(cert.Raw)
+	leafCert.SHA1 = leafCert.Fingerprint
+	leafCert.SHA256 = calculateSHA256(cert.Raw)
 
 	// TODO fix Extensions - check x509util.go
 	for _, extension := range cert.Extensions {
@@ -259,10 +272,8 @@ func parseName(input []string) *string {
 	return &result
 }
 
-// calculateSHA1 calculates the SHA1 fingerprint of the given data.
-func calculateSHA1(data []byte) string {
-	certHasher := sha1.New() //nolint:gosec
-
+// calculateHash takes a hash.Hash struct and calculates the fingerprint of the given data.
+func calculateHash(data []byte, certHasher hash.Hash) string {
 	_, e := certHasher.Write(data)
 	if e != nil {
 		log.Printf("Error while hashing cert: %s\n", e)
@@ -282,6 +293,16 @@ func calculateSHA1(data []byte) string {
 	}
 
 	return result.String()
+}
+
+// calculateSHA1 calculates the SHA1 fingerprint of the given data.
+func calculateSHA1(data []byte) string {
+	return calculateHash(data, sha1.New()) //nolint:gosec
+}
+
+// calculateSHA256 calculates the SHA256 fingerprint of the given data.
+func calculateSHA256(data []byte) string {
+	return calculateHash(data, sha256.New())
 }
 
 func parseSignatureAlgorithm(signatureAlgoritm x509.SignatureAlgorithm) string {

@@ -106,6 +106,8 @@ type LeafCert struct {
 	AsDER              string     `json:"as_der,omitempty"`
 	Extensions         Extensions `json:"extensions"`
 	Fingerprint        string     `json:"fingerprint"`
+	SHA1               string     `json:"sha1"`
+	SHA256             string     `json:"sha256"`
 	NotAfter           int64      `json:"not_after"`
 	NotBefore          int64      `json:"not_before"`
 	SerialNumber       string     `json:"serial_number"`
