@@ -1,6 +1,7 @@
 name: Changelog Reminder
-
 on: pull_request
+permissions:
+  pull-requests: write
 
 jobs:
   remind:
@@ -8,11 +9,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@master
+      - uses: actions/checkout@v3
       - name: Changelog Reminder
-        uses: peterjgrainger/action-changelog-reminder@v1.3.0
+        uses: mskelton/changelog-reminder-action@v3
         with:
-          changelog_regex: '/CHANGELOG.md'
-          customPrMessage: "We couldn't find any modification to the CHANGELOG.md file. If your changes are not suitable for the changelog, that's fine. Otherwise please add them to the changelog!"
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          message: "@${{ github.actor }} We couldn't find any modification to the CHANGELOG.md file. If your changes are not suitable for the changelog, that's fine. Otherwise please add them to the changelog!"
