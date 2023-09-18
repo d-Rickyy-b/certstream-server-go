@@ -30,7 +30,7 @@ builds:
       - goos: windows
         goarch: 386
 checksum:
-  name_template: '{{ .ProjectName }}-{{.Version}}_checksums.txt'
+  name_template: '{{ .ProjectName }}_{{.Version}}_checksums.txt'
 changelog:
   skip: true
 
