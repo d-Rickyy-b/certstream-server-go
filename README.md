@@ -29,7 +29,7 @@ Setting up an instance of the certstream server is simple. You can either downlo
 There's also a prebuild [Docker image](https://hub.docker.com/repository/docker/0rickyy0/certstream-server-go) available.
 You can use it by running this command:
 
-`docker run -v /path/to/config.yaml:/app/config.yaml -p 8080:8080 0rickyy0/certstream-server-go -d`
+`docker run -d -v /path/to/config.yaml:/app/config.yaml -p 8080:8080 0rickyy0/certstream-server-go`
 
 If you don't mount your own config file, the default config (config.sample.yaml) will be used.
 
