@@ -34,6 +34,9 @@ func (bm *BroadcastManager) unregisterClient(c *client) {
 			bm.clients[len(bm.clients)-1] = nil
 			bm.clients = bm.clients[:len(bm.clients)-1]
 
+			// Close the broadcast channel of the client, otherwise this leads to a memory leak
+			close(c.broadcastChan)
+
 			break
 		}
 	}
