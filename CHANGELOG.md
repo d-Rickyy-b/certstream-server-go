@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 ### Docs
 
+## [1.3.2] - 2023-11-28
+### Fixed
+- Memory leak related to clients disconnecting from the websocket not being handled properly
+
 ## [1.3.1] - 2023-09-18
 ### Changed
 - Updated config.sample.yaml to run both certstream and prometheus metrics on same socket
@@ -68,7 +72,8 @@ Fixed the connection issue due to the offline Google loglist urls.
 ## [1.0.0] - 2022-08-08
 Initial release! First stable version of certstream-server-go is published as v1.0.0
 
-[unreleased]: https://github.com/d-Rickyy-b/certstream-server-go/compare/v1.3.1...HEAD
+[unreleased]: https://github.com/d-Rickyy-b/certstream-server-go/compare/v1.3.2...HEAD
+[1.3.1]: https://github.com/d-Rickyy-b/certstream-server-go/compare/v1.3.1...v1.3.2
 [1.3.1]: https://github.com/d-Rickyy-b/certstream-server-go/compare/v1.3.0...v1.3.1
 [1.3.0]: https://github.com/d-Rickyy-b/certstream-server-go/compare/v1.2.2...v1.3.0
 [1.2.2]: https://github.com/d-Rickyy-b/certstream-server-go/compare/v1.2.1...v1.2.2
