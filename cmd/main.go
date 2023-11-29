@@ -24,6 +24,15 @@ func main() {
 
 	webserver := web.NewWebsocketServer(conf.Webserver.ListenAddr, conf.Webserver.ListenPort, conf.Webserver.CertPath, conf.Webserver.CertKeyPath)
 
+	setupMetrics(conf, webserver)
+
+	go webserver.Start()
+
+	watcher := certificatetransparency.Watcher{}
+	watcher.Start()
+}
+
+func setupMetrics(conf config.Config, webserver *web.WebServer) {
 	if conf.Prometheus.Enabled {
 		// If prometheus is enabled, and interface is either unconfigured or same as webserver config, use existing webserver
 		if (conf.Prometheus.ListenAddr == "" || conf.Prometheus.ListenAddr == conf.Webserver.ListenAddr) &&
@@ -37,9 +46,4 @@ func main() {
 			go metricsServer.Start()
 		}
 	}
-
-	go webserver.Start()
-
-	watcher := certificatetransparency.Watcher{}
-	watcher.Start()
 }
