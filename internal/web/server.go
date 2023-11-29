@@ -36,7 +36,8 @@ type WebServer struct {
 // offers exactly this function signature.
 func (ws *WebServer) RegisterPrometheus(url string, callback func(w io.Writer, exposeProcessMetrics bool)) {
 	ws.routes.HandleFunc(url, func(w http.ResponseWriter, r *http.Request) {
-		callback(w, false)
+
+		callback(w, config.AppConfig.Prometheus.ExposeSystemMetrics)
 	})
 }
 
