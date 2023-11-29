@@ -2,6 +2,7 @@ package config
 
 import (
 	"log"
+	"net"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -15,10 +16,15 @@ var (
 	Version   = "1.3.0"
 )
 
+type ServerConfig struct {
+	ListenAddr string   `yaml:"listen_addr"`
+	ListenPort int      `yaml:"listen_port"`
+	Whitelist  []string `yaml:"whitelist"`
+}
+
 type Config struct {
 	Webserver struct {
-		ListenAddr     string `yaml:"listen_addr"`
-		ListenPort     int    `yaml:"listen_port"`
+		ServerConfig   `yaml:",inline"`
 		FullURL        string `yaml:"full_url"`
 		LiteURL        string `yaml:"lite_url"`
 		DomainsOnlyURL string `yaml:"domains_only_url"`
@@ -26,10 +32,10 @@ type Config struct {
 		CertKeyPath    string `yaml:"cert_key_path"`
 	}
 	Prometheus struct {
-		Enabled    bool   `yaml:"enabled"`
-		MetricsURL string `yaml:"metrics_url"`
-		ListenAddr string `yaml:"listen_addr"`
-		ListenPort int    `yaml:"listen_port"`
+		ServerConfig        `yaml:",inline"`
+		Enabled             bool   `yaml:"enabled"`
+		MetricsURL          string `yaml:"metrics_url"`
+		ExposeSystemMetrics bool   `yaml:"expose_system_metrics"`
 	}
 }
 
@@ -116,12 +122,11 @@ func parseConfigFromBytes(data []byte) (Config, error) {
 // validateConfig validates the config values and sets defaults for missing values.
 func validateConfig(config Config) bool {
 	// Still matches invalid IP addresses but good enough for detecting completely wrong formats
-	IPRegex := regexp.MustCompile(`\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}`)
 	URLRegex := regexp.MustCompile(`^(/[a-zA-Z0-9\-._]+)+$`)
 
 	// Check webserver config
-	if config.Webserver.ListenAddr == "" || !IPRegex.MatchString(config.Webserver.ListenAddr) {
-		log.Fatalln("Webhook listen IP is does not match pattern 'x.x.x.x'")
+	if config.Webserver.ListenAddr == "" || net.ParseIP(config.Webserver.ListenAddr) == nil {
+		log.Fatalln("Webhook listen IP is not a valid IP: ", config.Webserver.ListenAddr)
 		return false
 	}
 
@@ -154,14 +159,31 @@ func validateConfig(config Config) bool {
 	}
 
 	if config.Prometheus.Enabled {
-		if config.Prometheus.ListenAddr == "" || !IPRegex.MatchString(config.Prometheus.ListenAddr) {
-			log.Fatalln("Prometheus export IP does not match pattern 'x.x.x.x'")
+
+		if config.Prometheus.ListenAddr == "" || net.ParseIP(config.Prometheus.ListenAddr) == nil {
+			log.Fatalln("Prometheus export IP is not a valid IP")
 			return false
 		}
 
 		if config.Prometheus.ListenPort == 0 {
 			log.Fatalln("Prometheus export port is not set")
 			return false
+		}
+
+		if config.Prometheus.Whitelist == nil {
+			config.Prometheus.Whitelist = []string{}
+		}
+
+		// Check if IPs in whitelist match pattern
+		for _, ip := range config.Prometheus.Whitelist {
+			if net.ParseIP(ip) == nil {
+				// Provided entry is not an IP, check if it's a CIDR range
+				_, _, err := net.ParseCIDR(ip)
+				if err != nil {
+					log.Fatalln("Invalid IP in prometheus whitelist: ", ip)
+					return false
+				}
+			}
 		}
 	}
 

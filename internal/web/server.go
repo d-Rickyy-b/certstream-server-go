@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"time"
 
@@ -36,6 +37,68 @@ type WebServer struct {
 func (ws *WebServer) RegisterPrometheus(url string, callback func(w io.Writer, exposeProcessMetrics bool)) {
 	ws.routes.HandleFunc(url, func(w http.ResponseWriter, r *http.Request) {
 		callback(w, false)
+	})
+}
+
+// IPWhitelist is a middleware that checks if the IP of the client is in the whitelist.
+func IPWhitelist(next http.Handler) http.Handler {
+	// build a list of whitelisted IPs and CIDRs
+	log.Println("Building IP whitelist...")
+	var ipList []net.IP
+	var cidrList []net.IPNet
+
+	for _, element := range config.AppConfig.Prometheus.Whitelist {
+		ip, ipNet, err := net.ParseCIDR(element)
+		if err != nil {
+			if net.ParseIP(element) == nil {
+				log.Println("Invalid IP in prometheus whitelist: ", element)
+			}
+
+			ipList = append(ipList, ip)
+			continue
+		}
+
+		cidrList = append(cidrList, *ipNet)
+	}
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// if the whitelist is empty, just continue
+		if len(ipList) == 0 && len(cidrList) == 0 {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		ipString, _, err := net.SplitHostPort(r.RemoteAddr)
+		if err != nil {
+			http.Error(w, "InternalServerError", http.StatusInternalServerError)
+			return
+		}
+
+		ip := net.ParseIP(ipString)
+
+		for _, cidr := range cidrList {
+			if cidr.Contains(ip) {
+				next.ServeHTTP(w, r)
+				return
+			}
+		}
+
+		for _, whitelistedIP := range ipList {
+			if whitelistedIP.Equal(ip) {
+				next.ServeHTTP(w, r)
+				return
+			}
+		}
+
+		//if !ipMap[ip] {
+		//	log.Printf("IP %s not in whitelist, rejecting request\n", r.RemoteAddr)
+		//	http.Error(w, "Forbidden", http.StatusForbidden)
+		//	return
+		//}
+
+		log.Printf("IP %s not in whitelist, rejecting request\n", r.RemoteAddr)
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
 	})
 }
 
@@ -178,6 +241,11 @@ func NewMetricsServer(networkIf string, port int, certPath, keyPath string) *Web
 	server.initServer()
 	server.routes.Use(middleware.Recoverer)
 
+	// Enable IP whitelist if configured
+	if len(config.AppConfig.Prometheus.Whitelist) > 0 {
+		server.routes.Use(IPWhitelist)
+	}
+
 	return server
 }
 
@@ -192,6 +260,11 @@ func NewWebsocketServer(networkIf string, port int, certPath, keyPath string) *W
 		keyPath:   keyPath,
 	}
 	server.initServer()
+
+	// Enable IP whitelist if configured
+	if len(config.AppConfig.Webserver.Whitelist) > 0 {
+		server.routes.Use(IPWhitelist)
+	}
 
 	ClientHandler.Broadcast = make(chan certstream.Entry, 10_000)
 	go ClientHandler.broadcaster()

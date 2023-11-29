@@ -12,3 +12,5 @@ prometheus:
   listen_addr: "0.0.0.0"
   listen_port: 8080
   metrics_url: "/metrics"
+  whitelist:
+    - "127.0.0.1/8"
