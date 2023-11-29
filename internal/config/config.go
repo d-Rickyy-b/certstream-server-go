@@ -86,8 +86,6 @@ func parseConfigFromFile(configFile string) (Config, error) {
 			return Config{}, statErr
 		}
 
-		log.Printf("Check if '%s' exists\n", absPath)
-
 		if _, secondStatErr := os.Stat(absPath); os.IsNotExist(secondStatErr) {
 			log.Printf("Config file '%s' does not exist\n", absPath)
 			return Config{}, secondStatErr

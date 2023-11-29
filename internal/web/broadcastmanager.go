@@ -29,7 +29,7 @@ func (bm *BroadcastManager) unregisterClient(c *client) {
 	for i, client := range bm.clients {
 		if c == client {
 			// Copy the last element of the slice to the position of the removed element
-			// Then remove the last element by reslicing
+			// Then remove the last element by re-slicing
 			bm.clients[i] = bm.clients[len(bm.clients)-1]
 			bm.clients[len(bm.clients)-1] = nil
 			bm.clients = bm.clients[:len(bm.clients)-1]

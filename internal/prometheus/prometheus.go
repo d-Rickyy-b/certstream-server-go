@@ -53,7 +53,6 @@ func WritePrometheus(w io.Writer, exposeProcessMetrics bool) {
 // initCtLogMetrics fetches all the CT Logs and registers one metric per log.
 func initCtLogMetrics() {
 	logs := certificatetransparency.GetLogOperators()
-	// logs := certificatetransparency.GetLogs()
 
 	for operator, urls := range logs {
 		operator := operator // Copy variable to new scope
