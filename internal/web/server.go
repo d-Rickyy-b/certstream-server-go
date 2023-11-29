@@ -242,6 +242,10 @@ func NewMetricsServer(networkIf string, port int, certPath, keyPath string) *Web
 	server.initServer()
 	server.routes.Use(middleware.Recoverer)
 
+	if config.AppConfig.Prometheus.RealIP {
+		server.routes.Use(middleware.RealIP)
+	}
+
 	// Enable IP whitelist if configured
 	if len(config.AppConfig.Prometheus.Whitelist) > 0 {
 		server.routes.Use(IPWhitelist)
@@ -261,6 +265,10 @@ func NewWebsocketServer(networkIf string, port int, certPath, keyPath string) *W
 		keyPath:   keyPath,
 	}
 	server.initServer()
+
+	if config.AppConfig.Webserver.RealIP {
+		server.routes.Use(middleware.RealIP)
+	}
 
 	// Enable IP whitelist if configured
 	if len(config.AppConfig.Webserver.Whitelist) > 0 {

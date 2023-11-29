@@ -19,6 +19,7 @@ var (
 type ServerConfig struct {
 	ListenAddr string   `yaml:"listen_addr"`
 	ListenPort int      `yaml:"listen_port"`
+	RealIP     bool     `yaml:"real_ip"`
 	Whitelist  []string `yaml:"whitelist"`
 }
 

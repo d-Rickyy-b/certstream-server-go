@@ -13,5 +13,6 @@ prometheus:
   listen_port: 8080
   metrics_url: "/metrics"
   expose_system_metrics: false
+  real_ip: false
   whitelist:
     - "127.0.0.1/8"
