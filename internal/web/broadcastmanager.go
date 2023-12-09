@@ -91,6 +91,9 @@ func (bm *BroadcastManager) broadcaster() {
 				data = dataFull
 			case SubTypeDomain:
 				data = dataDomain
+			default:
+				log.Printf("Unknown subscription type '%d' for client '%s'. Skipping this client!\n", client.subType, client.name)
+				continue
 			}
 
 			select {

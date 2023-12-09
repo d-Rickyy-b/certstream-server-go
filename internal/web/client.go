@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	SubTypeFull = iota
+	SubTypeFull SubscriptionType = iota
 	SubTypeLite
 	SubTypeDomain
 )
