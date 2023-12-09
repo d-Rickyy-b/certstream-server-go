@@ -6,27 +6,29 @@
 [![Docker Image Version (latest semver)](https://img.shields.io/docker/v/0rickyy0/certstream-server-go?label=docker&sort=semver)](https://hub.docker.com/repository/docker/0rickyy0/certstream-server-go)
 [![Go Reference](https://pkg.go.dev/badge/github.com/d-Rickyy-b/certstream-server-go.svg)](https://pkg.go.dev/github.com/d-Rickyy-b/certstream-server-go)
 
-This project aims to be a drop-in replacement for the [official certstream server](https://github.com/CaliDog/certstream-server/) by Calidog. This tool aggregates, parses, and streams certificate data from multiple [certificate transparency logs](https://www.certificate-transparency.org/what-is-ct) via websocket connections to the clients.
+This project aims to be a drop-in replacement for the [certstream server](https://github.com/CaliDog/certstream-server/) by Calidog. This tool aggregates, parses, and streams certificate data from multiple [certificate transparency logs](https://www.certificate-transparency.org/what-is-ct) via websocket connections to the clients.
 
-Developers can use this project to analyze newly created TLS certificates as they are issued.
+Everyone can use this project to analyze newly created TLS certificates as they are issued.
 
 ## Motivation
 
-From the moment I first found out about the certificate transparency logs, I was absolutely amazed by the great software of [Calidog](https://github.com/CaliDog/) who made the transparency log easier accessible for everyone. Their software "Certstream" parses the log and provides it in an easy-to-use format: json.
+From the moment I first found out about the certificate transparency logs, I was absolutely amazed by the great software of [Calidog](https://github.com/CaliDog/), which made the transparency log easier accessible for everyone. 
+Their software "Certstream" parses the log and provides it in an easy-to-use format: json.
 
-After creating my first application that utilized the certstream server, I found that the hosted (demo) version of the server wasn't as reliable as I thought it would be. I got disconnects and sometimes other errors. Eventually the provided server was still only thought to be **a demo**.
+After creating my first application that utilized the certstream server, I found that the hosted (demo) version of the server wasn't as reliable as I thought it would be. 
+I got disconnects and sometimes other errors. Eventually the provided server was still only thought to be **a demo**.
 
-I quickly thought about running my own instance of certstream. I didn't want to install Elixir/Erlang on my server. I could have used Docker, but on second thought, I was really into the idea of creating an alternative server, written in Go.
+I quickly thought about running my own instance of certstream. But I didn't want to install Elixir/Erlang on my server. Sure, I could have used Docker, but on second thought, I was really into the idea of creating an alternative server written in Go.
 
-"Why Go?", you might ask. Because it is a great language that compiles to native binaries on all major architectures and OS. All the cool kids are using it right now.
+"Why Go?", you might ask. Because it is a great language that compiles to native binaries on all major architectures and OSes. All the cool kids are using it right now.
 
 ## Getting started
 
-Setting up an instance of the certstream server is simple. You can either download and compile the code by yourself or use one of our [precompiled binaries](https://github.com/d-Rickyy-b/certstream-server-go/releases).
+Setting up an instance of the certstream server is simple. You can either download and compile the code yourself, or use one of the [precompiled binaries](https://github.com/d-Rickyy-b/certstream-server-go/releases).
 
 ### Docker
 
-There's also a prebuild [Docker image](https://hub.docker.com/repository/docker/0rickyy0/certstream-server-go) available.
+There's also a prebuilt [Docker image](https://hub.docker.com/repository/docker/0rickyy0/certstream-server-go) available.
 You can use it by running this command:
 
 `docker run -d -v /path/to/config.yaml:/app/config.yaml -p 8080:8080 0rickyy0/certstream-server-go`
@@ -47,14 +49,15 @@ You can connect to the certstream-server by opening a **websocket connection** t
 After you're connected, certificate information will be streamed to your websocket.
 
 The server requires you to send a **ping message** at least every 60 seconds (it's recommended to use an interval of 30s for pings). 
-If the server did not receive a ping message for more than this time, the server will disconnect you. 
+If the server does not receive a ping message for more than this time, it will disconnect you. 
 The server will **not** send out ping messages to your client.
 
 Read more about ping/pong WebSocket messages in the [Mozilla Developer Docs](https://developer.mozilla.org/en-US/docs/Web/API/WebSockets_API/Writing_WebSocket_servers#pings_and_pongs_the_heartbeat_of_websockets).
 
 ### Example
 
-To receive a live example of any of the endpoints, just send an HTTP GET request to the endpoints with `/example.json` appended to the endpoint. So for example `/full-stream/example.json`. This example shows the lite format of a certificate update.
+To receive a live example for any of the endpoints, just send an HTTP GET request to the endpoints with `/example.json` appended to the endpoint. 
+For example: `/full-stream/example.json`. This shows the lite format of a certificate update.
 
 ```json
 {
