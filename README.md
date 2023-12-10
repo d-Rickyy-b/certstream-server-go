@@ -54,6 +54,17 @@ The server will **not** send out ping messages to your client.
 
 Read more about ping/pong WebSocket messages in the [Mozilla Developer Docs](https://developer.mozilla.org/en-US/docs/Web/API/WebSockets_API/Writing_WebSocket_servers#pings_and_pongs_the_heartbeat_of_websockets).
 
+### Performance
+
+At idle (no clients connected), the server uses about **40 MB** of RAM, **14.5 Mbit/s** and **4-10% CPU** (Oracle Free Tier) on average while processing around **250-300 certificates per second**.
+
+### Monitoring
+
+**certstream-server-go** also offers a Prometheus metrics endpoint at `/metrics`. You can use this to monitor the server with Prometheus and Grafana.
+For an in-depth guide on how to do this, please refer to the [wiki](https://github.com/d-Rickyy-b/certstream-server-go/wiki/Collecting-and-Visualizing-Metrics).
+
+![grafana dashboard](https://user-images.githubusercontent.com/5798157/211434271-4350766d-2942-4fcb-8fda-f131f3f61cea.png)
+
 ### Example
 
 To receive a live example for any of the endpoints, just send an HTTP GET request to the endpoints with `/example.json` appended to the endpoint. 
