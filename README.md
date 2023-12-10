@@ -33,7 +33,7 @@ You can use it by running this command:
 
 `docker run -d -v /path/to/config.yaml:/app/config.yaml -p 8080:8080 0rickyy0/certstream-server-go`
 
-If you don't mount your own config file, the default config (config.sample.yaml) will be used.
+> ⚠️ If you don't mount your own config file, the default config (config.sample.yaml) will be used. For more details, check out the [wiki](https://github.com/d-Rickyy-b/certstream-server-go/wiki/Configuration).
 
 ## Connecting
 
