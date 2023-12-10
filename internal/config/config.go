@@ -17,10 +17,12 @@ var (
 )
 
 type ServerConfig struct {
-	ListenAddr string   `yaml:"listen_addr"`
-	ListenPort int      `yaml:"listen_port"`
-	RealIP     bool     `yaml:"real_ip"`
-	Whitelist  []string `yaml:"whitelist"`
+	ListenAddr  string   `yaml:"listen_addr"`
+	ListenPort  int      `yaml:"listen_port"`
+	CertPath    string   `yaml:"cert_path"`
+	CertKeyPath string   `yaml:"cert_key_path"`
+	RealIP      bool     `yaml:"real_ip"`
+	Whitelist   []string `yaml:"whitelist"`
 }
 
 type Config struct {
@@ -29,8 +31,6 @@ type Config struct {
 		FullURL        string `yaml:"full_url"`
 		LiteURL        string `yaml:"lite_url"`
 		DomainsOnlyURL string `yaml:"domains_only_url"`
-		CertPath       string `yaml:"cert_path"`
-		CertKeyPath    string `yaml:"cert_key_path"`
 	}
 	Prometheus struct {
 		ServerConfig        `yaml:",inline"`
