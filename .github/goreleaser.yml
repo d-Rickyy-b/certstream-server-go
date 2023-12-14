@@ -38,8 +38,8 @@ dockers:
   - image_templates:
       - '0rickyy0/{{.ProjectName}}:{{.Tag}}-amd64'
       - '{{ if not .Prerelease }}0rickyy0/{{.ProjectName}}:{{.Tag}}{{ end }}'
-      - 'ghcr.io/d-Rickyy-b/{{.ProjectName}}:{{.Tag}}-amd64'
-      - '{{ if not .Prerelease }}ghcr.io/d-Rickyy-b/{{.ProjectName}}:latest-amd64{{ end }}'
+      - 'ghcr.io/d-rickyy-b/{{.ProjectName}}:{{.Tag}}-amd64'
+      - '{{ if not .Prerelease }}ghcr.io/d-rickyy-b/{{.ProjectName}}:latest-amd64{{ end }}'
     goarch: amd64
     use: buildx
     extra_files:
@@ -57,8 +57,8 @@ dockers:
   - image_templates:
       - '0rickyy0/{{.ProjectName}}:{{.Tag}}-arm64'
       - '{{ if not .Prerelease }}0rickyy0/{{.ProjectName}}:latest-arm64{{ end }}'
-      - 'ghcr.io/d-Rickyy-b/{{.ProjectName}}:{{.Tag}}-arm64'
-      - '{{ if not .Prerelease }}ghcr.io/d-Rickyy-b/{{.ProjectName}}:latest-arm64{{ end }}'
+      - 'ghcr.io/d-rickyy-b/{{.ProjectName}}:{{.Tag}}-arm64'
+      - '{{ if not .Prerelease }}ghcr.io/d-rickyy-b/{{.ProjectName}}:latest-arm64{{ end }}'
     goarch: arm64
     use: buildx
     extra_files:
