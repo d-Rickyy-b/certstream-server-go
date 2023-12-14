@@ -9,6 +9,8 @@ jobs:
   build:
     name: Release build
     runs-on: ubuntu-latest
+    permissions:
+      packages: write
 
     steps:
       - name: Set up Go 1.21
