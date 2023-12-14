@@ -1,0 +1,52 @@
+# Thanks to https://chemidy.medium.com/create-the-smallest-and-secured-golang-docker-image-based-on-scratch-4752223b7324
+############################
+# STEP 1 build executable binary
+############################
+FROM golang:alpine AS builder
+
+ENV USER=certstreamserver
+ENV UID=10001
+
+# Create user
+RUN adduser \
+    --disabled-password \
+    --gecos "" \
+    --home "/nonexistent" \
+    --shell "/sbin/nologin" \
+    --no-create-home \
+    --uid "${UID}" \
+    "${USER}"
+
+# Install git. Git is required for fetching the dependencies.
+RUN apk update && apk add --no-cache git
+WORKDIR $GOPATH/src/certstream-server-go/
+COPY . .
+
+# Fetch dependencies.
+RUN go mod download
+
+# Build the binary.
+RUN go build -ldflags="-w -s" -o /go/bin/certstream-server-go $GOPATH/src/certstream-server-go/cmd
+RUN chown -R "${USER}:${USER}" /go/bin/certstream-server-go
+
+############################
+# STEP 2 build a small image
+############################
+FROM alpine
+
+WORKDIR /app
+
+# Import the user and group files from the builder.
+COPY --from=builder /etc/passwd /etc/passwd
+COPY --from=builder /etc/group /etc/group
+
+# Copy our static executable.
+COPY --from=builder /go/bin/certstream-server-go /app/certstream-server-go
+COPY ./config.sample.yaml /app/config.yaml
+
+# Use an unprivileged user.
+USER certstreamserver:certstreamserver
+
+EXPOSE 8080
+
+ENTRYPOINT ["/app/certstream-server-go"]

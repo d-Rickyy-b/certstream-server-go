@@ -6,7 +6,7 @@ before:
 
 builds:
   - main: ./cmd/main.go
-    ldflags: -s -w
+    ldflags: -s -w -X github.com/d-Rickyy-b/certstream-server-go/internal/config.Version={{.Version}}
     env:
       - CGO_ENABLED=0
     goos:
@@ -30,9 +30,59 @@ builds:
       - goos: windows
         goarch: 386
 checksum:
-  name_template: '{{ .ProjectName }}_{{.Version}}_checksums.txt'
+  name_template: '{{.ProjectName}}_{{.Version}}_checksums.txt'
 changelog:
   skip: true
+
+dockers:
+  - image_templates:
+      - '0rickyy0/{{.ProjectName}}:{{.Tag}}-amd64'
+      - '0rickyy0/{{.ProjectName}}:{{.Tag}}'
+      - 'ghcr.io/0rickyy0/{{.ProjectName}}:{{.Tag}}-amd64'
+      - 'ghcr.io/0rickyy0/{{.ProjectName}}:latest-amd64'
+    goarch: amd64
+    use: buildx
+    build_flag_templates:
+      - "--pull"
+      - "--label=org.opencontainers.image.title={{.ProjectName}}"
+      - "--label=org.opencontainers.image.description=Certstream server written in Go"
+      - "--label=org.opencontainers.image.created={{.Date}}"
+      - "--label=org.opencontainers.image.source=https://github.com/0Rickyy0/certstream-server-go"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+      - "--platform=linux/amd64"
+
+  - image_templates:
+      - '0rickyy0/{{.ProjectName}}:{{.Tag}}-arm64'
+      - '0rickyy0/{{.ProjectName}}:latest-arm64'
+      - 'ghcr.io/0rickyy0/{{.ProjectName}}:{{.Tag}}-arm64'
+      - 'ghcr.io/0rickyy0/{{.ProjectName}}:latest-arm64'
+    goarch: arm64
+    use: buildx
+    build_flag_templates:
+      - "--pull"
+      - "--label=org.opencontainers.image.title={{.ProjectName}}"
+      - "--label=org.opencontainers.image.description=Certstream server written in Go"
+      - "--label=org.opencontainers.image.created={{.Date}}"
+      - "--label=org.opencontainers.image.source=https://github.com/0Rickyy0/certstream-server-go"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+      - "--platform=linux/arm64"
+
+docker_manifests:
+  - name_template: '0rickyy0/{{.ProjectName}}:{{.Tag}}'
+    image_templates:
+      - '0rickyy0/{{.ProjectName}}:{{.Tag}}-amd64'
+      - '0rickyy0/{{.ProjectName}}:{{.Tag}}-arm64'
+      - 'ghcr.io/0rickyy0/{{.ProjectName}}:{{.Tag}}-amd64'
+      - 'ghcr.io/0rickyy0/{{.ProjectName}}:{{.Tag}}-arm64'
+
+  - name_template: '{{ if not .Prerelease }}0rickyy0/{{.ProjectName}}:latest{{ end }}'
+    image_templates:
+      - '0rickyy0/{{.ProjectName}}:{{.Tag}}-amd64'
+      - '0rickyy0/{{.ProjectName}}:{{.Tag}}-arm64'
+      - 'ghcr.io/0rickyy0/{{.ProjectName}}:{{.Tag}}-amd64'
+      - 'ghcr.io/0rickyy0/{{.ProjectName}}:{{.Tag}}-arm64'
 
 archives:
   - format: binary
