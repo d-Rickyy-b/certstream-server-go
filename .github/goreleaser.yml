@@ -49,7 +49,7 @@ dockers:
       - "--label=org.opencontainers.image.title={{.ProjectName}}"
       - "--label=org.opencontainers.image.description=Certstream server written in Go"
       - "--label=org.opencontainers.image.created={{.Date}}"
-      - "--label=org.opencontainers.image.source=https://github.com/0Rickyy0/certstream-server-go"
+      - "--label=org.opencontainers.image.source=https://github.com/d-Rickyy-b/certstream-server-go"
       - "--label=org.opencontainers.image.revision={{.FullCommit}}"
       - "--label=org.opencontainers.image.version={{.Version}}"
       - "--platform=linux/amd64"
@@ -68,7 +68,7 @@ dockers:
       - "--label=org.opencontainers.image.title={{.ProjectName}}"
       - "--label=org.opencontainers.image.description=Certstream server written in Go"
       - "--label=org.opencontainers.image.created={{.Date}}"
-      - "--label=org.opencontainers.image.source=https://github.com/0Rickyy0/certstream-server-go"
+      - "--label=org.opencontainers.image.source=https://github.com/d-Rickyy-b/certstream-server-go"
       - "--label=org.opencontainers.image.revision={{.FullCommit}}"
       - "--label=org.opencontainers.image.version={{.Version}}"
       - "--platform=linux/arm64"
@@ -78,15 +78,21 @@ docker_manifests:
     image_templates:
       - '0rickyy0/{{.ProjectName}}:{{.Tag}}-amd64'
       - '0rickyy0/{{.ProjectName}}:{{.Tag}}-arm64'
-      - 'ghcr.io/0rickyy0/{{.ProjectName}}:{{.Tag}}-amd64'
-      - 'ghcr.io/0rickyy0/{{.ProjectName}}:{{.Tag}}-arm64'
+
+  - name_template: 'ghcr.io/d-rickyy-b/{{.ProjectName}}:{{.Tag}}'
+    image_templates:
+      - 'ghcr.io/d-rickyy-b/{{.ProjectName}}:{{.Tag}}-amd64'
+      - 'ghcr.io/d-rickyy-b/{{.ProjectName}}:{{.Tag}}-arm64'
 
   - name_template: '{{ if not .Prerelease }}0rickyy0/{{.ProjectName}}:latest{{ end }}'
     image_templates:
       - '0rickyy0/{{.ProjectName}}:{{.Tag}}-amd64'
       - '0rickyy0/{{.ProjectName}}:{{.Tag}}-arm64'
-      - 'ghcr.io/0rickyy0/{{.ProjectName}}:{{.Tag}}-amd64'
-      - 'ghcr.io/0rickyy0/{{.ProjectName}}:{{.Tag}}-arm64'
+
+  - name_template: '{{ if not .Prerelease }}ghcr.io/d-rickyy-b/{{.ProjectName}}:latest{{ end }}'
+    image_templates:
+      - 'ghcr.io/d-rickyy-b/{{.ProjectName}}:{{.Tag}}-amd64'
+      - 'ghcr.io/d-rickyy-b/{{.ProjectName}}:{{.Tag}}-arm64'
 
 archives:
   - format: binary
