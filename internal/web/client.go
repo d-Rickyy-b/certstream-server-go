@@ -25,6 +25,15 @@ type client struct {
 	skippedCerts  int64
 }
 
+func newClient(conn *websocket.Conn, subType SubscriptionType, name string, certBufferSize int) *client {
+	return &client{
+		conn:          conn,
+		broadcastChan: make(chan []byte, certBufferSize),
+		name:          name,
+		subType:       subType,
+	}
+}
+
 // Each client has a broadcastHandler that runs in the background and sends out the broadcast messages to the client.
 func (c *client) broadcastHandler() {
 	defer func() {
