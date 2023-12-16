@@ -9,11 +9,12 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
+
 	"github.com/d-Rickyy-b/certstream-server-go/internal/certstream"
 	"github.com/d-Rickyy-b/certstream-server-go/internal/config"
 
-	"github.com/go-chi/chi"
-	"github.com/go-chi/chi/middleware"
 	"github.com/gorilla/websocket"
 )
 

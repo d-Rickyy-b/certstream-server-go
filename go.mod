@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/VictoriaMetrics/metrics v1.24.0
-	github.com/go-chi/chi v1.5.5
+	github.com/go-chi/chi/v5 v5.0.10
 	github.com/google/certificate-transparency-go v1.1.7
 	github.com/gorilla/websocket v1.5.1
 	gopkg.in/yaml.v3 v3.0.1
