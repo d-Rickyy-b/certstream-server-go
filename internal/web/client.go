@@ -22,6 +22,7 @@ type client struct {
 	broadcastChan chan []byte
 	name          string
 	subType       SubscriptionType
+	skippedCerts  int64
 }
 
 // Each client has a broadcastHandler that runs in the background and sends out the broadcast messages to the client.

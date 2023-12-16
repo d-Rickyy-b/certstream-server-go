@@ -99,7 +99,11 @@ func (bm *BroadcastManager) broadcaster() {
 			select {
 			case c.broadcastChan <- data:
 			default:
-				log.Printf("Not providing client '%s' with cert because our buffer is full. The client can't keep up.\n", c.name)
+				// Default case is executed if the client's broadcast channel is full.
+				c.skippedCerts++
+				if c.skippedCerts%1000 == 1 {
+					log.Printf("Not providing client '%s' with cert because client's buffer is full. The client can't keep up. Skipped certs: %d\n", c.name, c.skippedCerts)
+				}
 			}
 		}
 		bm.clientLock.RUnlock()
