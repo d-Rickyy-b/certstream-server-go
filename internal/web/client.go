@@ -26,6 +26,13 @@ type client struct {
 
 // Each client has a broadcastHandler that runs in the background and sends out the broadcast messages to the client.
 func (c *client) broadcastHandler() {
+	defer func() {
+		log.Println("Closing broadcast handler for client:", c.conn.RemoteAddr())
+		_ = c.conn.SetWriteDeadline(time.Now().Add(5 * time.Second))
+		_ = c.conn.WriteMessage(websocket.CloseMessage, []byte{})
+		_ = c.conn.Close()
+	}()
+
 	for message := range c.broadcastChan {
 		c.conn.SetWriteDeadline(time.Now().Add(5 * time.Second)) //nolint:errcheck
 
@@ -40,8 +47,6 @@ func (c *client) broadcastHandler() {
 			return
 		}
 	}
-
-	_ = c.conn.WriteMessage(websocket.CloseMessage, []byte{})
 }
 
 // listenWebsocket is running in the background on a goroutine and listens for messages from the client.
