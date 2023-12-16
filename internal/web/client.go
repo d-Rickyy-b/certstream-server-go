@@ -38,12 +38,17 @@ func (c *client) broadcastHandler() {
 
 		w, err := c.conn.NextWriter(websocket.TextMessage)
 		if err != nil {
+			log.Printf("Error while getting next writer: %v\n", err)
 			return
 		}
 
-		w.Write(message) //nolint:errcheck
+		_, writeErr := w.Write(message)
+		if writeErr != nil {
+			log.Printf("Error while writing: %v\n", writeErr)
+		}
 
-		if err := w.Close(); err != nil {
+		if closeErr := w.Close(); closeErr != nil {
+			log.Printf("Error while closing: %v\n", closeErr)
 			return
 		}
 	}
@@ -59,12 +64,12 @@ func (c *client) listenWebsocket() {
 	}()
 
 	c.conn.SetReadLimit(512)
-	c.conn.SetReadDeadline(time.Now().Add(65 * time.Second)) //nolint:errcheck
+	_ = c.conn.SetReadDeadline(time.Now().Add(65 * time.Second))
 
 	defaultPingHandler := c.conn.PingHandler()
 	c.conn.SetPingHandler(func(appData string) error {
-		// Ping received - reset the ping deadline of 65 seconds
-		c.conn.SetReadDeadline(time.Now().Add(65 * time.Second)) //nolint:errcheck
+		// Ping received - reset the ping deadline to 65 seconds
+		_ = c.conn.SetReadDeadline(time.Now().Add(65 * time.Second))
 		return defaultPingHandler(appData)
 	})
 	c.conn.SetPongHandler(func(string) error {
@@ -72,18 +77,20 @@ func (c *client) listenWebsocket() {
 		return nil
 	})
 
+	// Handle messages from the client
 	for {
-		_, message, err := c.conn.ReadMessage()
-		if err != nil {
-			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseNormalClosure) {
-				log.Printf("error: %v", err)
+		// ignore any message sent from clients - we only handle errors (aka. disconnects)
+		_, _, readErr := c.conn.ReadMessage()
+		if readErr != nil {
+			if websocket.IsUnexpectedCloseError(readErr, websocket.CloseGoingAway, websocket.CloseNormalClosure) {
+				log.Printf("Unexpected websocket close error: %v\n", readErr)
 			}
 
-			if strings.Contains(strings.ToLower(err.Error()), "i/o timeout") {
+			if strings.Contains(strings.ToLower(readErr.Error()), "i/o timeout") {
 				log.Printf("No ping received from client: %v\n", c.conn.RemoteAddr())
-				message := websocket.FormatCloseMessage(websocket.CloseNoStatusReceived, "No ping received!")
-				c.conn.WriteControl(websocket.CloseMessage, message, time.Now().Add(5*time.Second)) //nolint:errcheck
-			} else if strings.Contains(strings.ToLower(err.Error()), "an existing connection was forcibly closed by the remote host") {
+				closeMessage := websocket.FormatCloseMessage(websocket.CloseNoStatusReceived, "No ping received!")
+				c.conn.WriteControl(websocket.CloseMessage, closeMessage, time.Now().Add(5*time.Second)) //nolint:errcheck
+			} else if strings.Contains(strings.ToLower(readErr.Error()), "an existing connection was forcibly closed by the remote host") {
 				log.Printf("Connection to client lost: %v\n", c.conn.RemoteAddr())
 			}
 
@@ -91,7 +98,5 @@ func (c *client) listenWebsocket() {
 
 			break
 		}
-		// ignore any message sent from clients - we only handle errors (aka. disconnects)
-		_ = message
 	}
 }
