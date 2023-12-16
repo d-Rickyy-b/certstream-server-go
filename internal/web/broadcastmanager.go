@@ -83,8 +83,8 @@ func (bm *BroadcastManager) broadcaster() {
 		var data []byte
 
 		bm.clientLock.RLock()
-		for _, client := range bm.clients {
-			switch client.subType {
+		for _, c := range bm.clients {
+			switch c.subType {
 			case SubTypeLite:
 				data = dataLite
 			case SubTypeFull:
@@ -92,14 +92,14 @@ func (bm *BroadcastManager) broadcaster() {
 			case SubTypeDomain:
 				data = dataDomain
 			default:
-				log.Printf("Unknown subscription type '%d' for client '%s'. Skipping this client!\n", client.subType, client.name)
+				log.Printf("Unknown subscription type '%d' for client '%s'. Skipping this client!\n", c.subType, c.name)
 				continue
 			}
 
 			select {
-			case client.broadcastChan <- data:
+			case c.broadcastChan <- data:
 			default:
-				log.Printf("Not providing client '%s' with cert because our buffer is full. The client can't keep up.\n", client.name)
+				log.Printf("Not providing client '%s' with cert because our buffer is full. The client can't keep up.\n", c.name)
 			}
 		}
 		bm.clientLock.RUnlock()
