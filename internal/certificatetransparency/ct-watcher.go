@@ -31,7 +31,6 @@ var (
 
 // Watcher describes a component that watches for new certificates in a CT log.
 type Watcher struct {
-	Name       string
 	workers    []*worker
 	cancelFunc context.CancelFunc
 }
@@ -80,7 +79,7 @@ func (w *Watcher) Start() {
 
 // Stop stops the watcher.
 func (w *Watcher) Stop() {
-	log.Printf("Stopping watcher '%s'\n", w.Name)
+	log.Printf("Stopping watcher\n")
 	w.cancelFunc()
 }
 
