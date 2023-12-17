@@ -13,6 +13,7 @@ type Entry struct {
 	cachedJSONLite []byte
 }
 
+// Clone returns a new copy of the Entry.
 func (e *Entry) Clone() Entry {
 	return Entry{
 		Data:           e.Data,
@@ -22,7 +23,7 @@ func (e *Entry) Clone() Entry {
 	}
 }
 
-// JSON returns the json encoded Entry as byte slice.
+// JSON returns the json encoded Entry as byte slice and caches it for later access.
 func (e *Entry) JSON() []byte {
 	if len(e.cachedJSON) > 0 {
 		return e.cachedJSON
@@ -37,7 +38,7 @@ func (e *Entry) JSONNoCache() []byte {
 	return entryToJSONBytes(*e)
 }
 
-// JSONLite does the same as JSON but removes the chain and cert's DER representation.
+// JSONLite does the same as JSON() but removes the chain and cert's DER representation.
 func (e *Entry) JSONLite() []byte {
 	if len(e.cachedJSONLite) > 0 {
 		return e.cachedJSONLite
@@ -47,7 +48,7 @@ func (e *Entry) JSONLite() []byte {
 	return e.cachedJSONLite
 }
 
-// JSONLiteNoCache does the same as JSONNoCache but removes the chain and cert's DER representation.
+// JSONLiteNoCache does the same as JSONNoCache() but removes the chain and cert's DER representation.
 func (e *Entry) JSONLiteNoCache() []byte {
 	newEntry := e.Clone()
 	newEntry.Data.Chain = nil
@@ -56,6 +57,7 @@ func (e *Entry) JSONLiteNoCache() []byte {
 	return entryToJSONBytes(newEntry)
 }
 
+// JSONDomains returns the json encoded domains (DomainsEntry) as byte slice.
 func (e *Entry) JSONDomains() []byte {
 	domainsEntry := DomainsEntry{
 		Data:        e.Data.LeafCert.AllDomains,
