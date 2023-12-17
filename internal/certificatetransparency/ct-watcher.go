@@ -32,7 +32,15 @@ var (
 // Watcher describes a component that watches for new certificates in a CT log.
 type Watcher struct {
 	workers    []*worker
+	certChan   chan certstream.Entry
 	cancelFunc context.CancelFunc
+}
+
+// NewWatcher creates a new Watcher.
+func NewWatcher(certChan chan certstream.Entry) *Watcher {
+	return &Watcher{
+		certChan: certChan,
+	}
 }
 
 // Start starts the watcher. This method is blocking.
@@ -46,7 +54,11 @@ func (w *Watcher) Start() {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	w.cancelFunc = cancel
-	certChan := make(chan certstream.Entry, 5000)
+
+	// Create new certChan if it doesn't exist yet
+	if w.certChan == nil {
+		w.certChan = make(chan certstream.Entry, 5000)
+	}
 
 	var wg sync.WaitGroup
 
@@ -58,7 +70,7 @@ func (w *Watcher) Start() {
 				name:         transparencyLog.Description,
 				operatorName: operator.Name,
 				ctURL:        transparencyLog.URL,
-				entryChan:    certChan,
+				entryChan:    w.certChan,
 			}
 			w.workers = append(w.workers, &ctWorker)
 
@@ -71,10 +83,10 @@ func (w *Watcher) Start() {
 	}
 
 	log.Println("Started CT watcher")
-	go certHandler(certChan)
+	go certHandler(w.certChan)
 
 	wg.Wait()
-	close(certChan)
+	close(w.certChan)
 }
 
 // Stop stops the watcher.
