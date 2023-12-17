@@ -44,7 +44,7 @@ func (c *client) broadcastHandler() {
 	}()
 
 	for message := range c.broadcastChan {
-		c.conn.SetWriteDeadline(time.Now().Add(5 * time.Second)) //nolint:errcheck
+		_ = c.conn.SetWriteDeadline(time.Now().Add(60 * time.Second))
 
 		w, err := c.conn.NextWriter(websocket.TextMessage)
 		if err != nil {
