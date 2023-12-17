@@ -41,6 +41,7 @@ type (
 var (
 	errCreatingClient    = errors.New("failed to create JSON client")
 	errFetchingSTHFailed = errors.New("failed to fetch STH")
+	userAgent            = fmt.Sprintf("Certstream Server v%s (github.com/d-Rickyy-b/certstream-server-go)", config.Version)
 )
 
 // LogMetrics is a struct that holds a map of metrics for each CT log grouped by operator.
@@ -260,8 +261,6 @@ func (w *worker) startDownloadingCerts(ctx context.Context) {
 
 // runWorker runs a single worker for a single CT log. This method is blocking.
 func (w *worker) runWorker(ctx context.Context) error {
-	userAgent := fmt.Sprintf("Certstream Server v%s (github.com/d-Rickyy-b/certstream-server-go)", config.Version)
-
 	hc := http.Client{Timeout: 30 * time.Second}
 	jsonClient, e := client.New(w.ctURL, &hc, jsonclient.Options{UserAgent: userAgent})
 	if e != nil {
