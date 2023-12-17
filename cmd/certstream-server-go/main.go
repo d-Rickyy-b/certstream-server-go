@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 
 	"github.com/d-Rickyy-b/certstream-server-go/internal/certificatetransparency"
@@ -13,7 +14,13 @@ import (
 // main is the entry point for the application.
 func main() {
 	configFile := flag.String("config", "config.yml", "path to the config file")
+	versionFlag := flag.Bool("version", false, "Print the version and exit")
 	flag.Parse()
+
+	if *versionFlag {
+		fmt.Printf("certstream-server-go v%s\n", config.Version)
+		return
+	}
 
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 
