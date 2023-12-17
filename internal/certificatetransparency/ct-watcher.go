@@ -262,7 +262,7 @@ func (w *worker) startDownloadingCerts(ctx context.Context) {
 func (w *worker) runWorker(ctx context.Context) error {
 	userAgent := fmt.Sprintf("Certstream Server v%s (github.com/d-Rickyy-b/certstream-server-go)", config.Version)
 
-	hc := http.Client{Timeout: 5 * time.Second}
+	hc := http.Client{Timeout: 30 * time.Second}
 	jsonClient, e := client.New(w.ctURL, &hc, jsonclient.Options{UserAgent: userAgent})
 	if e != nil {
 		log.Printf("Error creating JSON client: %s\n", e)
