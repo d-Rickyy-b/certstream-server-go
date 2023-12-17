@@ -28,14 +28,14 @@ func (e *Entry) JSON() []byte {
 	if len(e.cachedJSON) > 0 {
 		return e.cachedJSON
 	}
-	e.cachedJSON = entryToJSONBytes(*e)
+	e.cachedJSON = e.entryToJSONBytes()
 
 	return e.cachedJSON
 }
 
 // JSONNoCache returns the json encoded Entry as byte slice without caching it.
 func (e *Entry) JSONNoCache() []byte {
-	return entryToJSONBytes(*e)
+	return e.entryToJSONBytes()
 }
 
 // JSONLite does the same as JSON() but removes the chain and cert's DER representation.
@@ -54,7 +54,7 @@ func (e *Entry) JSONLiteNoCache() []byte {
 	newEntry.Data.Chain = nil
 	newEntry.Data.LeafCert.AsDER = ""
 
-	return entryToJSONBytes(newEntry)
+	return newEntry.entryToJSONBytes()
 }
 
 // JSONDomains returns the json encoded domains (DomainsEntry) as byte slice.
@@ -73,7 +73,7 @@ func (e *Entry) JSONDomains() []byte {
 }
 
 // entryToJSONBytes encodes an Entry to a JSON byte slice.
-func entryToJSONBytes(e Entry) []byte {
+func (e *Entry) entryToJSONBytes() []byte {
 	buf := bytes.Buffer{}
 	enc := json.NewEncoder(&buf)
 	enc.SetEscapeHTML(false)
