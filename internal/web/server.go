@@ -53,7 +53,7 @@ func IPWhitelist(next http.Handler) http.Handler {
 		ip, ipNet, err := net.ParseCIDR(element)
 		if err != nil {
 			if net.ParseIP(element) == nil {
-				log.Println("Invalid IP in prometheus whitelist: ", element)
+				log.Println("Invalid IP in metrics whitelist: ", element)
 			}
 
 			ipList = append(ipList, ip)
@@ -226,7 +226,7 @@ func (ws *WebServer) initServer() {
 	}
 }
 
-// NewMetricsServer creates a new webserver that listens on the given port and provides metrics for a prometheus server.
+// NewMetricsServer creates a new webserver that listens on the given port and provides metrics for a metrics server.
 func NewMetricsServer(networkIf string, port int, certPath, keyPath string) *WebServer {
 	server := &WebServer{
 		networkIf: networkIf,

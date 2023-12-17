@@ -7,7 +7,7 @@ import (
 
 	"github.com/d-Rickyy-b/certstream-server-go/internal/certificatetransparency"
 	"github.com/d-Rickyy-b/certstream-server-go/internal/config"
-	"github.com/d-Rickyy-b/certstream-server-go/internal/prometheus"
+	"github.com/d-Rickyy-b/certstream-server-go/internal/metrics"
 	"github.com/d-Rickyy-b/certstream-server-go/internal/web"
 )
 
@@ -46,11 +46,11 @@ func setupMetrics(conf config.Config, webserver *web.WebServer) {
 		if (conf.Prometheus.ListenAddr == "" || conf.Prometheus.ListenAddr == conf.Webserver.ListenAddr) &&
 			(conf.Prometheus.ListenPort == 0 || conf.Prometheus.ListenPort == conf.Webserver.ListenPort) {
 			log.Println("Starting prometheus server on same interface as webserver")
-			webserver.RegisterPrometheus(conf.Prometheus.MetricsURL, prometheus.WritePrometheus)
+			webserver.RegisterPrometheus(conf.Prometheus.MetricsURL, metrics.WritePrometheus)
 		} else {
 			log.Println("Starting prometheus server on new interface")
-			metricsServer := web.NewMetricsServer(conf.Prometheus.ListenAddr, conf.Prometheus.ListenPort, conf.Webserver.CertPath, conf.Webserver.CertKeyPath)
-			metricsServer.RegisterPrometheus(conf.Prometheus.MetricsURL, prometheus.WritePrometheus)
+			metricsServer := web.NewMetricsServer(conf.Prometheus.ListenAddr, conf.Prometheus.ListenPort, conf.Prometheus.CertPath, conf.Prometheus.CertKeyPath)
+			metricsServer.RegisterPrometheus(conf.Prometheus.MetricsURL, metrics.WritePrometheus)
 			go metricsServer.Start()
 		}
 	}

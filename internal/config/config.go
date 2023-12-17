@@ -160,12 +160,12 @@ func validateConfig(config Config) bool {
 	if config.Prometheus.Enabled {
 
 		if config.Prometheus.ListenAddr == "" || net.ParseIP(config.Prometheus.ListenAddr) == nil {
-			log.Fatalln("Prometheus export IP is not a valid IP")
+			log.Fatalln("Metrics export IP is not a valid IP")
 			return false
 		}
 
 		if config.Prometheus.ListenPort == 0 {
-			log.Fatalln("Prometheus export port is not set")
+			log.Fatalln("Metrics export port is not set")
 			return false
 		}
 
@@ -179,7 +179,7 @@ func validateConfig(config Config) bool {
 				// Provided entry is not an IP, check if it's a CIDR range
 				_, _, err := net.ParseCIDR(ip)
 				if err != nil {
-					log.Fatalln("Invalid IP in prometheus whitelist: ", ip)
+					log.Fatalln("Invalid IP in metrics whitelist: ", ip)
 					return false
 				}
 			}
