@@ -32,6 +32,7 @@ func main() {
 	watcher.Start()
 }
 
+// setupMetrics configures the webserver to handle prometheus metrics according to the config.
 func setupMetrics(conf config.Config, webserver *web.WebServer) {
 	if conf.Prometheus.Enabled {
 		// If prometheus is enabled, and interface is either unconfigured or same as webserver config, use existing webserver
