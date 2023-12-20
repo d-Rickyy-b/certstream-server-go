@@ -23,6 +23,7 @@ func main() {
 	}
 
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
+	log.Printf("Starting certstream-server-go v%s\n", config.Version)
 
 	conf, err := config.ReadConfig(*configFile)
 	if err != nil {
