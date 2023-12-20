@@ -11,6 +11,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 ### Docs
 
+## [1.5.0] - 2023-12-21
+### Added
+- New `-version` switch to print version and exit afterwards
+- Print version on every run of the tool
+- Count and log number of skipped certificates per client
+
+### Changed
+- Update to chi/v5
+- Update ct-watcher timeout from 5 to 30 seconds
+
+### Fixed
+- Prevent invalid subscription types to be used
+- Kill connection after broadcasthandler was stopped
+
 ## [1.4.0] - 2023-11-29
 ### Added
 - Config option to use X-Forwarded-For or X-Real-IP header as client IP
@@ -78,7 +92,8 @@ Fixed the connection issue due to the offline Google loglist urls.
 ## [1.0.0] - 2022-08-08
 Initial release! First stable version of certstream-server-go is published as v1.0.0
 
-[unreleased]: https://github.com/d-Rickyy-b/certstream-server-go/compare/v1.4.0...HEAD
+[unreleased]: https://github.com/d-Rickyy-b/certstream-server-go/compare/v1.5.0...HEAD
+[1.5.0]: https://github.com/d-Rickyy-b/certstream-server-go/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/d-Rickyy-b/certstream-server-go/compare/v1.3.2...v1.4.0
 [1.3.2]: https://github.com/d-Rickyy-b/certstream-server-go/compare/v1.3.1...v1.3.2
 [1.3.1]: https://github.com/d-Rickyy-b/certstream-server-go/compare/v1.3.0...v1.3.1
