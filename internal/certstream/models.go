@@ -104,7 +104,7 @@ type Source struct {
 }
 
 type LeafCert struct {
-	AllDomains         []string   `json:"all_domains,omitempty"`
+	AllDomains         []string   `json:"all_domains"`
 	AsDER              string     `json:"as_der,omitempty"`
 	Extensions         Extensions `json:"extensions"`
 	Fingerprint        string     `json:"fingerprint"`
