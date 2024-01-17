@@ -117,6 +117,11 @@ func leafCertFromX509cert(cert x509.Certificate) certstream.LeafCert {
 		IsCA:               cert.IsCA,
 	}
 
+	// The zero value of DomainsEntry.Data is nil, but we want an empty array - especially for json marshalling later.
+	if leafCert.AllDomains == nil {
+		leafCert.AllDomains = []string{}
+	}
+
 	leafCert.Subject = buildSubject(cert.Subject)
 	if *leafCert.Subject.CN != "" && !leafCert.IsCA {
 		domainAlreadyAdded := false
