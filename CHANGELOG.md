@@ -97,7 +97,7 @@ Fixed the connection issue due to the offline Google loglist urls.
 Initial release! First stable version of certstream-server-go is published as v1.0.0
 
 [unreleased]: https://github.com/d-Rickyy-b/certstream-server-go/compare/v1.5.1...HEAD
-[1.5.0]: https://github.com/d-Rickyy-b/certstream-server-go/compare/v1.5.0...v1.5.1
+[1.5.1]: https://github.com/d-Rickyy-b/certstream-server-go/compare/v1.5.0...v1.5.1
 [1.5.0]: https://github.com/d-Rickyy-b/certstream-server-go/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/d-Rickyy-b/certstream-server-go/compare/v1.3.2...v1.4.0
 [1.3.2]: https://github.com/d-Rickyy-b/certstream-server-go/compare/v1.3.1...v1.3.2
