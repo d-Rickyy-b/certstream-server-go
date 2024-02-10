@@ -14,14 +14,14 @@ jobs:
       contents: write
 
     steps:
-      - name: Set up Go 1.21
-        uses: actions/setup-go@v3
+      - name: Set up Go 1.22
+        uses: actions/setup-go@v5
         with:
-          go-version: ^1.21
+          go-version: ^1.22
         id: go
 
       - name: Check out code into the Go module directory
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0 # See: https://goreleaser.com/ci/actions/
 
@@ -45,7 +45,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v4
+        uses: goreleaser/goreleaser-action@v5
         with:
           version: latest
           args: release --clean --config .github/goreleaser.yml
