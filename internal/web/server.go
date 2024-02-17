@@ -60,9 +60,11 @@ func IPWhitelist(whitelist []string) func(next http.Handler) http.Handler {
 			continue
 		}
 
-		log.Println(*ipNet)
 		cidrList = append(cidrList, *ipNet)
 	}
+
+	log.Println("IP whitelist: ", ipList)
+	log.Println("CIDR whitelist: ", cidrList)
 
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
