@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 ### Docs
 
+## [1.5.2] - 2024-02-17
+### Fixed
+- Fixed an issue with ip whitelists for the websocket server (#33)
+
 ## [1.5.1] - 2024-01-18
 ### Fixed
 - Fixed a rare issue where it was possible for the all_domains json property (or data property in case of the domains-only endpoint) to be null 
@@ -96,7 +100,8 @@ Fixed the connection issue due to the offline Google loglist urls.
 ## [1.0.0] - 2022-08-08
 Initial release! First stable version of certstream-server-go is published as v1.0.0
 
-[unreleased]: https://github.com/d-Rickyy-b/certstream-server-go/compare/v1.5.1...HEAD
+[unreleased]: https://github.com/d-Rickyy-b/certstream-server-go/compare/v1.5.2...HEAD
+[1.5.1]: https://github.com/d-Rickyy-b/certstream-server-go/compare/v1.5.1...v1.5.2
 [1.5.1]: https://github.com/d-Rickyy-b/certstream-server-go/compare/v1.5.0...v1.5.1
 [1.5.0]: https://github.com/d-Rickyy-b/certstream-server-go/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/d-Rickyy-b/certstream-server-go/compare/v1.3.2...v1.4.0
