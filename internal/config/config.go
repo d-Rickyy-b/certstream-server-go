@@ -13,7 +13,7 @@ import (
 
 var (
 	AppConfig Config
-	Version   = "1.4.0"
+	Version   = "1.5.2"
 )
 
 type ServerConfig struct {
