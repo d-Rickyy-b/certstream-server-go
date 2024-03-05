@@ -22,7 +22,7 @@ type client struct {
 	broadcastChan chan []byte
 	name          string
 	subType       SubscriptionType
-	skippedCerts  int64
+	skippedCerts  uint64
 }
 
 func newClient(conn *websocket.Conn, subType SubscriptionType, name string, certBufferSize int) *client {

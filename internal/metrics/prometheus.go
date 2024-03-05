@@ -3,6 +3,7 @@ package metrics
 import (
 	"fmt"
 	"io"
+	"strings"
 	"sync"
 	"time"
 
@@ -46,6 +47,9 @@ func WritePrometheus(w io.Writer, exposeProcessMetrics bool) {
 		initCtLogMetrics()
 	}
 	ctLogMetricsInitMutex.Unlock()
+
+	getSkippedCertMetrics()
+
 	metrics.WritePrometheus(w, exposeProcessMetrics)
 }
 
@@ -81,4 +85,34 @@ func getCertCountForLog(operatorName, logname string) int64 {
 	}
 
 	return tempCertMetrics[operatorName][logname]
+}
+
+// getSkippedCertMetrics gets the number of skipped certificates for each client and creates metrics for it.
+// It also removes metrics for clients that are not connected anymore.
+func getSkippedCertMetrics() {
+	skippedCerts := web.ClientHandler.GetSkippedCerts()
+	for clientName := range skippedCerts {
+		// Get or register a new counter for each client
+		metricName := fmt.Sprintf("certstreamservergo_skipped_certs{client=\"%s\"}", clientName)
+		c := metrics.GetOrCreateCounter(metricName)
+		c.Set(skippedCerts[clientName])
+	}
+
+	// Remove all metrics that are not in the list of current client skipped cert metrics
+	// Get a list of current client skipped cert metrics
+	for _, metricName := range metrics.ListMetricNames() {
+		if !strings.HasPrefix(metricName, "certstreamservergo_skipped_certs") {
+			continue
+		}
+
+		clientName := strings.TrimPrefix(metricName, "certstreamservergo_skipped_certs{client=\"")
+		clientName = strings.TrimSuffix(clientName, "\"}")
+
+		// Check if the registered metric is in the list of current client skipped cert metrics
+		// If not, unregister the metric
+		_, exists := skippedCerts[clientName]
+		if !exists {
+			metrics.UnregisterMetric(metricName)
+		}
+	}
 }

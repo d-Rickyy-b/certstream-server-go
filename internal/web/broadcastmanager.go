@@ -73,6 +73,18 @@ func (bm *BroadcastManager) clientCountByType(subType SubscriptionType) (count i
 	return count
 }
 
+func (bm *BroadcastManager) GetSkippedCerts() map[string]uint64 {
+	bm.clientLock.RLock()
+	defer bm.clientLock.RUnlock()
+
+	skippedCerts := make(map[string]uint64, len(bm.clients))
+	for _, c := range bm.clients {
+		skippedCerts[c.name] = c.skippedCerts
+	}
+
+	return skippedCerts
+}
+
 // broadcaster is run in a goroutine and handles the dispatching of entries to clients.
 func (bm *BroadcastManager) broadcaster() {
 	for {
