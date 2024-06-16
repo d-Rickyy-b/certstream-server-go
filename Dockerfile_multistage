@@ -26,7 +26,7 @@ COPY . .
 RUN go mod download
 
 # Build the binary.
-RUN go build -ldflags="-w -s" -o /go/bin/certstream-server-go $GOPATH/src/certstream-server-go/cmd
+RUN go build -ldflags="-w -s" -o /go/bin/certstream-server-go $GOPATH/src/certstream-server-go/cmd/certstream-server-go/
 RUN chown -R "${USER}:${USER}" /go/bin/certstream-server-go
 
 ############################
@@ -42,7 +42,7 @@ COPY --from=builder /etc/group /etc/group
 
 # Copy our static executable.
 COPY --from=builder /go/bin/certstream-server-go /app/certstream-server-go
-COPY ./config.sample.yaml /app/config.yaml
+COPY --chown=certstreamserver:certstreamserver ./config.sample.yaml /app/config.yaml
 
 # Use an unprivileged user.
 USER certstreamserver:certstreamserver
