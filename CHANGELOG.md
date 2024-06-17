@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Added
+- Support for websocket compression - disabled by default (#40)
 ### Changed
 ### Fixed
 ### Docs

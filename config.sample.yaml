@@ -6,6 +6,7 @@ webserver:
   domains_only_url: "/domains-only"
   cert_path: ""
   cert_key_path: ""
+  compression_enabled: false
 
 prometheus:
   enabled: true
