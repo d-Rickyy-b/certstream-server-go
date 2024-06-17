@@ -27,10 +27,11 @@ type ServerConfig struct {
 
 type Config struct {
 	Webserver struct {
-		ServerConfig   `yaml:",inline"`
-		FullURL        string `yaml:"full_url"`
-		LiteURL        string `yaml:"lite_url"`
-		DomainsOnlyURL string `yaml:"domains_only_url"`
+		ServerConfig       `yaml:",inline"`
+		FullURL            string `yaml:"full_url"`
+		LiteURL            string `yaml:"lite_url"`
+		DomainsOnlyURL     string `yaml:"domains_only_url"`
+		CompressionEnabled *bool  `yaml:"compression_enabled,omitempty"`
 	}
 	Prometheus struct {
 		ServerConfig        `yaml:",inline"`
@@ -132,6 +133,17 @@ func validateConfig(config Config) bool {
 	if config.Webserver.ListenPort == 0 {
 		log.Fatalln("Webhook listen port is not set")
 		return false
+	}
+
+	if config.Webserver.CompressionEnabled == nil {
+		// On one hand the Calidog certstream server does support compression by default, however
+		// the gorilla/websocket library has had issues with Safari clients.
+		// See: https://github.com/gorilla/websocket/issues/731
+		// Moreover according to gorilla/weboscket documentation, the support is experimental
+		// See: https://pkg.go.dev/github.com/gorilla/websocket#hdr-Compression_EXPERIMENTAL
+		// Thus lets default to false - i.e. disable compression by default
+		CompressionEnabled := false
+		config.Webserver.CompressionEnabled = &CompressionEnabled
 	}
 
 	if config.Webserver.FullURL == "" || !URLRegex.MatchString(config.Webserver.FullURL) {

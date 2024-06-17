@@ -20,7 +20,7 @@ import (
 
 var (
 	ClientHandler = BroadcastManager{}
-	upgrader      = websocket.Upgrader{} // use default options
+	upgrader      websocket.Upgrader
 )
 
 type WebServer struct {
@@ -248,7 +248,8 @@ func NewMetricsServer(networkIf string, port int, certPath, keyPath string) *Web
 }
 
 // NewWebsocketServer starts a new webserver and initialized it with the necessary routes.
-// It also starts the broadcaster in ClientHandler as a background job.
+// It also starts the broadcaster in ClientHandler as a background job and takes care of
+// setting up websocket.Upgrader.
 func NewWebsocketServer(networkIf string, port int, certPath, keyPath string) *WebServer {
 	server := &WebServer{
 		networkIf: networkIf,
@@ -256,6 +257,10 @@ func NewWebsocketServer(networkIf string, port int, certPath, keyPath string) *W
 		routes:    chi.NewRouter(),
 		certPath:  certPath,
 		keyPath:   keyPath,
+	}
+
+	upgrader = websocket.Upgrader{
+		EnableCompression: *config.AppConfig.Webserver.CompressionEnabled,
 	}
 
 	if config.AppConfig.Webserver.RealIP {
