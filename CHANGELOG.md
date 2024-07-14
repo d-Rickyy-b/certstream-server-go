@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 ### Added
 - Support for websocket compression - disabled by default (#40)
+- Support for non-browsers by implementing server initiated heartbeats (#39)
 ### Changed
 ### Fixed
 ### Docs

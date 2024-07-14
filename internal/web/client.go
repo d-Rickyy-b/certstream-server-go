@@ -36,30 +36,45 @@ func newClient(conn *websocket.Conn, subType SubscriptionType, name string, cert
 
 // Each client has a broadcastHandler that runs in the background and sends out the broadcast messages to the client.
 func (c *client) broadcastHandler() {
+	writeWait := 60 * time.Second
+	pingTicker := time.NewTicker(30 * time.Second)
+
 	defer func() {
 		log.Println("Closing broadcast handler for client:", c.conn.RemoteAddr())
+
+		pingTicker.Stop()
+
 		_ = c.conn.SetWriteDeadline(time.Now().Add(5 * time.Second))
 		_ = c.conn.WriteMessage(websocket.CloseMessage, []byte{})
 		_ = c.conn.Close()
 	}()
 
-	for message := range c.broadcastChan {
-		_ = c.conn.SetWriteDeadline(time.Now().Add(60 * time.Second))
+	for {
+		select {
+		case <-pingTicker.C:
+			_ = c.conn.SetWriteDeadline(time.Now().Add(writeWait))
 
-		w, err := c.conn.NextWriter(websocket.TextMessage)
-		if err != nil {
-			log.Printf("Error while getting next writer: %v\n", err)
-			return
-		}
+			if err := c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+				return
+			}
+		case message := <-c.broadcastChan:
+			_ = c.conn.SetWriteDeadline(time.Now().Add(writeWait))
 
-		_, writeErr := w.Write(message)
-		if writeErr != nil {
-			log.Printf("Error while writing: %v\n", writeErr)
-		}
+			w, err := c.conn.NextWriter(websocket.TextMessage)
+			if err != nil {
+				log.Printf("Error while getting next writer: %v\n", err)
+				return
+			}
 
-		if closeErr := w.Close(); closeErr != nil {
-			log.Printf("Error while closing: %v\n", closeErr)
-			return
+			_, writeErr := w.Write(message)
+			if writeErr != nil {
+				log.Printf("Error while writing: %v\n", writeErr)
+			}
+
+			if closeErr := w.Close(); closeErr != nil {
+				log.Printf("Error while closing: %v\n", closeErr)
+				return
+			}
 		}
 	}
 }
@@ -73,18 +88,24 @@ func (c *client) listenWebsocket() {
 		ClientHandler.unregisterClient(c)
 	}()
 
+	readWait := 65 * time.Second
+
 	c.conn.SetReadLimit(512)
-	_ = c.conn.SetReadDeadline(time.Now().Add(65 * time.Second))
+	_ = c.conn.SetReadDeadline(time.Now().Add(readWait))
 
 	defaultPingHandler := c.conn.PingHandler()
 	c.conn.SetPingHandler(func(appData string) error {
-		// Ping received - reset the ping deadline to 65 seconds
-		_ = c.conn.SetReadDeadline(time.Now().Add(65 * time.Second))
+		// Ping received - reset the deadline
+		err := c.conn.SetReadDeadline(time.Now().Add(readWait))
+		if err != nil {
+			return err
+		}
 		return defaultPingHandler(appData)
 	})
 	c.conn.SetPongHandler(func(string) error {
-		// Pong received
-		return nil
+		// Pong received - reset the deadline
+		err := c.conn.SetReadDeadline(time.Now().Add(readWait))
+		return err
 	})
 
 	// Handle messages from the client
