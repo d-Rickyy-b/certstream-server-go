@@ -52,8 +52,6 @@ func (c *client) broadcastHandler() {
 	for {
 		select {
 		case <-pingTicker.C:
-			log.Printf("Sent ping to %v\n", c.name)
-
 			_ = c.conn.SetWriteDeadline(time.Now().Add(writeWait))
 
 			if err := c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
@@ -104,8 +102,6 @@ func (c *client) listenWebsocket() {
 	c.conn.SetPongHandler(func(string) error {
 		// Pong received - reset the deadline
 		_ = c.conn.SetReadDeadline(time.Now().Add(readWait))
-
-		log.Printf("Received pong from %v\n", c.name)
 
 		return nil
 	})
