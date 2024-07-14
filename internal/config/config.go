@@ -27,10 +27,11 @@ type ServerConfig struct {
 
 type Config struct {
 	Webserver struct {
-		ServerConfig   `yaml:",inline"`
-		FullURL        string `yaml:"full_url"`
-		LiteURL        string `yaml:"lite_url"`
-		DomainsOnlyURL string `yaml:"domains_only_url"`
+		ServerConfig       `yaml:",inline"`
+		FullURL            string `yaml:"full_url"`
+		LiteURL            string `yaml:"lite_url"`
+		DomainsOnlyURL     string `yaml:"domains_only_url"`
+		CompressionEnabled bool   `yaml:"compression_enabled"`
 	}
 	Prometheus struct {
 		ServerConfig        `yaml:",inline"`
