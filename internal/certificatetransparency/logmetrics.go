@@ -80,8 +80,9 @@ func (m *LogMetrics) Init(operator, url string) {
 
 // Get the metric for a given operator and ct url.
 func (m *LogMetrics) Get(operator, url string) int64 {
-	m.mutex.RLock()
-	defer m.mutex.RUnlock()
+	// Despite this being a getter, we still need to fully lock the mutex because we might modify the map if the requested operator does not exist.
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
 
 	if _, ok := m.metrics[operator]; !ok {
 		m.metrics[operator] = make(OperatorMetric)
