@@ -62,6 +62,22 @@ func (m *LogMetrics) OperatorLogMapping() OperatorLogs {
 	return logOperators
 }
 
+// Init initializes the internal metrics map with the given operator names and CT log urls if it doesn't exist yet.
+func (m *LogMetrics) Init(operator, url string) {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
+	// if the operator does not exist, create a new entry
+	if _, ok := m.metrics[operator]; !ok {
+		m.metrics[operator] = make(OperatorMetric)
+	}
+
+	// if the operator exists but the url does not, create a new entry
+	if _, ok := m.metrics[operator][url]; !ok {
+		m.metrics[operator][url] = 0
+	}
+}
+
 // Get the metric for a given operator and ct url.
 func (m *LogMetrics) Get(operator, url string) int64 {
 	m.mutex.RLock()
