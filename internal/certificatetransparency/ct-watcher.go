@@ -71,8 +71,8 @@ func (w *Watcher) watchNewLogs() {
 	// Add all available logs to the watcher
 	w.addNewlyAvailableLogs()
 
-	// Check for new logs every 6 hours
-	ticker := time.NewTicker(6 * time.Hour)
+	// Check for new logs once every hour
+	ticker := time.NewTicker(1 * time.Hour)
 	for {
 		select {
 		case <-ticker.C:
