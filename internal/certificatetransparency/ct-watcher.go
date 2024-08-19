@@ -139,7 +139,7 @@ func (w *Watcher) addNewlyAvailableLogs() {
 		}
 	}
 
-	log.Printf("Found %d new ct logs\n", newCTs)
+	log.Printf("New ct logs found: %d\n", newCTs)
 }
 
 // Stop stops the watcher.
