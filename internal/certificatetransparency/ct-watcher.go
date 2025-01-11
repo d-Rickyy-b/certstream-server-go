@@ -14,6 +14,7 @@ import (
 
 	"github.com/d-Rickyy-b/certstream-server-go/internal/certstream"
 	"github.com/d-Rickyy-b/certstream-server-go/internal/config"
+	"github.com/d-Rickyy-b/certstream-server-go/internal/disk"
 	"github.com/d-Rickyy-b/certstream-server-go/internal/web"
 
 	ct "github.com/google/certificate-transparency-go"
@@ -29,13 +30,21 @@ var (
 	userAgent            = fmt.Sprintf("Certstream Server v%s (github.com/d-Rickyy-b/certstream-server-go)", config.Version)
 )
 
+type LogChannel string
+
+const (
+	LOG_CHAN_WEBSOCKET LogChannel = "WEBSOCKET"
+	LOG_CHAN_DISK      LogChannel = "DISK"
+)
+
 // Watcher describes a component that watches for new certificates in a CT log.
 type Watcher struct {
-	workers    []*worker
-	wg         sync.WaitGroup
-	context    context.Context
-	certChan   chan certstream.Entry
-	cancelFunc context.CancelFunc
+	workers     []*worker
+	wg          sync.WaitGroup
+	context     context.Context
+	certChan    chan certstream.Entry
+	cancelFunc  context.CancelFunc
+	LogChannels []LogChannel
 }
 
 // NewWatcher creates a new Watcher.
@@ -58,7 +67,7 @@ func (w *Watcher) Start() {
 	w.addNewlyAvailableLogs()
 
 	log.Println("Started CT watcher")
-	go certHandler(w.certChan)
+	go certHandler(w.certChan, w.LogChannels)
 	go w.watchNewLogs()
 
 	w.wg.Wait()
@@ -279,9 +288,20 @@ func (w *worker) foundPrecertCallback(rawEntry *ct.RawLogEntry) {
 	atomic.AddInt64(&processedPrecerts, 1)
 }
 
-// certHandler takes the entries out of the entryChan channel and broadcasts them to all clients.
+// certHandler takes the entries out of the entryChan channel sends them to the appropriate log channels.
 // Only a single instance of the certHandler runs per certstream server.
-func certHandler(entryChan chan certstream.Entry) {
+func certHandler(entryChan chan certstream.Entry, logChannels []LogChannel) {
+
+	channels := []chan certstream.Entry{}
+	for _, logChan := range logChannels {
+		switch logChan {
+		case LOG_CHAN_WEBSOCKET:
+			channels = append(channels, web.ClientHandler.Broadcast) //send entries to web socket
+		case LOG_CHAN_DISK:
+			channels = append(channels, disk.CertStreamEntryChan) //send entries to disk logger
+		}
+	}
+
 	var processed int64
 
 	for {
@@ -294,8 +314,9 @@ func certHandler(entryChan chan certstream.Entry) {
 			web.SetExampleCert(entry)
 		}
 
-		// Run json encoding in the background and send the result to the clients.
-		web.ClientHandler.Broadcast <- entry
+		for _, logChan := range channels {
+			logChan <- entry
+		}
 
 		// Update metrics
 		url := entry.Data.Source.NormalizedURL
