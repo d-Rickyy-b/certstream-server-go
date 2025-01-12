@@ -9,7 +9,7 @@ webserver:
   compression_enabled: false
 
 disklogger:
-  enabled: true
+  enabled: false
   type: DOMAINS_ONLY # LITE, FULL, DOMAINS_ONLY
   log_directory: logs
   rotation: DAILY # HOURLY, DAILY

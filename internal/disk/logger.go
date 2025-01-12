@@ -29,16 +29,16 @@ func StartLogger(logDirectory string, logType DiskLog, rotation string) {
 }
 
 func logEntries(logDirectory string, logType DiskLog, rotation string) {
-	var logFile *filerotate.File
+	var logFile *filerotate.RotatableFile
 	var err error
 
 	switch rotation {
 	case "HOURLY":
-		logFile, err = filerotate.NewHourly(logDirectory, "", onLogClose)
+		logFile, err = filerotate.New(logDirectory, filerotate.ROTATE_HOURLY)
 	case "DAILY":
 		fallthrough
 	default:
-		logFile, err = filerotate.NewDaily(logDirectory, "", onLogClose)
+		logFile, err = filerotate.New(logDirectory, filerotate.ROTATE_DAILY)
 	}
 
 	if err != nil {
@@ -67,12 +67,4 @@ func logEntries(logDirectory string, logType DiskLog, rotation string) {
 	}
 
 	logFile.Close()
-}
-
-func onLogClose(path string, didRotate bool) {
-	if didRotate {
-		log.Printf("Log file at '%s' was rotated", path)
-		return
-	}
-	log.Printf("Log file at '%s' was closed", path)
 }
