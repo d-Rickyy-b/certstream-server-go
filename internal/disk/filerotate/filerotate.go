@@ -85,7 +85,7 @@ func (rotatableFile *RotatableFile) RotateFile() {
 
 		newFile, _, nfErr := newFile(rotatableFile.Directory, rotatableFile.rotateType)
 		if nfErr != nil {
-			log.Println("Error while creation new file for rotation: ", nfErr)
+			log.Panicln("Error while creation new file for rotation: ", nfErr)
 		}
 
 		rotatableFile.Mutex.Lock()
