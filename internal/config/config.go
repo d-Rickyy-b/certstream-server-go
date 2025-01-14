@@ -39,6 +39,11 @@ type Config struct {
 		MetricsURL          string `yaml:"metrics_url"`
 		ExposeSystemMetrics bool   `yaml:"expose_system_metrics"`
 	}
+	General struct {
+		ServerConfig          `yaml:",inline"`
+		ResumeFromCTIndexFile bool   `yaml:"resume_from_ct_index_file"`
+		CTIndexFile           string `yaml:"ct_index_file"`
+	}
 }
 
 // ReadConfig reads the config file and returns a filled Config struct.

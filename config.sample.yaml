@@ -17,3 +17,7 @@ prometheus:
   real_ip: false
   whitelist:
     - "127.0.0.1/8"
+
+general:
+  resume_from_ct_index_file: true
+  ct_index_file: "ctIndex.json"
