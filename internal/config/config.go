@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/d-Rickyy-b/certstream-server-go/internal/disk"
 	"gopkg.in/yaml.v3"
 )
 
@@ -32,6 +33,12 @@ type Config struct {
 		LiteURL            string `yaml:"lite_url"`
 		DomainsOnlyURL     string `yaml:"domains_only_url"`
 		CompressionEnabled bool   `yaml:"compression_enabled"`
+	}
+	DiskLogger struct {
+		Enabled      bool         `yaml:"enabled"`
+		Type         disk.DiskLog `yaml:"type"`
+		LogDirectory string       `yaml:"log_directory"`
+		Rotation     string       `yaml:"rotation"`
 	}
 	Prometheus struct {
 		ServerConfig        `yaml:",inline"`
@@ -184,6 +191,13 @@ func validateConfig(config Config) bool {
 					return false
 				}
 			}
+		}
+	}
+
+	if config.DiskLogger.Enabled {
+		if config.DiskLogger.LogDirectory == "" {
+			log.Fatalln("Log Directory must be specified for disk logger")
+			return false
 		}
 	}
 

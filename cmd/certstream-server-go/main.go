@@ -7,6 +7,7 @@ import (
 
 	"github.com/d-Rickyy-b/certstream-server-go/internal/certificatetransparency"
 	"github.com/d-Rickyy-b/certstream-server-go/internal/config"
+	"github.com/d-Rickyy-b/certstream-server-go/internal/disk"
 	"github.com/d-Rickyy-b/certstream-server-go/internal/metrics"
 	"github.com/d-Rickyy-b/certstream-server-go/internal/web"
 )
@@ -31,12 +32,23 @@ func main() {
 	}
 
 	webserver := web.NewWebsocketServer(conf.Webserver.ListenAddr, conf.Webserver.ListenPort, conf.Webserver.CertPath, conf.Webserver.CertKeyPath)
-
 	setupMetrics(conf, webserver)
-
 	go webserver.Start()
 
-	watcher := certificatetransparency.Watcher{}
+	if conf.DiskLogger.Enabled {
+		disk.StartLogger(conf.DiskLogger.LogDirectory, conf.DiskLogger.Type, conf.DiskLogger.Rotation)
+	}
+
+	watcherLogChannels := []certificatetransparency.LogChannel{
+		certificatetransparency.LOG_CHAN_WEBSOCKET,
+	}
+	if conf.DiskLogger.Enabled {
+		watcherLogChannels = append(watcherLogChannels, certificatetransparency.LOG_CHAN_DISK)
+	}
+
+	log.Printf("Following log channels are enabled: %v\n", watcherLogChannels)
+
+	watcher := certificatetransparency.Watcher{LogChannels: watcherLogChannels}
 	watcher.Start()
 }
 
