@@ -19,5 +19,5 @@ prometheus:
     - "127.0.0.1/8"
 
 general:
-  resume_from_ct_index_file: true
+  resume_from_ct_index_file: false
   ct_index_file: "ctIndex.json"
