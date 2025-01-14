@@ -39,6 +39,7 @@ func New(directory string, rotateType RotateType) (*RotatableFile, error) {
 		Directory:    directory,
 		Path:         filePath,
 		file:         file,
+		rotateType:   rotateType,
 	}
 
 	go rotatableFile.RotateFile()
