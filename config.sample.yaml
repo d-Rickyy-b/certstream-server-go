@@ -41,3 +41,5 @@ general:
   # Google regularly updates the log list. If this option is set to true, the server will remove all logs no longer listed in the Google log list.
   # This option defaults to true. See https://github.com/d-Rickyy-b/certstream-server-go/issues/51
   drop_old_logs: true
+  resume_from_ct_index_file: true
+  ct_index_file: "ctIndex.json"

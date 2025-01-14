@@ -46,12 +46,19 @@ func NewWatcher(certChan chan models.Entry) *Watcher {
 }
 
 // Start starts the watcher. This method is blocking.
-func (w *Watcher) Start() {
+func (w *Watcher) Start(config config.Config) {
 	w.context, w.cancelFunc = context.WithCancel(context.Background())
 
 	// Create new certChan if it doesn't exist yet
 	if w.certChan == nil {
 		w.certChan = make(chan models.Entry, 5000)
+	}
+
+	if config.General.ResumeFromCTIndexFile {
+		// Load Saved CT Indexes
+		metrics.LoadCTIndex(config)
+		// Save CTIndexes at regular intervals
+		go metrics.SaveCertIndexesAtInterval(time.Second*30, config.General.CTIndexFile) // save indexes every X seconds
 	}
 
 	// initialize the watcher with currently available logs
@@ -126,11 +133,13 @@ func (w *Watcher) addNewlyAvailableLogs(logList loglist3.LogList) {
 				w.wg.Add(1)
 				newCTs++
 
+				lastCTIndex := metrics.GetCTIndex(transparencyLog.URL)
 				ctWorker := worker{
 					name:         transparencyLog.Description,
 					operatorName: operator.Name,
 					ctURL:        transparencyLog.URL,
 					entryChan:    w.certChan,
+					ctIndex:      lastCTIndex,
 				}
 				w.workers = append(w.workers, &ctWorker)
 
@@ -205,6 +214,7 @@ type worker struct {
 	operatorName string
 	ctURL        string
 	entryChan    chan models.Entry
+	ctIndex      int64
 	mu           sync.Mutex
 	running      bool
 	cancel       context.CancelFunc
@@ -284,18 +294,22 @@ func (w *worker) runWorker(ctx context.Context) error {
 		return errCreatingClient
 	}
 
-	sth, getSTHerr := jsonClient.GetSTH(ctx)
-	if getSTHerr != nil {
+	if w.ctIndex == 0 {
+		sth, getSTHerr := jsonClient.GetSTH(ctx)
+		if getSTHerr != nil {
 		// TODO this can happen due to a 429 error. We should retry the request
-		log.Printf("Could not get STH for '%s': %s\n", w.ctURL, getSTHerr)
-		return errFetchingSTHFailed
+			log.Printf("Could not get STH for '%s': %s\n", w.ctURL, getSTHerr)
+			return errFetchingSTHFailed
+		}
+		// Start at the latest STH to skip all the past certificates
+		w.ctIndex = int64(sth.TreeSize)
 	}
 
 	certScanner := scanner.NewScanner(jsonClient, scanner.ScannerOptions{
 		FetcherOptions: scanner.FetcherOptions{
 			BatchSize:     100,
 			ParallelFetch: 1,
-			StartIndex:    int64(sth.TreeSize), // Start at the latest STH to skip all the past certificates
+			StartIndex:    w.ctIndex,
 			Continuous:    true,
 		},
 		Matcher:     scanner.MatchAll{},
@@ -364,8 +378,9 @@ func certHandler(entryChan chan models.Entry) {
 		// Update metrics
 		url := entry.Data.Source.NormalizedURL
 		operator := entry.Data.Source.Operator
+		index := entry.Data.CertIndex
 
-		metrics.Inc(operator, url)
+		metrics.Inc(operator, url, index)
 	}
 }
 

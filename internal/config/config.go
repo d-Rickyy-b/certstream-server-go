@@ -55,6 +55,8 @@ type Config struct {
 		AdditionalLogs []LogConfig `yaml:"additional_logs"`
 		BufferSizes    BufferSizes `yaml:"buffer_sizes"`
 		DropOldLogs    *bool       `yaml:"drop_old_logs"`
+		ResumeFromCTIndexFile bool   `yaml:"resume_from_ct_index_file"`
+		CTIndexFile           string `yaml:"ct_index_file"`
 	}
 }
 
