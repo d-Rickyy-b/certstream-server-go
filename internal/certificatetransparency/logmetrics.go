@@ -2,6 +2,7 @@ package certificatetransparency
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"os"
 	"sync"
@@ -153,11 +154,11 @@ func (m *LogMetrics) GetCTIndex(url string) int64 {
 }
 
 // Load the last cert index that processed for each CT url if it exists
-func (m *LogMetrics) LoadCTIndex(config config.Config) {
+func (m *LogMetrics) LoadCTIndex() {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
-	bytes, err := os.ReadFile(config.General.CTIndexFile)
+	bytes, err := os.ReadFile(config.AppConfig.General.CTIndexFile)
 	if err != nil {
 		log.Println("Error while reading CTIndex file: ", err)
 		return
@@ -179,14 +180,15 @@ func (m *LogMetrics) LoadCTIndex(config config.Config) {
 // the last good index file from being clobbered if the program was shutdown/killed
 // in-between the write operation.
 func (m *LogMetrics) SaveCertIndexesAtInterval(interval time.Duration, ctIndexFileName string) {
-	const tempFileName = "index.json.latest_tmp"
 	if ctIndexFileName == "" {
 		ctIndexFileName = "ctIndex.json"
 	}
+	tempFileName := fmt.Sprintf("%s.tmp", ctIndexFileName)
 
-	for {
-		time.Sleep(interval)
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
 
+	for range ticker.C {
 		// Get the index data
 		ctIndex := m.GetAllCTIndexes()
 		bytes, cerr := json.MarshalIndent(ctIndex, "", " ")
@@ -197,7 +199,8 @@ func (m *LogMetrics) SaveCertIndexesAtInterval(interval time.Duration, ctIndexFi
 		// Save data to a temporary file first
 		file, err := os.OpenFile(tempFileName, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 		if err != nil {
-			log.Panic(err)
+			log.Println("Could not save CT index to temporary file: ", err)
+			continue
 		}
 
 		file.Truncate(0)

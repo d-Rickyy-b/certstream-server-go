@@ -40,7 +40,7 @@ type Config struct {
 		ExposeSystemMetrics bool   `yaml:"expose_system_metrics"`
 	}
 	General struct {
-		ServerConfig          `yaml:",inline"`
+		StartAtLatestSTH      bool   `yaml:"start_at_latest_sth"`
 		ResumeFromCTIndexFile bool   `yaml:"resume_from_ct_index_file"`
 		CTIndexFile           string `yaml:"ct_index_file"`
 	}

@@ -37,7 +37,7 @@ func main() {
 	go webserver.Start()
 
 	watcher := certificatetransparency.Watcher{}
-	watcher.Start(conf)
+	watcher.Start()
 }
 
 // setupMetrics configures the webserver to handle prometheus metrics according to the config.

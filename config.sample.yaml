@@ -19,5 +19,6 @@ prometheus:
     - "127.0.0.1/8"
 
 general:
+  start_at_latest_sth: true
   resume_from_ct_index_file: false
   ct_index_file: "ctIndex.json"
