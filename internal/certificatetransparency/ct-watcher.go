@@ -46,7 +46,7 @@ func NewWatcher(certChan chan models.Entry) *Watcher {
 }
 
 // Start starts the watcher. This method is blocking.
-func (w *Watcher) Start(config config.Config) {
+func (w *Watcher) Start() {
 	w.context, w.cancelFunc = context.WithCancel(context.Background())
 
 	// Create new certChan if it doesn't exist yet
@@ -54,11 +54,11 @@ func (w *Watcher) Start(config config.Config) {
 		w.certChan = make(chan models.Entry, 5000)
 	}
 
-	if config.General.ResumeFromCTIndexFile {
+	if config.AppConfig.General.ResumeFromCTIndexFile {
 		// Load Saved CT Indexes
-		metrics.LoadCTIndex(config)
+		metrics.LoadCTIndex()
 		// Save CTIndexes at regular intervals
-		go metrics.SaveCertIndexesAtInterval(time.Second*30, config.General.CTIndexFile) // save indexes every X seconds
+		go metrics.SaveCertIndexesAtInterval(time.Second*30, config.AppConfig.General.CTIndexFile) // save indexes every X seconds
 	}
 
 	// initialize the watcher with currently available logs
@@ -294,7 +294,8 @@ func (w *worker) runWorker(ctx context.Context) error {
 		return errCreatingClient
 	}
 
-	if w.ctIndex == 0 {
+	validSavedCTIndexExists := config.AppConfig.General.ResumeFromCTIndexFile && w.ctIndex >= 0
+	if !validSavedCTIndexExists || config.AppConfig.General.StartAtLatestSTH {
 		sth, getSTHerr := jsonClient.GetSTH(ctx)
 		if getSTHerr != nil {
 		// TODO this can happen due to a 429 error. We should retry the request
