@@ -1,6 +1,15 @@
 package certificatetransparency
 
-import "sync"
+import (
+	"encoding/json"
+	"fmt"
+	"log"
+	"os"
+	"sync"
+	"time"
+
+	"github.com/d-Rickyy-b/certstream-server-go/internal/config"
+)
 
 type (
 	// OperatorLogs is a map of operator names to a list of CT log urls, operated by said operator.
@@ -9,12 +18,14 @@ type (
 	OperatorMetric map[string]int64
 	// CTMetrics is a map of operator names to a map of CT log urls to the number of certs processed by said log.
 	CTMetrics map[string]OperatorMetric
+	// CTCertIndex is a map of CT log urls to the last processed certficate index on the said log
+	CTCertIndex map[string]int64
 )
 
 var (
 	processedCerts    int64
 	processedPrecerts int64
-	metrics           = LogMetrics{metrics: make(CTMetrics)}
+	metrics           = LogMetrics{metrics: make(CTMetrics), index: make(CTCertIndex)}
 )
 
 // LogMetrics is a struct that holds a map of metrics for each CT log grouped by operator.
@@ -22,6 +33,7 @@ var (
 type LogMetrics struct {
 	mutex   sync.RWMutex
 	metrics CTMetrics
+	index   CTCertIndex
 }
 
 // GetCTMetrics returns a copy of the internal metrics map.
@@ -76,6 +88,11 @@ func (m *LogMetrics) Init(operator, url string) {
 	if _, ok := m.metrics[operator][url]; !ok {
 		m.metrics[operator][url] = 0
 	}
+
+	// if url index does not exist, create a new entry
+	if _, ok := m.index[url]; !ok {
+		m.index[url] = 0
+	}
 }
 
 // Get the metric for a given operator and ct url.
@@ -104,7 +121,7 @@ func (m *LogMetrics) Set(operator, url string, value int64) {
 }
 
 // Inc the metric for a given operator and ct url.
-func (m *LogMetrics) Inc(operator, url string) {
+func (m *LogMetrics) Inc(operator, url string, index int64) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
@@ -113,6 +130,93 @@ func (m *LogMetrics) Inc(operator, url string) {
 	}
 
 	m.metrics[operator][url]++
+
+	m.index[url] = index
+}
+
+func (m *LogMetrics) GetAllCTIndexes() CTCertIndex {
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
+
+	// make a copy of the index and return it
+	// since map is a refrence type
+	copyOfIndex := make(map[string]int64)
+	for k, v := range m.index {
+		copyOfIndex[k] = v
+	}
+
+	return copyOfIndex
+}
+
+func (m *LogMetrics) GetCTIndex(url string) int64 {
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
+
+	index, ok := m.index[url]
+	if !ok {
+		return 0
+	}
+
+	return index
+}
+
+// Load the last cert index that processed for each CT url if it exists
+func (m *LogMetrics) LoadCTIndex() {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
+	bytes, err := os.ReadFile(config.AppConfig.General.CTIndexFile)
+	if err != nil {
+		log.Println("Error while reading CTIndex file: ", err)
+		return
+	}
+
+	jerr := json.Unmarshal(bytes, &m.index)
+	if jerr != nil {
+		log.Panicln(jerr)
+	}
+
+	log.Println("Sucessfuly loaded saved CT indexes")
+}
+
+// SaveCertIndexesAtInterval saves the index of CTLogs at given intervals.
+// we first create a temp file and write the index data to it, only then
+// do we move the temp file to actual permanent index file, this prevents
+// the last good index file from being clobbered if the program was shutdown/killed
+// in-between the write operation.
+func (m *LogMetrics) SaveCertIndexesAtInterval(interval time.Duration, ctIndexFileName string) {
+	if ctIndexFileName == "" {
+		ctIndexFileName = "ctIndex.json"
+	}
+	tempFileName := fmt.Sprintf("%s.tmp", ctIndexFileName)
+
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		// Get the index data
+		ctIndex := m.GetAllCTIndexes()
+		bytes, cerr := json.MarshalIndent(ctIndex, "", " ")
+		if cerr != nil {
+			log.Panic(cerr)
+		}
+
+		// Save data to a temporary file first
+		file, err := os.OpenFile(tempFileName, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+		if err != nil {
+			log.Println("Could not save CT index to temporary file: ", err)
+			continue
+		}
+
+		file.Truncate(0)
+		file.Write(bytes) //TODO: check for short writes
+		file.Sync()
+
+		file.Close()
+
+		// Atomically move the temp file to the permanent file
+		os.Rename(tempFileName, ctIndexFileName)
+	}
 }
 
 func GetProcessedCerts() int64 {
