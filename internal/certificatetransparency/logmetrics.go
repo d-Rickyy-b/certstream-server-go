@@ -138,7 +138,14 @@ func (m *LogMetrics) GetAllCTIndexes() CTCertIndex {
 	m.mutex.RLock()
 	defer m.mutex.RUnlock()
 
-	return m.index
+	// make a copy of the index and return it
+	// since map is a refrence type
+	copyOfIndex := make(map[string]int64)
+	for k, v := range m.index {
+		copyOfIndex[k] = v
+	}
+
+	return copyOfIndex
 }
 
 func (m *LogMetrics) GetCTIndex(url string) int64 {
