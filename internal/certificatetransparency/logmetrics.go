@@ -176,8 +176,6 @@ func (m *LogMetrics) LoadCTIndex() {
 		log.Panicln(jerr)
 	}
 
-	log.Printf("%v", m.index)
-
 	log.Println("Sucessfuly loaded saved CT indexes")
 }
 
