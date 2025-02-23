@@ -6,6 +6,9 @@ package certstream
 
 import (
 	"log"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/d-Rickyy-b/certstream-server-go/internal/certificatetransparency"
 	"github.com/d-Rickyy-b/certstream-server-go/internal/config"
@@ -66,6 +69,11 @@ func (cs *Certstream) setupMetrics(webserver *web.WebServer) {
 func (cs *Certstream) Start() {
 	log.Printf("Starting certstream-server-go v%s\n", config.Version)
 
+	// handle signals in a separate goroutine
+	signals := make(chan os.Signal, 1)
+	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)
+	go signalHandler(signals, cs.Stop)
+
 	// If there is no watcher initialized, create a new one
 	if cs.watcher == nil {
 		cs.watcher = &certificatetransparency.Watcher{}
@@ -98,4 +106,14 @@ func (cs *Certstream) Stop() {
 	if cs.metricsServer != nil {
 		cs.metricsServer.Stop()
 	}
+}
+
+// signalHandler listens for signals in order to gracefully shut down the server.
+// Executes the callback function when a signal is received.
+func signalHandler(signals chan os.Signal, callback func()) {
+	log.Println("Listening for signals...")
+	sig := <-signals
+	log.Printf("Received signal %v. Shutting down...\n", sig)
+	callback()
+	os.Exit(0)
 }
