@@ -12,8 +12,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/d-Rickyy-b/certstream-server-go/internal/certstream"
 	"github.com/d-Rickyy-b/certstream-server-go/internal/config"
+	"github.com/d-Rickyy-b/certstream-server-go/internal/models"
 	"github.com/d-Rickyy-b/certstream-server-go/internal/web"
 
 	ct "github.com/google/certificate-transparency-go"
@@ -34,12 +34,12 @@ type Watcher struct {
 	workers    []*worker
 	wg         sync.WaitGroup
 	context    context.Context
-	certChan   chan certstream.Entry
+	certChan   chan models.Entry
 	cancelFunc context.CancelFunc
 }
 
 // NewWatcher creates a new Watcher.
-func NewWatcher(certChan chan certstream.Entry) *Watcher {
+func NewWatcher(certChan chan models.Entry) *Watcher {
 	return &Watcher{
 		certChan: certChan,
 	}
@@ -51,7 +51,7 @@ func (w *Watcher) Start() {
 
 	// Create new certChan if it doesn't exist yet
 	if w.certChan == nil {
-		w.certChan = make(chan certstream.Entry, 5000)
+		w.certChan = make(chan models.Entry, 5000)
 	}
 
 	// initialize the watcher with currently available logs
@@ -154,7 +154,7 @@ type worker struct {
 	name         string
 	operatorName string
 	ctURL        string
-	entryChan    chan certstream.Entry
+	entryChan    chan models.Entry
 	mu           sync.Mutex
 	running      bool
 }
@@ -281,7 +281,7 @@ func (w *worker) foundPrecertCallback(rawEntry *ct.RawLogEntry) {
 
 // certHandler takes the entries out of the entryChan channel and broadcasts them to all clients.
 // Only a single instance of the certHandler runs per certstream server.
-func certHandler(entryChan chan certstream.Entry) {
+func certHandler(entryChan chan models.Entry) {
 	var processed int64
 
 	for {

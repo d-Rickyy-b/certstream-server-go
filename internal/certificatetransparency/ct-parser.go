@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/d-Rickyy-b/certstream-server-go/internal/certstream"
+	"github.com/d-Rickyy-b/certstream-server-go/internal/models"
 
 	ct "github.com/google/certificate-transparency-go"
 	"github.com/google/certificate-transparency-go/x509"
@@ -22,15 +22,15 @@ import (
 )
 
 // parseData converts a *ct.RawLogEntry struct into a certstream.Data struct by copying some values and calculating others.
-func parseData(entry *ct.RawLogEntry, operatorName, logName, ctURL string) (certstream.Data, error) {
+func parseData(entry *ct.RawLogEntry, operatorName, logName, ctURL string) (models.Data, error) {
 	certLink := fmt.Sprintf("%s/ct/v1/get-entries?start=%d&end=%d", ctURL, entry.Index, entry.Index)
 
 	// Create main data structure
-	data := certstream.Data{
+	data := models.Data{
 		CertIndex: entry.Index,
 		CertLink:  certLink,
 		Seen:      float64(time.Now().UnixMilli()) / 1_000,
-		Source: certstream.Source{
+		Source: models.Source{
 			Name:          logName,
 			URL:           ctURL,
 			Operator:      operatorName,
@@ -43,7 +43,7 @@ func parseData(entry *ct.RawLogEntry, operatorName, logName, ctURL string) (cert
 	logEntry, conversionErr := entry.ToLogEntry()
 	if conversionErr != nil {
 		log.Println("Could not convert entry to LogEntry: ", conversionErr)
-		return certstream.Data{}, conversionErr
+		return models.Data{}, conversionErr
 	}
 
 	var cert *x509.Certificate
@@ -60,7 +60,7 @@ func parseData(entry *ct.RawLogEntry, operatorName, logName, ctURL string) (cert
 		rawData = logEntry.Precert.Submitted.Data
 		isPrecert = true
 	default:
-		return certstream.Data{}, errors.New("could not parse entry: no certificate found")
+		return models.Data{}, errors.New("could not parse entry: no certificate found")
 	}
 
 	// Calculate certificate hash from the raw DER bytes of the certificate
@@ -81,15 +81,15 @@ func parseData(entry *ct.RawLogEntry, operatorName, logName, ctURL string) (cert
 	data.Chain, parseErr = parseCertificateChain(logEntry)
 	if parseErr != nil {
 		log.Println("Could not parse certificate chain: ", parseErr)
-		return certstream.Data{}, parseErr
+		return models.Data{}, parseErr
 	}
 
 	return data, nil
 }
 
 // parseCertificateChain returns the certificate chain in form of a []LeafCert from the given *ct.LogEntry.
-func parseCertificateChain(logEntry *ct.LogEntry) ([]certstream.LeafCert, error) {
-	chain := make([]certstream.LeafCert, len(logEntry.Chain))
+func parseCertificateChain(logEntry *ct.LogEntry) ([]models.LeafCert, error) {
+	chain := make([]models.LeafCert, len(logEntry.Chain))
 
 	for i, chainEntry := range logEntry.Chain {
 		myCert, parseErr := x509.ParseCertificate(chainEntry.Data)
@@ -106,10 +106,10 @@ func parseCertificateChain(logEntry *ct.LogEntry) ([]certstream.LeafCert, error)
 }
 
 // leafCertFromX509cert converts a x509.Certificate to the custom LeafCert data structure.
-func leafCertFromX509cert(cert x509.Certificate) certstream.LeafCert {
-	leafCert := certstream.LeafCert{
+func leafCertFromX509cert(cert x509.Certificate) models.LeafCert {
+	leafCert := models.LeafCert{
 		AllDomains:         cert.DNSNames,
-		Extensions:         certstream.Extensions{},
+		Extensions:         models.Extensions{},
 		NotAfter:           cert.NotAfter.Unix(),
 		NotBefore:          cert.NotBefore.Unix(),
 		SerialNumber:       formatSerialNumber(cert.SerialNumber),
@@ -195,8 +195,8 @@ func leafCertFromX509cert(cert x509.Certificate) certstream.LeafCert {
 }
 
 // buildSubject generates a Subject struct from the given pkix.Name.
-func buildSubject(certSubject pkix.Name) certstream.Subject {
-	subject := certstream.Subject{
+func buildSubject(certSubject pkix.Name) models.Subject {
+	subject := models.Subject{
 		C:  parseName(certSubject.Country),
 		CN: &certSubject.CommonName,
 		L:  parseName(certSubject.Locality),
@@ -402,17 +402,17 @@ func keyUsageToString(k x509.KeyUsage) string {
 }
 
 // ParseCertstreamEntry creates an Entry from a ct.RawLogEntry.
-func ParseCertstreamEntry(rawEntry *ct.RawLogEntry, operatorName, logname, ctURL string) (certstream.Entry, error) {
+func ParseCertstreamEntry(rawEntry *ct.RawLogEntry, operatorName, logname, ctURL string) (models.Entry, error) {
 	if rawEntry == nil {
-		return certstream.Entry{}, errors.New("certstream entry is nil")
+		return models.Entry{}, errors.New("certstream entry is nil")
 	}
 
 	data, err := parseData(rawEntry, operatorName, logname, ctURL)
 	if err != nil {
-		return certstream.Entry{}, err
+		return models.Entry{}, err
 	}
 
-	entry := certstream.Entry{
+	entry := models.Entry{
 		Data:        data,
 		MessageType: "certificate_update",
 	}

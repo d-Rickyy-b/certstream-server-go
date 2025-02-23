@@ -12,8 +12,8 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 
-	"github.com/d-Rickyy-b/certstream-server-go/internal/certstream"
 	"github.com/d-Rickyy-b/certstream-server-go/internal/config"
+	"github.com/d-Rickyy-b/certstream-server-go/internal/models"
 
 	"github.com/gorilla/websocket"
 )
@@ -275,7 +275,7 @@ func NewWebsocketServer(networkIf string, port int, certPath, keyPath string) *W
 	setupWebsocketRoutes(server.routes)
 	server.initServer()
 
-	ClientHandler.Broadcast = make(chan certstream.Entry, 10_000)
+	ClientHandler.Broadcast = make(chan models.Entry, 10_000)
 	go ClientHandler.broadcaster()
 
 	return server

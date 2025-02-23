@@ -1,4 +1,4 @@
-package certstream
+package models
 
 import (
 	"bytes"

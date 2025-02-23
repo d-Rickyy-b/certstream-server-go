@@ -3,10 +3,10 @@ package web
 import (
 	"net/http"
 
-	"github.com/d-Rickyy-b/certstream-server-go/internal/certstream"
+	"github.com/d-Rickyy-b/certstream-server-go/internal/models"
 )
 
-var exampleCert certstream.Entry
+var exampleCert models.Entry
 
 // exampleFull handles requests to the /full-stream/example.json endpoint.
 // It returns a JSON representation of the full example certificate.
@@ -29,6 +29,6 @@ func exampleDomains(w http.ResponseWriter, _ *http.Request) {
 	w.Write(exampleCert.JSONDomains()) //nolint:errcheck
 }
 
-func SetExampleCert(cert certstream.Entry) {
+func SetExampleCert(cert models.Entry) {
 	exampleCert = cert
 }

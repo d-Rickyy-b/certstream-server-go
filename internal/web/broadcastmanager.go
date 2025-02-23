@@ -4,11 +4,11 @@ import (
 	"log"
 	"sync"
 
-	"github.com/d-Rickyy-b/certstream-server-go/internal/certstream"
+	"github.com/d-Rickyy-b/certstream-server-go/internal/models"
 )
 
 type BroadcastManager struct {
-	Broadcast  chan certstream.Entry
+	Broadcast  chan models.Entry
 	clients    []*client
 	clientLock sync.RWMutex
 }
