@@ -10,13 +10,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/d-Rickyy-b/certstream-server-go/internal/certificatetransparency"
+	"github.com/d-Rickyy-b/certstream-server-go/internal/config"
+
 	ct "github.com/google/certificate-transparency-go"
 	"github.com/google/certificate-transparency-go/client"
 	"github.com/google/certificate-transparency-go/jsonclient"
 	"github.com/google/certificate-transparency-go/scanner"
-
-	"github.com/d-Rickyy-b/certstream-server-go/internal/certificatetransparency"
-	"github.com/d-Rickyy-b/certstream-server-go/internal/config"
 )
 
 var userAgent = fmt.Sprintf("Certstream v%s (github.com/d-Rickyy-b/certstream-server-go)", config.Version)
