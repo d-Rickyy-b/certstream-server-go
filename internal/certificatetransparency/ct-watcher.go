@@ -167,7 +167,7 @@ func (w *worker) startDownloadingCerts(ctx context.Context) {
 		w.ctURL = "https://" + w.ctURL
 	}
 
-	log.Printf("Starting worker for CT log: %s\n", w.ctURL)
+	log.Printf("Initializing worker for CT log: %s\n", w.ctURL)
 	defer log.Printf("Stopping worker for CT log: %s\n", w.ctURL)
 
 	w.mu.Lock()
@@ -182,6 +182,7 @@ func (w *worker) startDownloadingCerts(ctx context.Context) {
 	w.mu.Unlock()
 
 	for {
+		log.Printf("Starting worker for CT log: %s\n", w.ctURL)
 		workerErr := w.runWorker(ctx)
 		if workerErr != nil {
 			if errors.Is(workerErr, errFetchingSTHFailed) {
@@ -246,7 +247,7 @@ func (w *worker) runWorker(ctx context.Context) error {
 		return scanErr
 	}
 
-	log.Println("No error from certScanner!")
+	log.Printf("Exiting worker %s without error!\n", w.ctURL)
 
 	return nil
 }
