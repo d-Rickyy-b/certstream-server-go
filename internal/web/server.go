@@ -297,3 +297,10 @@ func (ws *WebServer) Start() {
 		log.Fatal("Error while serving webserver: ", err)
 	}
 }
+
+func (ws *WebServer) Stop() {
+	log.Println("Stopping webserver...")
+	if err := ws.server.Shutdown(nil); err != nil {
+		log.Fatal("Error while stopping webserver: ", err)
+	}
+}
