@@ -25,6 +25,12 @@ type ServerConfig struct {
 	Whitelist   []string `yaml:"whitelist"`
 }
 
+type LogConfig struct {
+	Operator    string `yaml:"operator"`
+	URL         string `yaml:"url"`
+	Description string `yaml:"description"`
+}
+
 type Config struct {
 	Webserver struct {
 		ServerConfig       `yaml:",inline"`
@@ -38,6 +44,9 @@ type Config struct {
 		Enabled             bool   `yaml:"enabled"`
 		MetricsURL          string `yaml:"metrics_url"`
 		ExposeSystemMetrics bool   `yaml:"expose_system_metrics"`
+	}
+	General struct {
+		AdditionalLogs []LogConfig `yaml:"additional_logs"`
 	}
 }
 
@@ -53,14 +62,14 @@ func ReadConfig(configPath string) (Config, error) {
 	if !validateConfig(conf) {
 		log.Fatalln("Invalid config")
 	}
-	AppConfig = conf
+	AppConfig = *conf
 
-	return conf, nil
+	return *conf, nil
 }
 
 // parseConfigFromFile reads the config file as bytes and passes it to parseConfigFromBytes.
 // It returns a filled Config struct.
-func parseConfigFromFile(configFile string) (Config, error) {
+func parseConfigFromFile(configFile string) (*Config, error) {
 	if configFile == "" {
 		configFile = "config.yml"
 	}
@@ -69,7 +78,7 @@ func parseConfigFromFile(configFile string) (Config, error) {
 	absPath, err := filepath.Abs(configFile)
 	if err != nil {
 		log.Printf("Couldn't convert to absolute path: '%s'\n", configFile)
-		return Config{}, err
+		return &Config{}, err
 	}
 
 	if _, statErr := os.Stat(absPath); os.IsNotExist(statErr) {
@@ -84,45 +93,46 @@ func parseConfigFromFile(configFile string) (Config, error) {
 			absPath += ".yaml"
 		default:
 			log.Printf("Config file '%s' does not have a valid extension\n", configFile)
-			return Config{}, statErr
+			return &Config{}, statErr
 		}
 
 		if _, secondStatErr := os.Stat(absPath); os.IsNotExist(secondStatErr) {
 			log.Printf("Config file '%s' does not exist\n", absPath)
-			return Config{}, secondStatErr
+			return &Config{}, secondStatErr
 		}
 	}
 	log.Printf("File '%s' exists\n", absPath)
 
 	yamlFileContent, readErr := os.ReadFile(absPath)
 	if readErr != nil {
-		return Config{}, readErr
+		return &Config{}, readErr
 	}
 
 	conf, parseErr := parseConfigFromBytes(yamlFileContent)
 	if parseErr != nil {
-		return Config{}, parseErr
+		return &Config{}, parseErr
 	}
 
 	return conf, nil
 }
 
 // parseConfigFromBytes parses the config bytes and returns a filled Config struct.
-func parseConfigFromBytes(data []byte) (Config, error) {
+func parseConfigFromBytes(data []byte) (*Config, error) {
 	var config Config
 
 	err := yaml.Unmarshal(data, &config)
 	if err != nil {
-		return config, err
+		return &config, err
 	}
 
-	return config, nil
+	return &config, nil
 }
 
 // validateConfig validates the config values and sets defaults for missing values.
-func validateConfig(config Config) bool {
+func validateConfig(config *Config) bool {
 	// Still matches invalid IP addresses but good enough for detecting completely wrong formats
-	URLRegex := regexp.MustCompile(`^(/[a-zA-Z0-9\-._]+)+$`)
+	URLPathRegex := regexp.MustCompile(`^(/[a-zA-Z0-9\-._]+)+$`)
+	URLRegex := regexp.MustCompile(`^https?://[a-zA-Z0-9\-._]+(:[0-9]+)?(/[a-zA-Z0-9\-._]+)*$`)
 
 	// Check webserver config
 	if config.Webserver.ListenAddr == "" || net.ParseIP(config.Webserver.ListenAddr) == nil {
@@ -135,17 +145,17 @@ func validateConfig(config Config) bool {
 		return false
 	}
 
-	if config.Webserver.FullURL == "" || !URLRegex.MatchString(config.Webserver.FullURL) {
+	if config.Webserver.FullURL == "" || !URLPathRegex.MatchString(config.Webserver.FullURL) {
 		log.Println("Webhook full URL is not set or does not match pattern '/...'")
 		config.Webserver.FullURL = "/full-stream"
 	}
 
-	if config.Webserver.LiteURL == "" || !URLRegex.MatchString(config.Webserver.FullURL) {
+	if config.Webserver.LiteURL == "" || !URLPathRegex.MatchString(config.Webserver.FullURL) {
 		log.Println("Webhook lite URL is not set or does not match pattern '/...'")
 		config.Webserver.LiteURL = "/"
 	}
 
-	if config.Webserver.DomainsOnlyURL == "" || !URLRegex.MatchString(config.Webserver.DomainsOnlyURL) {
+	if config.Webserver.DomainsOnlyURL == "" || !URLPathRegex.MatchString(config.Webserver.DomainsOnlyURL) {
 		log.Println("Webhook domains only URL is not set or does not match pattern '/...'")
 		config.Webserver.FullURL = "/domains-only"
 	}
@@ -186,6 +196,20 @@ func validateConfig(config Config) bool {
 			}
 		}
 	}
+
+	var validLogs []LogConfig
+	if len(config.General.AdditionalLogs) > 0 {
+		for _, ctLog := range config.General.AdditionalLogs {
+			if !URLRegex.MatchString(ctLog.URL) {
+				log.Println("Ignoring invalid additional log URL: ", ctLog.URL)
+				continue
+			}
+
+			validLogs = append(validLogs, ctLog)
+		}
+	}
+
+	config.General.AdditionalLogs = validLogs
 
 	return true
 }
