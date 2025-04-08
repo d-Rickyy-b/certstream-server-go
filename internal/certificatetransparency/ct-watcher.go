@@ -329,6 +329,35 @@ func getAllLogs() (loglist3.LogList, error) {
 		return loglist3.LogList{}, parseErr
 	}
 
+	// Add manually added logs from config to the allLogs list
+	if config.AppConfig.General.AdditionalLogs == nil {
+		return *allLogs, nil
+	}
+
+	for _, additionalLog := range config.AppConfig.General.AdditionalLogs {
+		customLog := loglist3.Log{
+			URL:         additionalLog.URL,
+			Description: additionalLog.Description,
+		}
+
+		operatorFound := false
+		for _, operator := range allLogs.Operators {
+			if operator.Name == additionalLog.Operator {
+				operator.Logs = append(operator.Logs, &customLog)
+				operatorFound = true
+				break
+			}
+		}
+
+		if !operatorFound {
+			newOperator := loglist3.Operator{
+				Name: additionalLog.Operator,
+				Logs: []*loglist3.Log{&customLog},
+			}
+			allLogs.Operators = append(allLogs.Operators, &newOperator)
+		}
+	}
+
 	// Add new ct logs to metrics
 	for _, operator := range allLogs.Operators {
 		for _, ctlog := range operator.Logs {
