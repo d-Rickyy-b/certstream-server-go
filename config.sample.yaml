@@ -28,3 +28,12 @@ general:
     - url: https://dodo.ct.comodo.com/
       operator: "Comodo"
       description: "Comodo Dodo"
+  # To optimize the performance of the server, you can overwrite the size of different buffers
+  # For low CPU, low memory machines, you should reduce the buffer sizes to save memory in case the CPU is maxed.
+  buffer_sizes:
+    # Buffer for each websocket connection
+    websocket: 300
+    # Buffer for each CT log connection
+    ctlog: 1000
+    # Combined buffer for the broadcast manager
+    broadcastmanager: 10000
