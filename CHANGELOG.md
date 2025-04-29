@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Added
+- New configuration for buffer sizes (#58)
 ### Changed
 ### Fixed
 ### Docs
@@ -17,9 +18,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Support for non-browsers by implementing server initiated heartbeats (#39)
 - Start new ct-watchers as new ct logs become available (#42)
 - More logging to document currently watched logs (03d878e)
+ 
 ### Changed
 - Changed log output to be better grepable (5c055cc)
 - Update ct log update interval to once per hour instead of once per 6 hours as previously (9b6e77d)
+
 ### Fixed
 - Fixed a possible race condition when accessing metrics
 
