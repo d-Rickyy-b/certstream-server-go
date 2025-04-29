@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Added
+- Remove old CT logs as soon as they are removed from the Google CT Loglist (#60)
 ### Changed
 ### Fixed
 ### Docs

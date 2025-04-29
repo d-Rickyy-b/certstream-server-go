@@ -55,7 +55,7 @@ func (w *Watcher) Start() {
 	}
 
 	// initialize the watcher with currently available logs
-	w.addNewlyAvailableLogs()
+	w.updateLogs()
 
 	log.Println("Started CT watcher")
 	go certHandler(w.certChan)
@@ -69,14 +69,14 @@ func (w *Watcher) Start() {
 // This method is blocking. It can be stopped by cancelling the context.
 func (w *Watcher) watchNewLogs() {
 	// Add all available logs to the watcher
-	w.addNewlyAvailableLogs()
+	w.updateLogs()
 
 	// Check for new logs once every hour
 	ticker := time.NewTicker(1 * time.Hour)
 	for {
 		select {
 		case <-ticker.C:
-			w.addNewlyAvailableLogs()
+			w.updateLogs()
 		case <-w.context.Done():
 			ticker.Stop()
 			return
@@ -84,17 +84,23 @@ func (w *Watcher) watchNewLogs() {
 	}
 }
 
-// The transparency log list is constantly updated with new Log servers.
-// This function checks for new ct logs and adds them to the watcher.
-func (w *Watcher) addNewlyAvailableLogs() {
-	log.Println("Checking for new ct logs...")
-
+func (w *Watcher) updateLogs() {
 	// Get a list of urls of all CT logs
 	logList, err := getAllLogs()
 	if err != nil {
 		log.Println(err)
 		return
 	}
+
+	w.addNewlyAvailableLogs(logList)
+	if *config.AppConfig.General.DropOldLogs {
+		w.dropRemovedLogs(logList)
+	}
+}
+
+// addNewlyAvailableLogs checks the transparency log list for new Log servers and adds workers for those to the watcher.
+func (w *Watcher) addNewlyAvailableLogs(logList loglist3.LogList) {
+	log.Println("Checking for new ct logs...")
 
 	newCTs := 0
 
@@ -139,6 +145,12 @@ func (w *Watcher) addNewlyAvailableLogs() {
 
 	log.Printf("New ct logs found: %d\n", newCTs)
 	log.Printf("Currently monitored ct logs: %d\n", len(w.workers))
+}
+
+// dropRemovedLogs checks if any of the currently monitored logs are no longer in the log list.
+// If they are not, the CT Logs are probably no longer relevant and the corresponding workers will be stopped.
+func (w *Watcher) dropRemovedLogs(logList loglist3.LogList) {
+	removedCTs := 0
 
 	// Iterate over all workers and check if they are still in the logList
 	// If they are not, the CT Logs are probably no longer relevant.
@@ -163,9 +175,13 @@ func (w *Watcher) addNewlyAvailableLogs() {
 		// If the log is not in the loglist, stop the worker
 		if !onLogList {
 			log.Printf("Stopping worker. CT URL not found in LogList: '%s'\n", ctWorker.ctURL)
+			removedCTs++
 			ctWorker.stop()
 		}
 	}
+
+	log.Printf("Removed ct logs: %d\n", removedCTs)
+	log.Printf("Currently monitored ct logs: %d\n", len(w.workers))
 }
 
 // Stop stops the watcher.

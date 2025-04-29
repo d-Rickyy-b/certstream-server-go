@@ -28,3 +28,6 @@ general:
     - url: https://dodo.ct.comodo.com/
       operator: "Comodo"
       description: "Comodo Dodo"
+  # Google regularly updates the log list. If this option is set to true, the server will remove all old logs.
+  # This option defaults to true. See https://github.com/d-Rickyy-b/certstream-server-go/issues/51
+  drop_old_logs: true
