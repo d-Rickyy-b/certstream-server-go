@@ -54,6 +54,7 @@ type Config struct {
 	General struct {
 		AdditionalLogs []LogConfig `yaml:"additional_logs"`
 		BufferSizes    BufferSizes `yaml:"buffer_sizes"`
+		DropOldLogs    *bool       `yaml:"drop_old_logs"`
 	}
 }
 
@@ -228,7 +229,13 @@ func validateConfig(config *Config) bool {
 
 	if config.General.BufferSizes.BroadcastManager <= 0 {
 		config.General.BufferSizes.BroadcastManager = 10000
-	}
+
+  // If the cleanup flag is not set, default to true
+	if config.General.DropOldLogs == nil {
+		log.Println("drop_old_logs is not set, defaulting to true")
+		defaultCleanup := true
+		config.General.DropOldLogs = &defaultCleanup
+  }
 
 	return true
 }
