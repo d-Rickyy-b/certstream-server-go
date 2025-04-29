@@ -292,7 +292,7 @@ func (w *worker) runWorker(ctx context.Context) error {
 		Matcher:     scanner.MatchAll{},
 		PrecertOnly: false,
 		NumWorkers:  1,
-		BufferSize:  1000,
+		BufferSize:  config.AppConfig.General.BufferSizes.CTLog,
 	})
 
 	scanErr := certScanner.Scan(ctx, w.foundCertCallback, w.foundPrecertCallback)

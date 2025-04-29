@@ -31,6 +31,12 @@ type LogConfig struct {
 	Description string `yaml:"description"`
 }
 
+type BufferSizes struct {
+	Websocket        int `yaml:"websocket"`
+	CTLog            int `yaml:"ctlog"`
+	BroadcastManager int `yaml:"broadcastmanager"`
+}
+
 type Config struct {
 	Webserver struct {
 		ServerConfig       `yaml:",inline"`
@@ -47,6 +53,7 @@ type Config struct {
 	}
 	General struct {
 		AdditionalLogs []LogConfig `yaml:"additional_logs"`
+		BufferSizes    BufferSizes `yaml:"buffer_sizes"`
 		DropOldLogs    *bool       `yaml:"drop_old_logs"`
 	}
 }
@@ -212,12 +219,23 @@ func validateConfig(config *Config) bool {
 
 	config.General.AdditionalLogs = validLogs
 
-	// If the cleanup flag is not set, default to true
+	if config.General.BufferSizes.Websocket <= 0 {
+		config.General.BufferSizes.Websocket = 300
+	}
+
+	if config.General.BufferSizes.CTLog <= 0 {
+		config.General.BufferSizes.CTLog = 1000
+	}
+
+	if config.General.BufferSizes.BroadcastManager <= 0 {
+		config.General.BufferSizes.BroadcastManager = 10000
+
+  // If the cleanup flag is not set, default to true
 	if config.General.DropOldLogs == nil {
 		log.Println("drop_old_logs is not set, defaulting to true")
 		defaultCleanup := true
 		config.General.DropOldLogs = &defaultCleanup
-	}
+  }
 
 	return true
 }
