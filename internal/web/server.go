@@ -168,7 +168,7 @@ func upgradeConnection(w http.ResponseWriter, r *http.Request) (*websocket.Conn,
 
 // setupClient initializes a client struct and starts the broadcastHandler and websocket listener.
 func setupClient(connection *websocket.Conn, subscriptionType SubscriptionType, name string) {
-	c := newClient(connection, subscriptionType, name, 300)
+	c := newClient(connection, subscriptionType, name, config.AppConfig.General.BufferSizes.Websocket)
 	go c.broadcastHandler()
 	go c.listenWebsocket()
 
@@ -275,7 +275,7 @@ func NewWebsocketServer(networkIf string, port int, certPath, keyPath string) *W
 	setupWebsocketRoutes(server.routes)
 	server.initServer()
 
-	ClientHandler.Broadcast = make(chan models.Entry, 10_000)
+	ClientHandler.Broadcast = make(chan models.Entry, config.AppConfig.General.BufferSizes.BroadcastManager)
 	go ClientHandler.broadcaster()
 
 	return server
