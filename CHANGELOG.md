@@ -7,11 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Added
-- Remove old CT logs as soon as they are removed from the Google CT Loglist (#60)
-- New configuration for buffer sizes (#58)
 ### Changed
+### Removed
 ### Fixed
 ### Docs
+
+## [v1.8.0] - 2025-05-03
+### Security
+- Close several CVEs in x/crypto and x/net dependencies (#59)
+
+### Added
+- New CLI tool for fetching certificates from a CT log (#47)
+- Ability to add custom CT logs to the config (#56)
+- Remove old CT logs as soon as they are removed from the Google CT Loglist (#60)
+- New configuration for buffer sizes (#58)
+
+### Fixed
+- Properly handle IPv6 addresses in config (#61)
+
+## [1.7.1] - 2025-05-03
+### Fixed
+- Properly handle IPv6 addresses in config (#61)
 
 ## [1.7.0] - 2024-08-20
 ### Added
@@ -120,7 +136,9 @@ Fixed the connection issue due to the offline Google loglist urls.
 ## [1.0.0] - 2022-08-08
 Initial release! First stable version of certstream-server-go is published as v1.0.0
 
-[unreleased]: https://github.com/d-Rickyy-b/certstream-server-go/compare/v1.7.0...HEAD
+[unreleased]: https://github.com/d-Rickyy-b/certstream-server-go/compare/v1.8.0...HEAD
+[1.8.0]: https://github.com/d-Rickyy-b/certstream-server-go/compare/v1.7.1...v1.8.0
+[1.7.1]: https://github.com/d-Rickyy-b/certstream-server-go/compare/v1.7.0...v1.7.1
 [1.7.0]: https://github.com/d-Rickyy-b/certstream-server-go/compare/v1.6.0...v1.7.0
 [1.6.0]: https://github.com/d-Rickyy-b/certstream-server-go/compare/v1.5.2...v1.6.0
 [1.5.2]: https://github.com/d-Rickyy-b/certstream-server-go/compare/v1.5.1...v1.5.2
