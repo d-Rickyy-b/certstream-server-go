@@ -7,6 +7,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -197,7 +198,7 @@ func setupWebsocketRoutes(r *chi.Mux) {
 }
 
 func (ws *WebServer) initServer() {
-	addr := fmt.Sprintf("%s:%d", ws.networkIf, ws.port)
+	addr := net.JoinHostPort(ws.networkIf, strconv.Itoa(ws.port))
 
 	tlsConfig := &tls.Config{
 		MinVersion:       tls.VersionTLS12,
@@ -283,8 +284,7 @@ func NewWebsocketServer(networkIf string, port int, certPath, keyPath string) *W
 
 // Start initializes the webserver and starts listening for connections.
 func (ws *WebServer) Start() {
-	addr := fmt.Sprintf("%s:%d", ws.networkIf, ws.port)
-	log.Printf("Starting webserver on %s\n", addr)
+	log.Printf("Starting webserver on %s\n", ws.server.Addr)
 
 	var err error
 	if ws.keyPath != "" && ws.certPath != "" {
