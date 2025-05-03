@@ -7,13 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Added
+### Changed
+### Fixed
+### Docs
+
+## [1.7.1] - 2025-05-03
+### Fixed
+- Properly handle IPv6 addresses in config (#61)
+
+## [1.7.0] - 2024-08-20
+### Added
 - Support for websocket compression - disabled by default (#40)
 - Support for non-browsers by implementing server initiated heartbeats (#39)
 - Start new ct-watchers as new ct logs become available (#42)
+- More logging to document currently watched logs (03d878e)
+
 ### Changed
+- Changed log output to be better grepable (5c055cc)
+- Update ct log update interval to once per hour instead of once per 6 hours as previously (9b6e77d)
+
 ### Fixed
 - Fixed a possible race condition when accessing metrics
-### Docs
 
 ## [1.6.0] - 2024-03-05
 ### Added
@@ -25,7 +39,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.5.1] - 2024-01-18
 ### Fixed
-- Fixed a rare issue where it was possible for the all_domains json property (or data property in case of the domains-only endpoint) to be null 
+- Fixed a rare issue where it was possible for the all_domains json property (or data property in case of the domains-only endpoint) to be null
 
 ## [1.5.0] - 2023-12-21
 ### Added
@@ -80,7 +94,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Handle sudden disconnects of CT logs
 
 ### Docs
-- Added [wiki entry for docker-compose](https://github.com/d-Rickyy-b/certstream-server-go/wiki/Collecting-and-Visualizing-Metrics) 
+- Added [wiki entry for docker-compose](https://github.com/d-Rickyy-b/certstream-server-go/wiki/Collecting-and-Visualizing-Metrics)
 
 ## [1.2.1] - 2022-12-16
 ### Changed
@@ -108,7 +122,9 @@ Fixed the connection issue due to the offline Google loglist urls.
 ## [1.0.0] - 2022-08-08
 Initial release! First stable version of certstream-server-go is published as v1.0.0
 
-[unreleased]: https://github.com/d-Rickyy-b/certstream-server-go/compare/v1.6.0...HEAD
+[unreleased]: https://github.com/d-Rickyy-b/certstream-server-go/compare/v1.7.1...HEAD
+[1.7.1]: https://github.com/d-Rickyy-b/certstream-server-go/compare/v1.7.0...v1.7.1
+[1.7.0]: https://github.com/d-Rickyy-b/certstream-server-go/compare/v1.6.0...v1.7.0
 [1.6.0]: https://github.com/d-Rickyy-b/certstream-server-go/compare/v1.5.2...v1.6.0
 [1.5.2]: https://github.com/d-Rickyy-b/certstream-server-go/compare/v1.5.1...v1.5.2
 [1.5.1]: https://github.com/d-Rickyy-b/certstream-server-go/compare/v1.5.0...v1.5.1
