@@ -172,6 +172,15 @@ func (w *Watcher) dropRemovedLogs(logList loglist3.LogList) {
 			}
 		}
 
+		// Make sure to not drop logs that are defined locally in the additional logs list
+		for _, additionalLogConfig := range config.AppConfig.General.AdditionalLogs {
+			additionalLogListURL := normalizeCtlogURL(additionalLogConfig.URL)
+			if workerURL == additionalLogListURL {
+				onLogList = true
+				break
+			}
+		}
+
 		// If the log is not in the loglist, stop the worker
 		if !onLogList {
 			log.Printf("Stopping worker. CT URL not found in LogList: '%s'\n", ctWorker.ctURL)
