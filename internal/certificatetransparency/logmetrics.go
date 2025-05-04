@@ -208,14 +208,31 @@ func (m *LogMetrics) SaveCertIndexesAtInterval(interval time.Duration, ctIndexFi
 			continue
 		}
 
-		file.Truncate(0)
-		file.Write(bytes) //TODO: check for short writes
-		file.Sync()
+		truncateErr := file.Truncate(0)
+		if truncateErr != nil {
+			log.Println("Error truncating CT index temp file: ", truncateErr)
+			continue
+		}
+		// TODO: check for short writes
+		_, writeErr := file.Write(bytes)
+		if writeErr != nil {
+			log.Println("Error writing to CT index temp file: ", writeErr)
+			continue
+		}
+		syncErr := file.Sync()
+		if syncErr != nil {
+			log.Println("Error syncing CT index temp file: ", syncErr)
+			continue
+		}
 
 		file.Close()
 
 		// Atomically move the temp file to the permanent file
-		os.Rename(tempFileName, ctIndexFileName)
+		renameErr := os.Rename(tempFilePath, ctIndexFilePath)
+		if renameErr != nil {
+			log.Println("Error renaming CT index temp file: ", renameErr)
+			continue
+		}
 	}
 }
 
