@@ -23,10 +23,10 @@ general:
   # When you want to add logs that are not contained in the log list provided by
   # Google (https://www.gstatic.com/ct/log_list/v3/log_list.json), you can add them here.
   additional_logs:
-    - url: https://ct.googleapis.com/logs/us1/mirrors/digicert_nessie2022/
+    - url: https://ct.googleapis.com/logs/us1/mirrors/digicert_nessie2022
       operator: "DigiCert"
       description: "DigiCert Nessie2022 log"
-    - url: https://dodo.ct.comodo.com/
+    - url: https://dodo.ct.comodo.com
       operator: "Comodo"
       description: "Comodo Dodo"
   # To optimize the performance of the server, you can overwrite the size of different buffers

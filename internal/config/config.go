@@ -140,7 +140,7 @@ func parseConfigFromBytes(data []byte) (*Config, error) {
 func validateConfig(config *Config) bool {
 	// Still matches invalid IP addresses but good enough for detecting completely wrong formats
 	URLPathRegex := regexp.MustCompile(`^(/[a-zA-Z0-9\-._]+)+$`)
-	URLRegex := regexp.MustCompile(`^https?://[a-zA-Z0-9\-._]+(:[0-9]+)?(/[a-zA-Z0-9\-._]+)*$`)
+	URLRegex := regexp.MustCompile(`^https?://[a-zA-Z0-9\-._]+(:[0-9]+)?(/[a-zA-Z0-9\-._]+)*/?$`)
 
 	// Check webserver config
 	if config.Webserver.ListenAddr == "" || net.ParseIP(config.Webserver.ListenAddr) == nil {
