@@ -12,6 +12,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 ### Docs
 
+## [v1.8.1] - 2025-05-04
+### Fixed
+- No longer reject URLs with trailing slashes defined in the `additional_logs` config (#62)
+- When using `drop_old_logs` in the config, the server won't remove logs defined in `additional_logs` anymore (#64)
+
 ## [v1.8.0] - 2025-05-03
 ### Security
 - Close several CVEs in x/crypto and x/net dependencies (#59)
@@ -137,6 +142,7 @@ Fixed the connection issue due to the offline Google loglist urls.
 Initial release! First stable version of certstream-server-go is published as v1.0.0
 
 [unreleased]: https://github.com/d-Rickyy-b/certstream-server-go/compare/v1.8.0...HEAD
+[1.8.1]: https://github.com/d-Rickyy-b/certstream-server-go/compare/v1.8.0...v1.8.1
 [1.8.0]: https://github.com/d-Rickyy-b/certstream-server-go/compare/v1.7.1...v1.8.0
 [1.7.1]: https://github.com/d-Rickyy-b/certstream-server-go/compare/v1.7.0...v1.7.1
 [1.7.0]: https://github.com/d-Rickyy-b/certstream-server-go/compare/v1.6.0...v1.7.0
