@@ -184,11 +184,9 @@ func (m *LogMetrics) LoadCTIndex() {
 // do we move the temp file to actual permanent index file, this prevents
 // the last good index file from being clobbered if the program was shutdown/killed
 // in-between the write operation.
-func (m *LogMetrics) SaveCertIndexesAtInterval(interval time.Duration, ctIndexFileName string) {
-	if ctIndexFileName == "" {
-		ctIndexFileName = "ctIndex.json"
-	}
-	tempFileName := fmt.Sprintf("%s.tmp", ctIndexFileName)
+func (m *LogMetrics) SaveCertIndexesAtInterval(interval time.Duration, ctIndexFilePath string) {
+
+	tempFilePath := fmt.Sprintf("%s.tmp", ctIndexFilePath)
 
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
@@ -202,9 +200,9 @@ func (m *LogMetrics) SaveCertIndexesAtInterval(interval time.Duration, ctIndexFi
 		}
 
 		// Save data to a temporary file first
-		file, err := os.OpenFile(tempFileName, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
-		if err != nil {
-			log.Println("Could not save CT index to temporary file: ", err)
+		file, openErr := os.OpenFile(tempFilePath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+		if openErr != nil {
+			log.Println("Could not save CT index to temporary file: ", openErr)
 			continue
 		}
 
