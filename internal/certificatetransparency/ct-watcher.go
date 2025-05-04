@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"path/filepath"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -54,11 +55,16 @@ func (w *Watcher) Start() {
 		w.certChan = make(chan models.Entry, 5000)
 	}
 
-	if config.AppConfig.General.ResumeFromCTIndexFile {
+	if config.AppConfig.General.Recovery.Enabled {
+		ctIndexFilePath, err := filepath.Abs(config.AppConfig.General.Recovery.CTIndexFile)
+		if err != nil {
+			log.Printf("Error getting absolute path for CT index file: '%s', %s\n", config.AppConfig.General.Recovery.CTIndexFile, err)
+			return
+		}
 		// Load Saved CT Indexes
-		metrics.LoadCTIndex()
+		metrics.LoadCTIndex(ctIndexFilePath)
 		// Save CTIndexes at regular intervals
-		go metrics.SaveCertIndexesAtInterval(time.Second*30, config.AppConfig.General.CTIndexFile) // save indexes every X seconds
+		go metrics.SaveCertIndexesAtInterval(time.Second*30, ctIndexFilePath) // save indexes every X seconds
 	}
 
 	// initialize the watcher with currently available logs

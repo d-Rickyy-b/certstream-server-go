@@ -7,8 +7,6 @@ import (
 	"os"
 	"sync"
 	"time"
-
-	"github.com/d-Rickyy-b/certstream-server-go/internal/config"
 )
 
 type (
@@ -161,12 +159,12 @@ func (m *LogMetrics) GetCTIndex(url string) int64 {
 }
 
 // Load the last cert index that processed for each CT url if it exists
-func (m *LogMetrics) LoadCTIndex() {
+func (m *LogMetrics) LoadCTIndex(ctIndexFilePath string) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
-	bytes, err := os.ReadFile(config.AppConfig.General.CTIndexFile)
-	if err != nil {
+	bytes, readErr := os.ReadFile(ctIndexFilePath)
+	if readErr != nil {
 		log.Println("Error while reading CTIndex file: ", err)
 		return
 	}
