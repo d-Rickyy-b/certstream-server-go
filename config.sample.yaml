@@ -29,6 +29,7 @@ general:
     - url: https://dodo.ct.comodo.com
       operator: "Comodo"
       description: "Comodo Dodo"
+
   # To optimize the performance of the server, you can overwrite the size of different buffers
   # For low CPU, low memory machines, you should reduce the buffer sizes to save memory in case the CPU is maxed.
   buffer_sizes:
@@ -38,9 +39,16 @@ general:
     ctlog: 1000
     # Combined buffer for the broadcast manager
     broadcastmanager: 10000
+
   # Google regularly updates the log list. If this option is set to true, the server will remove all logs no longer listed in the Google log list.
   # This option defaults to true. See https://github.com/d-Rickyy-b/certstream-server-go/issues/51
   drop_old_logs: true
-  start_at_latest_sth: true
-  resume_from_ct_index_file: false
-  ct_index_file: "ctIndex.json"
+
+  # Options for resuming certificate downloads after restart
+  recovery:
+    # If enabled, the server will resume downloading certificates from the last processed and stored index for each log.
+    # If there is no ct_index_file or for a specific log there is no index entry, the server will start from the latest STH.
+    enabled: true
+    # Path to the file where indices are stored. Be aware that a temp file in the same path with the same name and ".tmp" as suffix will be created.
+    # If there are no write permissions to the path, the server will not be able to store the indices.
+    ct_index_file: "./ct_index.json"
