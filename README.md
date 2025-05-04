@@ -13,10 +13,10 @@ Everyone can use this project to analyze newly created TLS certificates as they 
 ## Motivation
 
 From the moment I first found out about the certificate transparency logs, I was absolutely amazed by the great software of [Calidog](https://github.com/CaliDog/), which made the transparency log easier accessible for everyone. 
-Their software "Certstream" parses the log and provides it in an easy-to-use format: json.
+Their software "Certstream" parses the log and provides it in an easy-to-use format: JSON.
 
 After creating my first application that utilized the certstream server, I found that the hosted (demo) version of the server wasn't as reliable as I thought it would be. 
-I got disconnects and sometimes other errors. Eventually the provided server was still only thought to be **a demo**.
+I got disconnects and sometimes other errors. Eventually, the provided server was still only thought to be **a demo**.
 
 I quickly thought about running my own instance of certstream. But I didn't want to install Elixir/Erlang on my server. Sure, I could have used Docker, but on second thought, I was really into the idea of creating an alternative server written in Go.
 
@@ -24,7 +24,7 @@ I quickly thought about running my own instance of certstream. But I didn't want
 
 ## Getting started
 
-Setting up an instance of the certstream server is simple. You can either download and compile the code yourself, or use one of the [precompiled binaries](https://github.com/d-Rickyy-b/certstream-server-go/releases).
+Setting up an instance of the certstream server is straightforward. You can either download and compile the code yourself, or use one of the [precompiled binaries](https://github.com/d-Rickyy-b/certstream-server-go/releases).
 
 ### Docker
 
@@ -33,7 +33,8 @@ You can use it by running this command:
 
 `docker run -d -v /path/to/config.yaml:/app/config.yaml -p 8080:8080 0rickyy0/certstream-server-go`
 
-> ⚠️ If you don't mount your own config file, the default config (config.sample.yaml) will be used. For more details, check out the [wiki](https://github.com/d-Rickyy-b/certstream-server-go/wiki/Configuration).
+> [!WARNING]  
+> If you don't mount your own config file, the default config (config.sample.yaml) will be used. For more details, check out the [wiki](https://github.com/d-Rickyy-b/certstream-server-go/wiki/Configuration).
 
 ## Connecting
 
@@ -56,7 +57,7 @@ Read more about ping/pong WebSocket messages in the [Mozilla Developer Docs](htt
 
 ### Performance
 
-At idle (no clients connected), the server uses about **40 MB** of RAM, **14.5 Mbit/s** and **4-10% CPU** (Oracle Free Tier) on average while processing around **250-300 certificates per second**.
+At idle (no clients connected), the server uses about **40 MB** of RAM, **14.5 Mbit/s** and **4–10% CPU** (Oracle Free Tier) on average while processing around **250–300 certificates per second**.
 
 ### Monitoring
 
@@ -67,7 +68,7 @@ For an in-depth guide on how to do this, please refer to the [wiki](https://gith
 
 ### Example
 
-To receive a live example for any of the endpoints, just send an HTTP GET request to the endpoints with `/example.json` appended to the endpoint. 
+To receive a live example for any of the endpoints, send an HTTP GET request to the endpoints with `/example.json` appended to the endpoint. 
 For example: `/full-stream/example.json`. This shows the lite format of a certificate update.
 
 ```json
