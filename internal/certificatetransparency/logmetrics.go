@@ -158,19 +158,43 @@ func (m *LogMetrics) GetCTIndex(url string) int64 {
 	return index
 }
 
-// Load the last cert index that processed for each CT url if it exists
+// LoadCTIndex loads the last cert index processed for each CT url if it exists
 func (m *LogMetrics) LoadCTIndex(ctIndexFilePath string) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
 	bytes, readErr := os.ReadFile(ctIndexFilePath)
 	if readErr != nil {
-		log.Println("Error while reading CTIndex file: ", err)
-		return
+		// Create the file if it doesn't exist
+		if os.IsNotExist(readErr) {
+			log.Printf("Specified CT index file does not exist: '%s'\n", ctIndexFilePath)
+			log.Println("Creating CT index file now!")
+			file, createErr := os.Create(ctIndexFilePath)
+			if createErr != nil {
+				log.Printf("Error creating CT index file: '%s'\n", ctIndexFilePath)
+				log.Panicln(createErr)
+			}
+
+			var marshalErr error
+			bytes, marshalErr = json.Marshal(m.index)
+			if marshalErr != nil {
+				return
+			}
+			_, writeErr := file.Write(bytes)
+			if writeErr != nil {
+				log.Printf("Error writing to CT index file: '%s'\n", ctIndexFilePath)
+				log.Panicln(writeErr)
+			}
+			file.Close()
+		} else {
+			// If the file exists but we can't read it, log the error and panic
+			log.Panicln(readErr)
+		}
 	}
 
 	jerr := json.Unmarshal(bytes, &m.index)
 	if jerr != nil {
+		log.Printf("Error unmarshalling CT index file: '%s'\n", ctIndexFilePath)
 		log.Panicln(jerr)
 	}
 
@@ -178,9 +202,8 @@ func (m *LogMetrics) LoadCTIndex(ctIndexFilePath string) {
 }
 
 // SaveCertIndexesAtInterval saves the index of CTLogs at given intervals.
-// we first create a temp file and write the index data to it, only then
-// do we move the temp file to actual permanent index file, this prevents
-// the last good index file from being clobbered if the program was shutdown/killed
+// We first create a temp file and write the index data to it. Only then do we move the temp file to the actual
+// permanent index file. This prevents the last good index file from being clobbered if the program was shutdown/killed
 // in-between the write operation.
 func (m *LogMetrics) SaveCertIndexesAtInterval(interval time.Duration, ctIndexFilePath string) {
 
