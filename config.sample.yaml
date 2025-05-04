@@ -38,6 +38,6 @@ general:
     ctlog: 1000
     # Combined buffer for the broadcast manager
     broadcastmanager: 10000
-  # Google regularly updates the log list. If this option is set to true, the server will remove all old logs.
+  # Google regularly updates the log list. If this option is set to true, the server will remove all logs no longer listed in the Google log list.
   # This option defaults to true. See https://github.com/d-Rickyy-b/certstream-server-go/issues/51
   drop_old_logs: true
