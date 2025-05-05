@@ -148,6 +148,7 @@ func (w *Watcher) addNewlyAvailableLogs(logList loglist3.LogList) {
 					ctIndex:      lastCTIndex,
 				}
 				w.workers = append(w.workers, &ctWorker)
+				metrics.Init(operator.Name, transparencyLog.URL)
 
 				// Start a goroutine for each worker
 				go func() {
@@ -483,14 +484,6 @@ func getAllLogs() (loglist3.LogList, error) {
 				Logs: []*loglist3.Log{&customLog},
 			}
 			allLogs.Operators = append(allLogs.Operators, &newOperator)
-		}
-	}
-
-	// Add new ct logs to metrics
-	for _, operator := range allLogs.Operators {
-		for _, ctlog := range operator.Logs {
-			url := normalizeCtlogURL(ctlog.URL)
-			metrics.Init(operator.Name, url)
 		}
 	}
 
