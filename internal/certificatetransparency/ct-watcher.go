@@ -214,6 +214,48 @@ func (w *Watcher) Stop() {
 	w.cancelFunc()
 }
 
+// CreateIndexFile creates a ct_index.json file based on the current STHs of all availble logs.
+func (w *Watcher) CreateIndexFile(filePath string) error {
+	logs, err := getAllLogs()
+	if err != nil {
+		return err
+	}
+
+	w.context, w.cancelFunc = context.WithCancel(context.Background())
+	log.Println("Fetching current STH for all logs...")
+	for _, operator := range logs.Operators {
+		// Iterate over each log of the operator
+		for _, transparencyLog := range operator.Logs {
+			// Check if the log is already being watched
+			metrics.Init(operator.Name, transparencyLog.URL)
+			log.Println("Fetching STH for", transparencyLog.URL)
+
+			hc := http.Client{Timeout: 5 * time.Second}
+			jsonClient, e := client.New(transparencyLog.URL, &hc, jsonclient.Options{UserAgent: userAgent})
+			if e != nil {
+				log.Printf("Error creating JSON client: %s\n", e)
+				continue
+			}
+
+			sth, getSTHerr := jsonClient.GetSTH(w.context)
+			if getSTHerr != nil {
+				// TODO this can happen due to a 429 error. We should retry the request
+				log.Printf("Could not get STH for '%s': %s\n", transparencyLog.URL, getSTHerr)
+				continue
+			}
+
+			metrics.index[transparencyLog.URL] = int64(sth.TreeSize)
+		}
+	}
+	w.cancelFunc()
+
+	tempFilePath := fmt.Sprintf("%s.tmp", filePath)
+	metrics.SaveCertIndexes(tempFilePath, filePath)
+	log.Println("Index file saved to", filePath)
+
+	return nil
+}
+
 // A worker processes a single CT log.
 type worker struct {
 	name         string
