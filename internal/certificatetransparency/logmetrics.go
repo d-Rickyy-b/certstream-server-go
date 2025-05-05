@@ -206,52 +206,56 @@ func (m *LogMetrics) LoadCTIndex(ctIndexFilePath string) {
 // permanent index file. This prevents the last good index file from being clobbered if the program was shutdown/killed
 // in-between the write operation.
 func (m *LogMetrics) SaveCertIndexesAtInterval(interval time.Duration, ctIndexFilePath string) {
-
 	tempFilePath := fmt.Sprintf("%s.tmp", ctIndexFilePath)
 
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 
 	for range ticker.C {
-		// Get the index data
-		ctIndex := m.GetAllCTIndexes()
-		bytes, cerr := json.MarshalIndent(ctIndex, "", " ")
-		if cerr != nil {
-			log.Panic(cerr)
-		}
+		m.SaveCertIndexes(tempFilePath, ctIndexFilePath)
+	}
+}
 
-		// Save data to a temporary file first
-		file, openErr := os.OpenFile(tempFilePath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
-		if openErr != nil {
-			log.Println("Could not save CT index to temporary file: ", openErr)
-			continue
-		}
+// SaveCertIndexes saves the index of CTLogs to a file.
+func (m *LogMetrics) SaveCertIndexes(tempFilePath, ctIndexFilePath string) {
+	// Get the index data
+	ctIndex := m.GetAllCTIndexes()
+	bytes, cerr := json.MarshalIndent(ctIndex, "", " ")
+	if cerr != nil {
+		log.Panic(cerr)
+	}
 
-		truncateErr := file.Truncate(0)
-		if truncateErr != nil {
-			log.Println("Error truncating CT index temp file: ", truncateErr)
-			continue
-		}
-		// TODO: check for short writes
-		_, writeErr := file.Write(bytes)
-		if writeErr != nil {
-			log.Println("Error writing to CT index temp file: ", writeErr)
-			continue
-		}
-		syncErr := file.Sync()
-		if syncErr != nil {
-			log.Println("Error syncing CT index temp file: ", syncErr)
-			continue
-		}
+	// Save data to a temporary file first
+	file, openErr := os.OpenFile(tempFilePath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+	if openErr != nil {
+		log.Println("Could not save CT index to temporary file: ", openErr)
+		return
+	}
 
-		file.Close()
+	truncateErr := file.Truncate(0)
+	if truncateErr != nil {
+		log.Println("Error truncating CT index temp file: ", truncateErr)
+		return
+	}
+	// TODO: check for short writes
+	_, writeErr := file.Write(bytes)
+	if writeErr != nil {
+		log.Println("Error writing to CT index temp file: ", writeErr)
+		return
+	}
+	syncErr := file.Sync()
+	if syncErr != nil {
+		log.Println("Error syncing CT index temp file: ", syncErr)
+		return
+	}
 
-		// Atomically move the temp file to the permanent file
-		renameErr := os.Rename(tempFilePath, ctIndexFilePath)
-		if renameErr != nil {
-			log.Println("Error renaming CT index temp file: ", renameErr)
-			continue
-		}
+	file.Close()
+
+	// Atomically move the temp file to the permanent file
+	renameErr := os.Rename(tempFilePath, ctIndexFilePath)
+	if renameErr != nil {
+		log.Println("Error renaming CT index temp file: ", renameErr)
+		return
 	}
 }
 
