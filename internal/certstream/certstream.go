@@ -23,6 +23,13 @@ type Certstream struct {
 	config        config.Config
 }
 
+func NewRawCertstream(config config.Config) *Certstream {
+	cs := Certstream{}
+	cs.config = config
+
+	return &cs
+}
+
 // NewCertstreamServer creates a new Certstream server from a config struct.
 func NewCertstreamServer(config config.Config) (*Certstream, error) {
 	cs := Certstream{}
@@ -106,6 +113,16 @@ func (cs *Certstream) Stop() {
 	if cs.metricsServer != nil {
 		cs.metricsServer.Stop()
 	}
+}
+
+// CreateIndexFile creates the index file for the certificate transparency logs.
+// It gets only called when the CLI flag --create-index-file is set.
+func (cs *Certstream) CreateIndexFile() error {
+	// If there is no watcher initialized, create a new one
+	if cs.watcher == nil {
+		cs.watcher = &certificatetransparency.Watcher{}
+	}
+	return cs.watcher.CreateIndexFile(cs.config.General.Recovery.CTIndexFile)
 }
 
 // signalHandler listens for signals in order to gracefully shut down the server.

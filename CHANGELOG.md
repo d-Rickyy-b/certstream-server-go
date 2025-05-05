@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Added
+- Ability to store index of most recent cert per log to resume processing from that point after a restart (#49)
+- New CLI switch for creating an index file from a CT log (#49)
 ### Changed
 ### Removed
 ### Fixed

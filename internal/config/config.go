@@ -55,6 +55,10 @@ type Config struct {
 		AdditionalLogs []LogConfig `yaml:"additional_logs"`
 		BufferSizes    BufferSizes `yaml:"buffer_sizes"`
 		DropOldLogs    *bool       `yaml:"drop_old_logs"`
+		Recovery       struct {
+			Enabled     bool   `yaml:"enabled"`
+			CTIndexFile string `yaml:"ct_index_file"`
+		} `yaml:"recovery"`
 	}
 }
 
@@ -236,6 +240,11 @@ func validateConfig(config *Config) bool {
 		log.Println("drop_old_logs is not set, defaulting to true")
 		defaultCleanup := true
 		config.General.DropOldLogs = &defaultCleanup
+	}
+
+	if config.General.Recovery.Enabled && config.General.Recovery.CTIndexFile == "" {
+		log.Println("Recovery enabled but no index file specified. Defaulting to ./ct_index.json")
+		config.General.Recovery.CTIndexFile = "./ct_index.json"
 	}
 
 	return true
