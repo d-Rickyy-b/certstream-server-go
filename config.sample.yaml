@@ -22,10 +22,8 @@ prometheus:
 general:
   # When you want to add logs that are not contained in the log list provided by
   # Google (https://www.gstatic.com/ct/log_list/v3/log_list.json), you can add them here.
+  # Examples: https://groups.google.com/a/chromium.org/g/ct-policy/c/lZaXMbRKtNo/m/yg2LugQcAwAJ / https://crt.sh/monitored-logs
   additional_logs:
-    - url: https://ct.googleapis.com/logs/us1/mirrors/digicert_nessie2022
-      operator: "DigiCert"
-      description: "DigiCert Nessie2022 log"
     - url: https://dodo.ct.comodo.com
       operator: "Comodo"
       description: "Comodo Dodo"
