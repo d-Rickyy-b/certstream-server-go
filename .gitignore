@@ -12,6 +12,10 @@
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
 
+# Temp files
+*.tmp
+*.temp
+
 # Dependency directories (remove the comment below to include it)
 # vendor/
 
@@ -26,3 +30,4 @@ dist/
 # Ignore actual config files
 config.yaml
 config.yml
+ct_index.json

@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"path/filepath"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -52,6 +53,18 @@ func (w *Watcher) Start() {
 	// Create new certChan if it doesn't exist yet
 	if w.certChan == nil {
 		w.certChan = make(chan models.Entry, 5000)
+	}
+
+	if config.AppConfig.General.Recovery.Enabled {
+		ctIndexFilePath, err := filepath.Abs(config.AppConfig.General.Recovery.CTIndexFile)
+		if err != nil {
+			log.Printf("Error getting absolute path for CT index file: '%s', %s\n", config.AppConfig.General.Recovery.CTIndexFile, err)
+			return
+		}
+		// Load Saved CT Indexes
+		metrics.LoadCTIndex(ctIndexFilePath)
+		// Save CTIndexes at regular intervals
+		go metrics.SaveCertIndexesAtInterval(time.Second*30, ctIndexFilePath) // save indexes every X seconds
 	}
 
 	// initialize the watcher with currently available logs
@@ -126,13 +139,16 @@ func (w *Watcher) addNewlyAvailableLogs(logList loglist3.LogList) {
 				w.wg.Add(1)
 				newCTs++
 
+				lastCTIndex := metrics.GetCTIndex(transparencyLog.URL)
 				ctWorker := worker{
 					name:         transparencyLog.Description,
 					operatorName: operator.Name,
 					ctURL:        transparencyLog.URL,
 					entryChan:    w.certChan,
+					ctIndex:      lastCTIndex,
 				}
 				w.workers = append(w.workers, &ctWorker)
+				metrics.Init(operator.Name, transparencyLog.URL)
 
 				// Start a goroutine for each worker
 				go func() {
@@ -199,12 +215,55 @@ func (w *Watcher) Stop() {
 	w.cancelFunc()
 }
 
+// CreateIndexFile creates a ct_index.json file based on the current STHs of all availble logs.
+func (w *Watcher) CreateIndexFile(filePath string) error {
+	logs, err := getAllLogs()
+	if err != nil {
+		return err
+	}
+
+	w.context, w.cancelFunc = context.WithCancel(context.Background())
+	log.Println("Fetching current STH for all logs...")
+	for _, operator := range logs.Operators {
+		// Iterate over each log of the operator
+		for _, transparencyLog := range operator.Logs {
+			// Check if the log is already being watched
+			metrics.Init(operator.Name, transparencyLog.URL)
+			log.Println("Fetching STH for", transparencyLog.URL)
+
+			hc := http.Client{Timeout: 5 * time.Second}
+			jsonClient, e := client.New(transparencyLog.URL, &hc, jsonclient.Options{UserAgent: userAgent})
+			if e != nil {
+				log.Printf("Error creating JSON client: %s\n", e)
+				continue
+			}
+
+			sth, getSTHerr := jsonClient.GetSTH(w.context)
+			if getSTHerr != nil {
+				// TODO this can happen due to a 429 error. We should retry the request
+				log.Printf("Could not get STH for '%s': %s\n", transparencyLog.URL, getSTHerr)
+				continue
+			}
+
+			metrics.index[transparencyLog.URL] = int64(sth.TreeSize)
+		}
+	}
+	w.cancelFunc()
+
+	tempFilePath := fmt.Sprintf("%s.tmp", filePath)
+	metrics.SaveCertIndexes(tempFilePath, filePath)
+	log.Println("Index file saved to", filePath)
+
+	return nil
+}
+
 // A worker processes a single CT log.
 type worker struct {
 	name         string
 	operatorName string
 	ctURL        string
 	entryChan    chan models.Entry
+	ctIndex      int64
 	mu           sync.Mutex
 	running      bool
 	cancel       context.CancelFunc
@@ -284,18 +343,24 @@ func (w *worker) runWorker(ctx context.Context) error {
 		return errCreatingClient
 	}
 
-	sth, getSTHerr := jsonClient.GetSTH(ctx)
-	if getSTHerr != nil {
+	// If recovery is enabled and the CT index is set, we start at the saved index. Otherwise we start at the latest STH.
+	validSavedCTIndexExists := config.AppConfig.General.Recovery.Enabled && w.ctIndex >= 0
+	if !validSavedCTIndexExists {
+		sth, getSTHerr := jsonClient.GetSTH(ctx)
+		if getSTHerr != nil {
 		// TODO this can happen due to a 429 error. We should retry the request
-		log.Printf("Could not get STH for '%s': %s\n", w.ctURL, getSTHerr)
-		return errFetchingSTHFailed
+			log.Printf("Could not get STH for '%s': %s\n", w.ctURL, getSTHerr)
+			return errFetchingSTHFailed
+		}
+		// Start at the latest STH to skip all the past certificates
+		w.ctIndex = int64(sth.TreeSize)
 	}
 
 	certScanner := scanner.NewScanner(jsonClient, scanner.ScannerOptions{
 		FetcherOptions: scanner.FetcherOptions{
 			BatchSize:     100,
 			ParallelFetch: 1,
-			StartIndex:    int64(sth.TreeSize), // Start at the latest STH to skip all the past certificates
+			StartIndex:    w.ctIndex,
 			Continuous:    true,
 		},
 		Matcher:     scanner.MatchAll{},
@@ -364,8 +429,9 @@ func certHandler(entryChan chan models.Entry) {
 		// Update metrics
 		url := entry.Data.Source.NormalizedURL
 		operator := entry.Data.Source.Operator
+		index := entry.Data.CertIndex
 
-		metrics.Inc(operator, url)
+		metrics.Inc(operator, url, index)
 	}
 }
 
@@ -418,14 +484,6 @@ func getAllLogs() (loglist3.LogList, error) {
 				Logs: []*loglist3.Log{&customLog},
 			}
 			allLogs.Operators = append(allLogs.Operators, &newOperator)
-		}
-	}
-
-	// Add new ct logs to metrics
-	for _, operator := range allLogs.Operators {
-		for _, ctlog := range operator.Logs {
-			url := normalizeCtlogURL(ctlog.URL)
-			metrics.Init(operator.Name, url)
 		}
 	}
 

@@ -1,6 +1,13 @@
 package certificatetransparency
 
-import "sync"
+import (
+	"encoding/json"
+	"fmt"
+	"log"
+	"os"
+	"sync"
+	"time"
+)
 
 type (
 	// OperatorLogs is a map of operator names to a list of CT log urls, operated by said operator.
@@ -9,12 +16,14 @@ type (
 	OperatorMetric map[string]int64
 	// CTMetrics is a map of operator names to a map of CT log urls to the number of certs processed by said log.
 	CTMetrics map[string]OperatorMetric
+	// CTCertIndex is a map of CT log urls to the last processed certficate index on the said log
+	CTCertIndex map[string]int64
 )
 
 var (
 	processedCerts    int64
 	processedPrecerts int64
-	metrics           = LogMetrics{metrics: make(CTMetrics)}
+	metrics           = LogMetrics{metrics: make(CTMetrics), index: make(CTCertIndex)}
 )
 
 // LogMetrics is a struct that holds a map of metrics for each CT log grouped by operator.
@@ -22,6 +31,7 @@ var (
 type LogMetrics struct {
 	mutex   sync.RWMutex
 	metrics CTMetrics
+	index   CTCertIndex
 }
 
 // GetCTMetrics returns a copy of the internal metrics map.
@@ -76,6 +86,11 @@ func (m *LogMetrics) Init(operator, url string) {
 	if _, ok := m.metrics[operator][url]; !ok {
 		m.metrics[operator][url] = 0
 	}
+
+	// if url index does not exist, create a new entry
+	if _, ok := m.index[url]; !ok {
+		m.index[url] = 0
+	}
 }
 
 // Get the metric for a given operator and ct url.
@@ -104,7 +119,7 @@ func (m *LogMetrics) Set(operator, url string, value int64) {
 }
 
 // Inc the metric for a given operator and ct url.
-func (m *LogMetrics) Inc(operator, url string) {
+func (m *LogMetrics) Inc(operator, url string, index int64) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
@@ -113,6 +128,135 @@ func (m *LogMetrics) Inc(operator, url string) {
 	}
 
 	m.metrics[operator][url]++
+
+	m.index[url] = index
+}
+
+func (m *LogMetrics) GetAllCTIndexes() CTCertIndex {
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
+
+	// make a copy of the index and return it
+	// since map is a refrence type
+	copyOfIndex := make(map[string]int64)
+	for k, v := range m.index {
+		copyOfIndex[k] = v
+	}
+
+	return copyOfIndex
+}
+
+func (m *LogMetrics) GetCTIndex(url string) int64 {
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
+
+	index, ok := m.index[url]
+	if !ok {
+		return 0
+	}
+
+	return index
+}
+
+// LoadCTIndex loads the last cert index processed for each CT url if it exists
+func (m *LogMetrics) LoadCTIndex(ctIndexFilePath string) {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
+	bytes, readErr := os.ReadFile(ctIndexFilePath)
+	if readErr != nil {
+		// Create the file if it doesn't exist
+		if os.IsNotExist(readErr) {
+			log.Printf("Specified CT index file does not exist: '%s'\n", ctIndexFilePath)
+			log.Println("Creating CT index file now!")
+			file, createErr := os.Create(ctIndexFilePath)
+			if createErr != nil {
+				log.Printf("Error creating CT index file: '%s'\n", ctIndexFilePath)
+				log.Panicln(createErr)
+			}
+
+			var marshalErr error
+			bytes, marshalErr = json.Marshal(m.index)
+			if marshalErr != nil {
+				return
+			}
+			_, writeErr := file.Write(bytes)
+			if writeErr != nil {
+				log.Printf("Error writing to CT index file: '%s'\n", ctIndexFilePath)
+				log.Panicln(writeErr)
+			}
+			file.Close()
+		} else {
+			// If the file exists but we can't read it, log the error and panic
+			log.Panicln(readErr)
+		}
+	}
+
+	jerr := json.Unmarshal(bytes, &m.index)
+	if jerr != nil {
+		log.Printf("Error unmarshalling CT index file: '%s'\n", ctIndexFilePath)
+		log.Panicln(jerr)
+	}
+
+	log.Println("Sucessfuly loaded saved CT indexes")
+}
+
+// SaveCertIndexesAtInterval saves the index of CTLogs at given intervals.
+// We first create a temp file and write the index data to it. Only then do we move the temp file to the actual
+// permanent index file. This prevents the last good index file from being clobbered if the program was shutdown/killed
+// in-between the write operation.
+func (m *LogMetrics) SaveCertIndexesAtInterval(interval time.Duration, ctIndexFilePath string) {
+	tempFilePath := fmt.Sprintf("%s.tmp", ctIndexFilePath)
+
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		m.SaveCertIndexes(tempFilePath, ctIndexFilePath)
+	}
+}
+
+// SaveCertIndexes saves the index of CTLogs to a file.
+func (m *LogMetrics) SaveCertIndexes(tempFilePath, ctIndexFilePath string) {
+	// Get the index data
+	ctIndex := m.GetAllCTIndexes()
+	bytes, cerr := json.MarshalIndent(ctIndex, "", " ")
+	if cerr != nil {
+		log.Panic(cerr)
+	}
+
+	// Save data to a temporary file first
+	file, openErr := os.OpenFile(tempFilePath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+	if openErr != nil {
+		log.Println("Could not save CT index to temporary file: ", openErr)
+		return
+	}
+
+	truncateErr := file.Truncate(0)
+	if truncateErr != nil {
+		log.Println("Error truncating CT index temp file: ", truncateErr)
+		return
+	}
+	// TODO: check for short writes
+	_, writeErr := file.Write(bytes)
+	if writeErr != nil {
+		log.Println("Error writing to CT index temp file: ", writeErr)
+		return
+	}
+	syncErr := file.Sync()
+	if syncErr != nil {
+		log.Println("Error syncing CT index temp file: ", syncErr)
+		return
+	}
+
+	file.Close()
+
+	// Atomically move the temp file to the permanent file
+	renameErr := os.Rename(tempFilePath, ctIndexFilePath)
+	if renameErr != nil {
+		log.Println("Error renaming CT index temp file: ", renameErr)
+		return
+	}
 }
 
 func GetProcessedCerts() int64 {
