@@ -1,6 +1,6 @@
 version: '2'
 
-# Make sure to create the sub directories "prometheus", "prometheus_data", "grafana", "grafana_data" and "certstream"
+# Make sure to create the subdirectories "prometheus", "prometheus_data", "grafana", "grafana_data" and "certstream"
 # and create the config files for all three services. For further details please refer to https://github.com/d-Rickyy-b/certstream-server-go/wiki/Collecting-and-Visualizing-Metrics
 
 networks:
