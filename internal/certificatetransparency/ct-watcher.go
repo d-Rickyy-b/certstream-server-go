@@ -13,6 +13,9 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/google/trillian/client/backoff"
+
+	"github.com/d-Rickyy-b/certstream-server-go/internal/broadcast"
 	"github.com/d-Rickyy-b/certstream-server-go/internal/config"
 	"github.com/d-Rickyy-b/certstream-server-go/internal/metrics"
 	"github.com/d-Rickyy-b/certstream-server-go/internal/models"
@@ -553,7 +556,7 @@ func certHandler(entryChan chan models.Entry) {
 		}
 
 		// Run JSON encoding in the background and send the result to the clients.
-		web.ClientHandler.Broadcast <- entry
+		broadcast.ClientHandler.MessageQueue <- entry
 
 		// Update metrics
 		url := entry.Data.Source.NormalizedURL

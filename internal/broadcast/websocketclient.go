@@ -1,4 +1,4 @@
-package web
+package broadcast
 
 import (
 	"fmt"
@@ -21,33 +21,26 @@ const (
 
 type SubscriptionType int
 
-// client represents a single client's connection to the server.
-type client struct {
-	clientData
-
-	id            string
-	conn          *websocket.Conn
-	broadcastChan chan []byte
-	subType       SubscriptionType
-	skippedCerts  uint64
+// WebsocketClient represents a single WebSocket client's connection to the server.
+type WebsocketClient struct {
+	conn *websocket.Conn
+	*BaseClient
 }
 
-type clientData struct {
-	userAgent        string
-	connectionIP     string
-	connectionPort   string
-	realIPFromHeader string
-}
-
-// newClient creates a new client struct that holds information about a connected client.
-func newClient(conn *websocket.Conn, subType SubscriptionType, data clientData, certBufferSize int) *client {
-	return &client{
-		clientData:    data,
-		id:            generateClientID(),
-		conn:          conn,
-		broadcastChan: make(chan []byte, certBufferSize),
-		subType:       subType,
+// NewWebsocketClient creates a new WebSocket client from the given connection.
+func NewWebsocketClient(conn *websocket.Conn, subType SubscriptionType, name string, certBufferSize int) *WebsocketClient {
+	c := &WebsocketClient{
+		conn: conn,
+		BaseClient: &BaseClient{
+			broadcastChan: make(chan []byte, certBufferSize),
+			name:          name,
+			subType:       subType,
+		},
 	}
+	go c.broadcastHandler()
+	go c.listenWebsocket()
+
+	return c
 }
 
 // generateClientID generates a random 8-char identifier for the client.
@@ -62,7 +55,7 @@ func generateClientID() string {
 }
 
 // Each client has a broadcastHandler that runs in the background and sends out the broadcast messages to the client.
-func (c *client) broadcastHandler() {
+func (c *WebsocketClient) broadcastHandler() {
 	writeWait := 60 * time.Second
 	pingTicker := time.NewTicker(30 * time.Second)
 
@@ -109,10 +102,10 @@ func (c *client) broadcastHandler() {
 // listenWebsocket is running in the background on a goroutine and listens for messages from the client.
 // It responds to ping messages with a pong message. It closes the connection if the client sends
 // a close message or no ping is received within 65 seconds.
-func (c *client) listenWebsocket() {
+func (c *WebsocketClient) listenWebsocket() {
 	defer func() {
 		_ = c.conn.Close()
-		ClientHandler.unregisterClient(c)
+		ClientHandler.UnregisterClient(c.name)
 	}()
 
 	readWait := 65 * time.Second

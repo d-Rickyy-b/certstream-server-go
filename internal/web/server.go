@@ -228,7 +228,7 @@ func initFullWebsocket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	setupClient(connection, SubTypeFull, r)
+	setupClient(connection, broadcast.SubTypeFull, r.RemoteAddr)
 }
 
 // initLiteWebsocket is called when a client connects to the / endpoint.
@@ -240,7 +240,7 @@ func initLiteWebsocket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	setupClient(connection, SubTypeLite, r)
+	setupClient(connection, broadcast.SubTypeLite, r.RemoteAddr)
 }
 
 // initDomainWebsocket is called when a client connects to the /domains-only endpoint.
@@ -252,7 +252,7 @@ func initDomainWebsocket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	setupClient(connection, SubTypeDomain, r)
+	setupClient(connection, broadcast.SubTypeDomain, r.RemoteAddr)
 }
 
 // upgradeConnection upgrades the connection to a websocket and returns the connection.
@@ -283,7 +283,7 @@ func upgradeConnection(w http.ResponseWriter, r *http.Request) (*websocket.Conn,
 }
 
 // setupClient initializes a client struct and starts the broadcastHandler and websocket listener.
-func setupClient(connection *websocket.Conn, subType SubscriptionType, r *http.Request) {
+func setupClient(connection *websocket.Conn, subscriptionType broadcast.SubscriptionType, name string) {
 	// Extract data from request
 	origConnAddr, _ := r.Context().Value(origConnAddrKey).(string)
 
@@ -305,11 +305,8 @@ func setupClient(connection *websocket.Conn, subType SubscriptionType, r *http.R
 		realIPFromHeader: realIPFromHeader,
 	}
 
-	c := newClient(connection, subType, data, config.AppConfig.General.BufferSizes.Websocket)
-	go c.broadcastHandler()
-	go c.listenWebsocket()
-
-	ClientHandler.registerClient(c)
+	c := broadcast.NewWebsocketClient(connection, subscriptionType, name, config.AppConfig.General.BufferSizes.Websocket)
+	broadcast.ClientHandler.RegisterClient(c)
 }
 
 // setupWebsocketRoutes configures all the routes necessary for the websocket webserver.
@@ -385,8 +382,7 @@ func NewMetricsServer(networkIf string, port int, certPath, keyPath string) *Ser
 }
 
 // NewWebsocketServer starts a new webserver and initialized it with the necessary routes.
-// It also starts the broadcaster in ClientHandler as a background job and takes care of
-// setting up websocket.Upgrader.
+// It also takes care of setting up websocket.Upgrader.
 func NewWebsocketServer(networkIf string, port int, certPath, keyPath string) *Server {
 	websocketServer := &Server{
 		networkIf: networkIf,
@@ -416,9 +412,6 @@ func NewWebsocketServer(networkIf string, port int, certPath, keyPath string) *S
 
 	setupWebsocketRoutes(websocketServer.routes)
 	websocketServer.initServer()
-
-	ClientHandler.Broadcast = make(chan models.Entry, config.AppConfig.General.BufferSizes.BroadcastManager)
-	go ClientHandler.broadcaster()
 
 	return websocketServer
 }

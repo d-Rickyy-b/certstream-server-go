@@ -11,6 +11,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/d-Rickyy-b/certstream-server-go/internal/broadcast"
 	"github.com/d-Rickyy-b/certstream-server-go/internal/certificatetransparency"
 	"github.com/d-Rickyy-b/certstream-server-go/internal/config"
 	"github.com/d-Rickyy-b/certstream-server-go/internal/metrics"
@@ -35,6 +36,11 @@ func NewRawCertstream(config config.Config) *Certstream {
 func NewCertstreamServer(config config.Config) (*Certstream, error) {
 	cs := NewRawCertstream(config)
 
+	// Start the broadcast dispatcher
+	broadcast.NewDispatcher()
+	broadcast.ClientHandler.Start()
+
+	// TODO: add support do disable websocket Server
 	// Initialize the webserver used for the websocket server
 	webserver := web.NewWebsocketServer(
 		config.Webserver.ListenAddr,
@@ -48,7 +54,14 @@ func NewCertstreamServer(config config.Config) (*Certstream, error) {
 	// Setup metrics server
 	cs.setupMetrics(webserver)
 
-	return cs, nil
+	if config.StreamProcessing.Kafka.Enabled {
+		log.Println("Initializing Kafka client...")
+
+		kc := broadcast.NewKafkaClient(broadcast.SubTypeFull, "kafka-producer", config.General.BufferSizes.Websocket)
+		broadcast.ClientHandler.RegisterClient(kc)
+	}
+
+	return &cs, nil
 }
 
 // NewCertstreamFromConfigFile creates a new Certstream server from a config file.
