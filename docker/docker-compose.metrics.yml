@@ -30,7 +30,7 @@ services:
     ports:
       # Exposing Prometheus is NOT required, if you don't want to access it from outside the Docker network.
       # Using localhost enables you to use a reverse proxy (e.g. with basic auth) to access Prometheus in a more secure way.
-      - 127.0.0.1:9090:9090
+      - "127.0.0.1:9090:9090"
     networks:
       - monitoring
     extra_hosts:
@@ -44,7 +44,7 @@ services:
     depends_on:
       - prometheus
     ports:
-      - 127.0.0.1:8082:3000
+      - "127.0.0.1:8082:3000"
     volumes:
       - ./grafana_data:/var/lib/grafana
       - ./grafana/provisioning/:/etc/grafana/provisioning/
@@ -60,7 +60,7 @@ services:
     # Configure the service to run as specific user.
     # user: "1000:1000"
     ports:
-      - 127.0.0.1:8080:80
+      - "127.0.0.1:8080:80"
       # Don't forget to open the other port in case you run the Prometheus endpoint on another port than the websocket server.
       # - 127.0.0.1:8081:81
     volumes:

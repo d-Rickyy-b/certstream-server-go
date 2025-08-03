@@ -7,7 +7,7 @@ services:
     # Configure the service to run as specific user
     # user: "1000:1000"
     ports:
-      - 127.0.0.1:8080:80
+      - "127.0.0.1:8080:80"
       # Don't forget to open the other port in case you run the Prometheus endpoint on another port than the websocket server.
       # - 127.0.0.1:8081:81
     volumes:
