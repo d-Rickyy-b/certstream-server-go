@@ -11,12 +11,11 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/d-Rickyy-b/certstream-server-go/internal/broadcast"
+	"github.com/d-Rickyy-b/certstream-server-go/internal/config"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-
-	"github.com/d-Rickyy-b/certstream-server-go/internal/config"
-	"github.com/d-Rickyy-b/certstream-server-go/internal/models"
-
 	"github.com/gorilla/websocket"
 )
 
