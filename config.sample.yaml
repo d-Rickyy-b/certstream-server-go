@@ -11,6 +11,11 @@ webserver:
   cert_path: ""
   cert_key_path: ""
   compression_enabled: false
+  # Use True-Client-IP, X-Real-IP or the X-Forwarded-For headers (in that order) to determine the real IP address of the client.
+  # If you are using a reverse proxy, you should set this to true.
+  real_ip: false
+  whitelist:
+    - "127.0.0.1/8"
 
 prometheus:
   enabled: true
