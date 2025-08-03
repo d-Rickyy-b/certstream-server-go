@@ -54,7 +54,7 @@ func IPWhitelist(whitelist []string) func(next http.Handler) http.Handler {
 	for _, element := range whitelist {
 		_, ipNet, err := net.ParseCIDR(element)
 		if err != nil {
-			var ip net.IP
+			// If there is an error parsing the CIDR, it might be an IP address
 			if ip = net.ParseIP(element); ip == nil {
 				log.Println("Invalid IP in metrics whitelist: ", element)
 
