@@ -9,6 +9,7 @@ require (
 	github.com/go-chi/chi/v5 v5.2.3
 	github.com/google/certificate-transparency-go v1.3.2
 	github.com/gorilla/websocket v1.5.3
+	github.com/segmentio/kafka-go v0.4.48
 	gopkg.in/yaml.v3 v3.0.1
 )
 

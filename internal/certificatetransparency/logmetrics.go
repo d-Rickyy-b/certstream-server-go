@@ -273,10 +273,12 @@ func GetProcessedPrecerts() int64 {
 	return processedPrecerts
 }
 
+// GetCertMetrics returns a copy of the internal metrics map.
 func GetCertMetrics() CTMetrics {
 	return metrics.GetCTMetrics()
 }
 
+// GetLogOperators returns a map of operator names to a list of CT logs.
 func GetLogOperators() map[string][]string {
 	return metrics.OperatorLogMapping()
 }

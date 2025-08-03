@@ -32,8 +32,10 @@ type LogConfig struct {
 }
 
 type BufferSizes struct {
-	Websocket        int `yaml:"websocket"`
-	CTLog            int `yaml:"ctlog"`
+	Websocket  int `yaml:"websocket"`
+	CTLog      int `yaml:"ctlog"`
+	Dispatcher int `yaml:"dispatcher"`
+	// Deprecated: BroadcastManager was renamed to Dispatcher.
 	BroadcastManager int `yaml:"broadcastmanager"`
 }
 
@@ -50,6 +52,14 @@ type Config struct {
 		Enabled             bool   `yaml:"enabled"`
 		MetricsURL          string `yaml:"metrics_url"`
 		ExposeSystemMetrics bool   `yaml:"expose_system_metrics"`
+	}
+	StreamProcessing struct {
+		Kafka struct {
+			Enabled    bool   `yaml:"enabled"`
+			ServerAddr string `yaml:"server_addr"`
+			ServerPort int    `yaml:"server_port"`
+			Topic      string `yaml:"topic"`
+		}
 	}
 	General struct {
 		// DisableDefaultLogs indicates whether the default logs used in Google Chrome and provided by Google should be disabled.
@@ -235,8 +245,13 @@ func validateConfig(config *Config) bool {
 		config.General.BufferSizes.CTLog = 1000
 	}
 
-	if config.General.BufferSizes.BroadcastManager <= 0 {
-		config.General.BufferSizes.BroadcastManager = 10000
+	// For backward compatibility, copy value from deprecated BroadcastManager field
+	if config.General.BufferSizes.BroadcastManager != 0 {
+		config.General.BufferSizes.Dispatcher = config.General.BufferSizes.BroadcastManager
+	}
+
+	if config.General.BufferSizes.Dispatcher <= 0 {
+		config.General.BufferSizes.Dispatcher = 10000
 	}
 
 	// If the cleanup flag is not set, default to true

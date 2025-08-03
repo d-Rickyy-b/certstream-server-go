@@ -7,8 +7,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/d-Rickyy-b/certstream-server-go/internal/broadcast"
 	"github.com/d-Rickyy-b/certstream-server-go/internal/certificatetransparency"
-	"github.com/d-Rickyy-b/certstream-server-go/internal/web"
 
 	"github.com/VictoriaMetrics/metrics"
 )
@@ -22,13 +22,13 @@ var (
 
 	// Number of currently connected clients.
 	fullClientCount = metrics.NewGauge("certstreamservergo_clients_total{type=\"full\"}", func() float64 {
-		return float64(web.ClientHandler.ClientFullCount())
+		return float64(broadcast.ClientHandler.ClientFullCount())
 	})
 	liteClientCount = metrics.NewGauge("certstreamservergo_clients_total{type=\"lite\"}", func() float64 {
-		return float64(web.ClientHandler.ClientLiteCount())
+		return float64(broadcast.ClientHandler.ClientLiteCount())
 	})
 	domainClientCount = metrics.NewGauge("certstreamservergo_clients_total{type=\"domain\"}", func() float64 {
-		return float64(web.ClientHandler.ClientDomainsCount())
+		return float64(broadcast.ClientHandler.ClientDomainsCount())
 	})
 
 	// Number of certificates processed by the CT watcher.
@@ -90,7 +90,7 @@ func getCertCountForLog(operatorName, logname string) int64 {
 // getSkippedCertMetrics gets the number of skipped certificates for each client and creates metrics for it.
 // It also removes metrics for clients that are not connected anymore.
 func getSkippedCertMetrics() {
-	skippedCerts := web.ClientHandler.GetSkippedCerts()
+	skippedCerts := broadcast.ClientHandler.GetSkippedCerts()
 	for clientName := range skippedCerts {
 		// Get or register a new counter for each client
 		metricName := fmt.Sprintf("certstreamservergo_skipped_certs{client=\"%s\"}", clientName)

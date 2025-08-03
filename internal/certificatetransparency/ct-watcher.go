@@ -13,6 +13,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/d-Rickyy-b/certstream-server-go/internal/broadcast"
 	"github.com/d-Rickyy-b/certstream-server-go/internal/config"
 	"github.com/d-Rickyy-b/certstream-server-go/internal/models"
 	"github.com/d-Rickyy-b/certstream-server-go/internal/web"
@@ -471,7 +472,7 @@ func certHandler(entryChan chan models.Entry) {
 		}
 
 		// Run json encoding in the background and send the result to the clients.
-		web.ClientHandler.Broadcast <- entry
+		broadcast.ClientHandler.MessageQueue <- entry
 
 		// Update metrics
 		url := entry.Data.Source.NormalizedURL

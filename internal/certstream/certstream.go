@@ -10,6 +10,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/d-Rickyy-b/certstream-server-go/internal/broadcast"
 	"github.com/d-Rickyy-b/certstream-server-go/internal/certificatetransparency"
 	"github.com/d-Rickyy-b/certstream-server-go/internal/config"
 	"github.com/d-Rickyy-b/certstream-server-go/internal/metrics"
@@ -35,12 +36,24 @@ func NewCertstreamServer(config config.Config) (*Certstream, error) {
 	cs := Certstream{}
 	cs.config = config
 
+	// Start the broadcast dispatcher
+	broadcast.NewDispatcher()
+	broadcast.ClientHandler.Start()
+
+	// TODO: add support do disable websocket Server
 	// Initialize the webserver used for the websocket server
 	webserver := web.NewWebsocketServer(config.Webserver.ListenAddr, config.Webserver.ListenPort, config.Webserver.CertPath, config.Webserver.CertKeyPath)
 	cs.webserver = webserver
 
 	// Setup metrics server
 	cs.setupMetrics(webserver)
+
+	if config.StreamProcessing.Kafka.Enabled {
+		log.Println("Initializing Kafka client...")
+
+		kc := broadcast.NewKafkaClient(broadcast.SubTypeFull, "kafka-producer", config.General.BufferSizes.Websocket)
+		broadcast.ClientHandler.RegisterClient(kc)
+	}
 
 	return &cs, nil
 }
@@ -65,7 +78,11 @@ func (cs *Certstream) setupMetrics(webserver *web.WebServer) {
 			webserver.RegisterPrometheus(cs.config.Prometheus.MetricsURL, metrics.WritePrometheus)
 		} else {
 			log.Println("Starting prometheus server on new interface")
-			cs.metricsServer = web.NewMetricsServer(cs.config.Prometheus.ListenAddr, cs.config.Prometheus.ListenPort, cs.config.Prometheus.CertPath, cs.config.Prometheus.CertKeyPath)
+			cs.metricsServer = web.NewMetricsServer(
+				cs.config.Prometheus.ListenAddr,
+				cs.config.Prometheus.ListenPort,
+				cs.config.Prometheus.CertPath,
+				cs.config.Prometheus.CertKeyPath)
 			cs.metricsServer.RegisterPrometheus(cs.config.Prometheus.MetricsURL, metrics.WritePrometheus)
 		}
 	}

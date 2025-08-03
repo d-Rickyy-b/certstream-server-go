@@ -29,7 +29,7 @@ func exampleDomains(w http.ResponseWriter, _ *http.Request) {
 	w.Write(exampleCert.JSONDomains()) //nolint:errcheck
 }
 
-// SetExampleCert sets one certificate as the example Cert that is returned by the example endpoints.
+// SetExampleCert sets the example certificate to be used in the example endpoints.
 func SetExampleCert(cert models.Entry) {
 	exampleCert = cert
 }
