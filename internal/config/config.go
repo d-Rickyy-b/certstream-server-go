@@ -66,8 +66,10 @@ type Config struct {
 		DisableDefaultLogs bool `yaml:"disable_default_logs"`
 		// AdditionalLogs contains additional logs provided by the user that can be used in addition to the default logs.
 		AdditionalLogs []LogConfig `yaml:"additional_logs"`
-		BufferSizes    BufferSizes `yaml:"buffer_sizes"`
-		DropOldLogs    *bool       `yaml:"drop_old_logs"`
+		// BufferSizes contains the buffer sizes for the different components of the server. They usually don't need any adjustments.
+		BufferSizes BufferSizes `yaml:"buffer_sizes"`
+		// DropOldLogs indicates whether downloading CT-Logs should start at the latest index (true) or should from the beginning (false).
+		DropOldLogs *bool `yaml:"drop_old_logs"`
 		Recovery       struct {
 			Enabled     bool   `yaml:"enabled"`
 			CTIndexFile string `yaml:"ct_index_file"`
