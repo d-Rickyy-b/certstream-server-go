@@ -16,6 +16,8 @@ require (
 require (
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/google/trillian v1.7.2 // indirect
+	github.com/klauspost/compress v1.17.11 // indirect
+	github.com/pierrec/lz4/v4 v4.1.15 // indirect
 	github.com/valyala/fastrand v1.1.0 // indirect
 	github.com/valyala/histogram v1.2.0 // indirect
 	golang.org/x/crypto v0.42.0 // indirect
