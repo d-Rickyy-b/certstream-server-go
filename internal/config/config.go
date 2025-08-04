@@ -72,7 +72,9 @@ type Config struct {
 		AdditionalLogs      []LogConfig `mapstructure:"additional_logs"`
 		AdditionalTiledLogs []LogConfig `mapstructure:"additional_tiled_logs"`
 		ExcludedLogs        []LogConfig `mapstructure:"excluded_logs"`
+		// BufferSizes contains the buffer sizes for the different components of the server. They usually don't need any adjustments.
 		BufferSizes         BufferSizes `mapstructure:"buffer_sizes"`
+		// DropOldLogs indicates whether downloading CT-Logs should start at the latest index (true) or should from the beginning (false).
 		DropOldLogs         *bool       `mapstructure:"drop_old_logs"`
 		Recovery            struct {
 			Enabled     bool   `mapstructure:"enabled"`
