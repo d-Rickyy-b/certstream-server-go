@@ -46,7 +46,9 @@ func main() {
 	}
 
 	// Get entries from CT log
-	c, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	c, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
 	entries, getEntriesErr := jsonClient.GetRawEntries(c, certID, certID)
 	if getEntriesErr != nil {
 		log.Fatalln("Error getting entries from CT log: ", getEntriesErr)
