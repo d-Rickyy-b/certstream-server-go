@@ -53,14 +53,14 @@ type Config struct {
 		MetricsURL          string `yaml:"metrics_url"`
 		ExposeSystemMetrics bool   `yaml:"expose_system_metrics"`
 	}
-	StreamProcessing struct {
-		Kafka struct {
-			Enabled    bool   `yaml:"enabled"`
-			ServerAddr string `yaml:"server_addr"`
-			ServerPort int    `yaml:"server_port"`
-			Topic      string `yaml:"topic"`
-		}
-	}
+	StreamProcessing []struct {
+		Name       string `yaml:"name"`
+		Type       string `yaml:"type"`
+		Enabled    bool   `yaml:"enabled"`
+		ServerAddr string `yaml:"server_addr"`
+		ServerPort int    `yaml:"server_port"`
+		Topic      string `yaml:"topic"`
+	} `yaml:"stream_processing"`
 	General struct {
 		// DisableDefaultLogs indicates whether the default logs used in Google Chrome and provided by Google should be disabled.
 		DisableDefaultLogs bool `yaml:"disable_default_logs"`

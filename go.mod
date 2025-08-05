@@ -9,12 +9,14 @@ require (
 	github.com/go-chi/chi/v5 v5.2.3
 	github.com/google/certificate-transparency-go v1.3.2
 	github.com/gorilla/websocket v1.5.3
+	github.com/nsqio/go-nsq v1.1.0
 	github.com/segmentio/kafka-go v0.4.48
 	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
 	github.com/go-logr/logr v1.4.3 // indirect
+	github.com/golang/snappy v0.0.1 // indirect
 	github.com/google/trillian v1.7.2 // indirect
 	github.com/klauspost/compress v1.17.11 // indirect
 	github.com/pierrec/lz4/v4 v4.1.15 // indirect

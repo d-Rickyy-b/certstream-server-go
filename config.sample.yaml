@@ -28,10 +28,16 @@ prometheus:
     - "127.0.0.1/8"
 
 # Configuration related to external stream processing tools go here.
-streamprocessing:
-  kafka:
+stream_processing:
+  - name: "kafka"
+    enabled: false
+    server_addr: "127.0.0.1"
+    server_port: 9092
+    topic: "certstream"
+
+  - name: "nqs"
     enabled: true
-    server_address: "127.0.0.1"
+    server_addr: "127.0.0.1"
     server_port: 9092
     topic: "certstream"
 

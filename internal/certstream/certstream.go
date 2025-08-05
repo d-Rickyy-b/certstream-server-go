@@ -6,8 +6,10 @@ package certstream
 
 import (
 	"log"
+	"net"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 
 	"github.com/d-Rickyy-b/certstream-server-go/internal/broadcast"
@@ -48,11 +50,40 @@ func NewCertstreamServer(config config.Config) (*Certstream, error) {
 	// Setup metrics server
 	cs.setupMetrics(webserver)
 
-	if config.StreamProcessing.Kafka.Enabled {
-		log.Println("Initializing Kafka client...")
+	log.Println(config.StreamProcessing)
+	// Initialize the stream processors if configured and enabled.
+	for _, streamProcessor := range config.StreamProcessing {
+		if !streamProcessor.Enabled {
+			continue
+		}
 
-		kc := broadcast.NewKafkaClient(broadcast.SubTypeFull, "kafka-producer", config.General.BufferSizes.Websocket)
-		broadcast.ClientHandler.RegisterClient(kc)
+		addr := net.JoinHostPort(streamProcessor.ServerAddr, strconv.Itoa(streamProcessor.ServerPort))
+		log.Printf("Initializing stream processor: %s at %s\n", streamProcessor.Name, addr)
+
+		switch streamProcessor.Type {
+		case "nsq":
+			log.Println("Initializing NSQ client...")
+			nc := broadcast.NewNSQClient(
+				broadcast.SubTypeFull,
+				addr,
+				streamProcessor.Name,
+				streamProcessor.Topic,
+				config.General.BufferSizes.Websocket,
+			)
+			broadcast.ClientHandler.RegisterClient(nc)
+		case "kafka":
+			log.Println("Initializing Kafka client...")
+			kc := broadcast.NewKafkaClient(
+				broadcast.SubTypeFull,
+				addr,
+				streamProcessor.Name,
+				streamProcessor.Topic,
+				config.General.BufferSizes.Websocket,
+			)
+			broadcast.ClientHandler.RegisterClient(kc)
+		default:
+			log.Printf("Unknown stream processor type '%s' for %s. Skipping...\n", streamProcessor.Type, streamProcessor.Name)
+		}
 	}
 
 	return &cs, nil
