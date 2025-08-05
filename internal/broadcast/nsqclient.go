@@ -9,7 +9,7 @@ import (
 
 // NSQClient connects to a NSQ server in order to provide it with certificates.
 type NSQClient struct {
-	conn        *nsq.Producer // Kafka connection
+	conn        *nsq.Producer // nsq connection
 	addr        string
 	topic       string
 	isConnected bool
@@ -60,12 +60,12 @@ func NewNSQClient(subType SubscriptionType, addr, name, topic string, certBuffer
 	return nsqc
 }
 
-// reconnectHandler is a background job that attempts to reconnect to the Kafka server if the connection is lost.
+// reconnectHandler is a background job that attempts to reconnect to the NSQ server if the connection is lost.
 func (c *NSQClient) reconnectHandler() {
 	for {
 		select {
 		case <-c.stopChan:
-			log.Println("Stopping reconnectHandler for kafka producer:", c.addr)
+			log.Println("Stopping reconnectHandler for nsq producer:", c.addr)
 			return
 		default:
 			if c.isConnected {
