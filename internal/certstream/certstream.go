@@ -50,7 +50,6 @@ func NewCertstreamServer(config config.Config) (*Certstream, error) {
 	// Setup metrics server
 	cs.setupMetrics(webserver)
 
-	log.Println(config.StreamProcessing)
 	// Initialize the stream processors if configured and enabled.
 	for _, streamProcessor := range config.StreamProcessing {
 		if !streamProcessor.Enabled {
