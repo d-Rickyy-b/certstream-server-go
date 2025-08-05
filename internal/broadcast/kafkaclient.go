@@ -3,11 +3,7 @@ package broadcast
 import (
 	"context"
 	"log"
-	"net"
-	"strconv"
 	"time"
-
-	"github.com/d-Rickyy-b/certstream-server-go/internal/config"
 
 	"github.com/segmentio/kafka-go"
 )
@@ -20,24 +16,23 @@ const (
 type KafkaClient struct {
 	conn        *kafka.Conn // Kafka connection
 	addr        string
+	topic       string
 	isConnected bool
 	BaseClient
 }
 
 // NewKafkaClient creates a new Kafka client that immediately connects to the configured Kafka server.
-func NewKafkaClient(subType SubscriptionType, name string, certBufferSize int) *KafkaClient {
-	addr := net.JoinHostPort(config.AppConfig.StreamProcessing.Kafka.ServerAddr, strconv.Itoa(config.AppConfig.StreamProcessing.Kafka.ServerPort))
-
+func NewKafkaClient(subType SubscriptionType, addr, name, topic string, certBufferSize int) *KafkaClient {
 	// Connect to the Kafka server
-	// TODO make topic configurable
-	conn, err := kafka.DialLeader(context.Background(), "tcp", addr, TOPIC, 0)
+	conn, err := kafka.DialLeader(context.Background(), "tcp", addr, topic, 0)
 	if err != nil {
 		log.Println("failed to connect to kafka:", err)
 	}
 
 	kc := &KafkaClient{
-		conn: conn,
-		addr: addr,
+		conn:  conn,
+		addr:  addr,
+		topic: topic,
 		BaseClient: BaseClient{
 			broadcastChan: make(chan []byte, certBufferSize),
 			stopChan:      make(chan struct{}),
@@ -67,7 +62,9 @@ func (c *KafkaClient) reconnectHandler() {
 				time.Sleep(5 * time.Second)
 				continue
 			}
-			conn, err := kafka.DialLeader(context.Background(), "tcp", c.addr, TOPIC, 0)
+
+			// Attempt to connect to the Kafka server
+			conn, err := kafka.DialLeader(context.Background(), "tcp", c.addr, c.topic, 0)
 			if err != nil {
 				log.Printf("Reconnect failed: %v. Retrying in 5s...", err)
 				time.Sleep(5 * time.Second)
