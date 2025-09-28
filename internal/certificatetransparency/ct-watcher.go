@@ -122,9 +122,14 @@ func (w *Watcher) addNewlyAvailableLogs(logList loglist3.LogList) {
 	for _, operator := range logList.Operators {
 		// Iterate over each log of the operator
 		for _, transparencyLog := range operator.Logs {
-			// Check if the log is already being watched
 			newURL := normalizeCtlogURL(transparencyLog.URL)
 
+			if transparencyLog.State.LogStatus() == loglist3.RetiredLogStatus {
+				log.Printf("Skipping retired CT log: %s\n", newURL)
+				continue
+			}
+
+			// Check if the log is already being watched
 			alreadyWatched := false
 			for _, ctWorker := range w.workers {
 				workerURL := normalizeCtlogURL(ctWorker.ctURL)
