@@ -87,7 +87,7 @@ func (e *Entry) entryToJSONBytes() []byte {
 }
 
 type Data struct {
-	CertIndex  int64      `json:"cert_index"`
+	CertIndex  uint64     `json:"cert_index"`
 	CertLink   string     `json:"cert_link"`
 	Chain      []LeafCert `json:"chain,omitempty"`
 	LeafCert   LeafCert   `json:"leaf_cert"`

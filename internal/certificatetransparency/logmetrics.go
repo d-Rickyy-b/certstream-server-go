@@ -17,7 +17,7 @@ type (
 	// CTMetrics is a map of operator names to a map of CT log urls to the number of certs processed by said log.
 	CTMetrics map[string]OperatorMetric
 	// CTCertIndex is a map of CT log urls to the last processed certficate index on the said log
-	CTCertIndex map[string]int64
+	CTCertIndex map[string]uint64
 )
 
 var (
@@ -119,7 +119,7 @@ func (m *LogMetrics) Set(operator, url string, value int64) {
 }
 
 // Inc the metric for a given operator and ct url.
-func (m *LogMetrics) Inc(operator, url string, index int64) {
+func (m *LogMetrics) Inc(operator, url string, index uint64) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
@@ -138,7 +138,7 @@ func (m *LogMetrics) GetAllCTIndexes() CTCertIndex {
 
 	// make a copy of the index and return it
 	// since map is a refrence type
-	copyOfIndex := make(map[string]int64)
+	copyOfIndex := make(map[string]uint64)
 	for k, v := range m.index {
 		copyOfIndex[k] = v
 	}
@@ -146,7 +146,7 @@ func (m *LogMetrics) GetAllCTIndexes() CTCertIndex {
 	return copyOfIndex
 }
 
-func (m *LogMetrics) GetCTIndex(url string) int64 {
+func (m *LogMetrics) GetCTIndex(url string) uint64 {
 	m.mutex.RLock()
 	defer m.mutex.RUnlock()
 

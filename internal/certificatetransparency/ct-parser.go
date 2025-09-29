@@ -27,7 +27,7 @@ func parseData(entry *ct.RawLogEntry, operatorName, logName, ctURL string) (mode
 
 	// Create main data structure
 	data := models.Data{
-		CertIndex: entry.Index,
+		CertIndex: uint64(entry.Index),
 		CertLink:  certLink,
 		Seen:      float64(time.Now().UnixMilli()) / 1_000,
 		Source: models.Source{
