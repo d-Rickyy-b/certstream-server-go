@@ -165,6 +165,7 @@ func (w *Watcher) addNewlyAvailableLogs(logList loglist3.LogList) {
 			go func() {
 				defer w.wg.Done()
 				ctWorker.startDownloadingCerts(w.context)
+				w.discardWorker(&ctWorker)
 			}()
 		}
 	}
@@ -173,7 +174,23 @@ func (w *Watcher) addNewlyAvailableLogs(logList loglist3.LogList) {
 	log.Printf("Currently monitored ct logs: %d\n", len(w.workers))
 }
 
-// dropRemovedLogs checks if any of the currently monitored logs are no longer in the log list.
+// discardWorker removes a worker from the watcher's list of workers.
+// This needs to be done when a worker stops.
+func (w *Watcher) discardWorker(worker *worker) {
+	log.Println("Removing worker for CT log:", worker.ctURL)
+
+	w.workersMu.Lock()
+	defer w.workersMu.Unlock()
+
+	for i, wo := range w.workers {
+		if wo == worker {
+			w.workers = append(w.workers[:i], w.workers[i+1:]...)
+			return
+		}
+	}
+}
+
+// dropRemovedLogs checks if any of the currently monitored logs are no longer in the log list or are retired.
 // If they are not, the CT Logs are probably no longer relevant and the corresponding workers will be stopped.
 func (w *Watcher) dropRemovedLogs(logList loglist3.LogList) {
 	removedCTs := 0
