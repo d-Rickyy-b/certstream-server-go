@@ -2,6 +2,9 @@ webserver:
   # For IPv6, set the listen_addr to "::"
   listen_addr: "0.0.0.0"
   listen_port: 8080
+  # If you want to use a reverse proxy in front of the server, set this to true
+  # It will use the X-Forwarded-For header to get the real IP of the client
+  real_ip: false
   full_url: "/full-stream"
   lite_url: "/"
   domains_only_url: "/domains-only"
