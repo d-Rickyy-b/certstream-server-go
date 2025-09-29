@@ -75,6 +75,7 @@ func (w *Watcher) Start() {
 	go certHandler(w.certChan)
 	go w.watchNewLogs()
 
+	// Wait for all workers to finish
 	w.wg.Wait()
 	close(w.certChan)
 }
@@ -98,6 +99,7 @@ func (w *Watcher) watchNewLogs() {
 	}
 }
 
+// updateLogs checks the transparency log list for new logs and adds new 0workers for those to the watcher.
 func (w *Watcher) updateLogs() {
 	// Get a list of urls of all CT logs
 	logList, err := getAllLogs()
@@ -241,7 +243,7 @@ func (w *Watcher) dropRemovedLogs(logList loglist3.LogList) {
 
 		// If the log is not in the loglist, stop the worker
 		if !onLogList {
-			log.Printf("Stopping worker. CT URL not found in LogList: '%s'\n", ctWorker.ctURL)
+			log.Printf("Stopping worker. CT URL not found in LogList or retired: '%s'\n", ctWorker.ctURL)
 			removedCTs++
 			ctWorker.stop()
 		}
@@ -390,7 +392,7 @@ func (w *worker) runWorker(ctx context.Context) error {
 	if !validSavedCTIndexExists {
 		sth, getSTHerr := jsonClient.GetSTH(ctx)
 		if getSTHerr != nil {
-		// TODO this can happen due to a 429 error. We should retry the request
+			// TODO this can happen due to a 429 error. We should retry the request
 			log.Printf("Could not get STH for '%s': %s\n", w.ctURL, getSTHerr)
 			return errFetchingSTHFailed
 		}
