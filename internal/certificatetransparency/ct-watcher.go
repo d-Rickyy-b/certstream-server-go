@@ -83,9 +83,6 @@ func (w *Watcher) Start() {
 // watchNewLogs monitors the ct log list for new logs and starts a worker for each new log found.
 // This method is blocking. It can be stopped by cancelling the context.
 func (w *Watcher) watchNewLogs() {
-	// Add all available logs to the watcher
-	w.updateLogs()
-
 	// Check for new logs once every hour
 	ticker := time.NewTicker(1 * time.Hour)
 	for {
