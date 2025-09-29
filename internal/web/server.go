@@ -99,7 +99,6 @@ func IPWhitelist(whitelist []string) func(next http.Handler) http.Handler {
 
 			log.Printf("IP %s not in whitelist, rejecting request\n", r.RemoteAddr)
 			http.Error(w, "Forbidden", http.StatusForbidden)
-			return
 		})
 	}
 }
