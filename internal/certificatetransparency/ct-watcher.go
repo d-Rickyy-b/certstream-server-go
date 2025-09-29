@@ -250,7 +250,7 @@ func (w *Watcher) CreateIndexFile(filePath string) error {
 				continue
 			}
 
-			metrics.index[transparencyLog.URL] = int64(sth.TreeSize)
+			metrics.index[transparencyLog.URL] = sth.TreeSize
 		}
 	}
 	w.cancelFunc()
@@ -268,7 +268,7 @@ type worker struct {
 	operatorName string
 	ctURL        string
 	entryChan    chan models.Entry
-	ctIndex      int64
+	ctIndex      uint64
 	mu           sync.Mutex
 	running      bool
 	cancel       context.CancelFunc
@@ -353,19 +353,19 @@ func (w *worker) runWorker(ctx context.Context) error {
 	if !validSavedCTIndexExists {
 		sth, getSTHerr := jsonClient.GetSTH(ctx)
 		if getSTHerr != nil {
-		// TODO this can happen due to a 429 error. We should retry the request
+			// TODO this can happen due to a 429 error. We should retry the request
 			log.Printf("Could not get STH for '%s': %s\n", w.ctURL, getSTHerr)
 			return errFetchingSTHFailed
 		}
 		// Start at the latest STH to skip all the past certificates
-		w.ctIndex = int64(sth.TreeSize)
+		w.ctIndex = sth.TreeSize
 	}
 
 	certScanner := scanner.NewScanner(jsonClient, scanner.ScannerOptions{
 		FetcherOptions: scanner.FetcherOptions{
 			BatchSize:     100,
 			ParallelFetch: 1,
-			StartIndex:    w.ctIndex,
+			StartIndex:    int64(w.ctIndex),
 			Continuous:    true,
 		},
 		Matcher:     scanner.MatchAll{},
