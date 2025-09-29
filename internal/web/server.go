@@ -262,6 +262,10 @@ func NewWebsocketServer(networkIf string, port int, certPath, keyPath string) *W
 
 	upgrader = websocket.Upgrader{
 		EnableCompression: config.AppConfig.Webserver.CompressionEnabled,
+		CheckOrigin: func(r *http.Request) bool {
+			// Allow all connections by default
+			return true
+		},
 	}
 
 	if config.AppConfig.Webserver.RealIP {
