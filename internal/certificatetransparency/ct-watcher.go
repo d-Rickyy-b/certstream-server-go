@@ -142,28 +142,30 @@ func (w *Watcher) addNewlyAvailableLogs(logList loglist3.LogList) {
 				}
 			}
 
-			// If the log is not being watched, create a new worker
-			if !alreadyWatched {
-				w.wg.Add(1)
-				newCTs++
-
-				lastCTIndex := metrics.GetCTIndex(transparencyLog.URL)
-				ctWorker := worker{
-					name:         transparencyLog.Description,
-					operatorName: operator.Name,
-					ctURL:        transparencyLog.URL,
-					entryChan:    w.certChan,
-					ctIndex:      lastCTIndex,
-				}
-				w.workers = append(w.workers, &ctWorker)
-				metrics.Init(operator.Name, transparencyLog.URL)
-
-				// Start a goroutine for each worker
-				go func() {
-					defer w.wg.Done()
-					ctWorker.startDownloadingCerts(w.context)
-				}()
+			// If the log is already being watched, continue
+			if alreadyWatched {
+				continue
 			}
+
+			w.wg.Add(1)
+			newCTs++
+
+			lastCTIndex := metrics.GetCTIndex(transparencyLog.URL)
+			ctWorker := worker{
+				name:         transparencyLog.Description,
+				operatorName: operator.Name,
+				ctURL:        transparencyLog.URL,
+				entryChan:    w.certChan,
+				ctIndex:      lastCTIndex,
+			}
+			w.workers = append(w.workers, &ctWorker)
+			metrics.Init(operator.Name, transparencyLog.URL)
+
+			// Start a goroutine for each worker
+			go func() {
+				defer w.wg.Done()
+				ctWorker.startDownloadingCerts(w.context)
+			}()
 		}
 	}
 
