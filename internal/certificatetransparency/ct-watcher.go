@@ -186,6 +186,11 @@ func (w *Watcher) dropRemovedLogs(logList loglist3.LogList) {
 
 		onLogList := false
 		for _, operator := range logList.Operators {
+			if ctWorker.operatorName != operator.Name {
+				// This operator is not the one we're looking for
+				continue
+			}
+
 			// Iterate over each log of the operator
 			for _, transparencyLog := range operator.Logs {
 				// Remove retired logs from the list
@@ -200,6 +205,11 @@ func (w *Watcher) dropRemovedLogs(logList loglist3.LogList) {
 					onLogList = true
 					break
 				}
+			}
+
+			// Prevent further loop iterations
+			if onLogList {
+				break
 			}
 		}
 
