@@ -9,9 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Ability to store index of most recent cert per log to resume processing from that point after a restart (#49)
 - New CLI switch for creating an index file from a CT log (#49)
+- Check for retired CT logs and prevent them from being watched / stop watching them (#77)
+- Accept websocket connections from all origins
 ### Changed
 ### Removed
 ### Fixed
+- Properly remove stopped ct log workers (#74)
 ### Docs
 
 ## [v1.8.1] - 2025-05-04
