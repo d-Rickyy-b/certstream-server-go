@@ -1,6 +1,7 @@
 package web
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 	"io"
@@ -303,7 +304,12 @@ func (ws *WebServer) Start() {
 
 func (ws *WebServer) Stop() {
 	log.Println("Stopping webserver...")
-	if err := ws.server.Shutdown(nil); err != nil {
+
+	// If the server did not stop within 15 seconds, forcefully close it
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+
+	if err := ws.server.Shutdown(ctx); err != nil {
 		log.Fatal("Error while stopping webserver: ", err)
 	}
 }
