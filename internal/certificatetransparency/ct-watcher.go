@@ -33,6 +33,7 @@ var (
 // Watcher describes a component that watches for new certificates in a CT log.
 type Watcher struct {
 	workers    []*worker
+	workersMu  sync.RWMutex
 	wg         sync.WaitGroup
 	context    context.Context
 	certChan   chan models.Entry
@@ -115,6 +116,8 @@ func (w *Watcher) updateLogs() {
 func (w *Watcher) addNewlyAvailableLogs(logList loglist3.LogList) {
 	log.Println("Checking for new ct logs...")
 
+	w.workersMu.Lock()
+	defer w.workersMu.Unlock()
 	newCTs := 0
 
 	// Check the ct log list for new, unwatched logs
