@@ -29,9 +29,6 @@ general:
     - url: https://ct.googleapis.com/logs/us1/mirrors/digicert_nessie2022
       operator: "DigiCert"
       description: "DigiCert Nessie2022 log"
-    - url: https://dodo.ct.comodo.com
-      operator: "Comodo"
-      description: "Comodo Dodo"
 
   # To optimize the performance of the server, you can overwrite the size of different buffers
   # For low CPU, low memory machines, you should reduce the buffer sizes to save memory in case the CPU is maxed.
