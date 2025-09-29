@@ -183,8 +183,13 @@ func (w *Watcher) dropRemovedLogs(logList loglist3.LogList) {
 		for _, operator := range logList.Operators {
 			// Iterate over each log of the operator
 			for _, transparencyLog := range operator.Logs {
-				// Check if the log is already being watched
+				// Remove retired logs from the list
+				if transparencyLog.State.LogStatus() == loglist3.RetiredLogStatus {
+					// Skip retired logs
+					continue
+				}
 
+				// Check if the log is already being watched
 				logListURL := normalizeCtlogURL(transparencyLog.URL)
 				if workerURL == logListURL {
 					onLogList = true
