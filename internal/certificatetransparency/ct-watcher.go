@@ -387,7 +387,7 @@ func (w *worker) runWorker(ctx context.Context) error {
 	}
 
 	// If recovery is enabled and the CT index is set, we start at the saved index. Otherwise we start at the latest STH.
-	validSavedCTIndexExists := config.AppConfig.General.Recovery.Enabled && w.ctIndex >= 0
+	validSavedCTIndexExists := config.AppConfig.General.Recovery.Enabled
 	if !validSavedCTIndexExists {
 		sth, getSTHerr := jsonClient.GetSTH(ctx)
 		if getSTHerr != nil {
