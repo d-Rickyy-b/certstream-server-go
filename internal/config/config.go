@@ -52,6 +52,9 @@ type Config struct {
 		ExposeSystemMetrics bool   `yaml:"expose_system_metrics"`
 	}
 	General struct {
+		// DisableDefaultLogs indicates whether the default logs used in Google Chrome and provided by Google should be disabled.
+		DisableDefaultLogs bool `yaml:"disable_default_logs"`
+		// AdditionalLogs contains additional logs provided by the user that can be used in addition to the default logs.
 		AdditionalLogs []LogConfig `yaml:"additional_logs"`
 		BufferSizes    BufferSizes `yaml:"buffer_sizes"`
 		DropOldLogs    *bool       `yaml:"drop_old_logs"`
@@ -219,6 +222,8 @@ func validateConfig(config *Config) bool {
 
 			validLogs = append(validLogs, ctLog)
 		}
+	} else if (config.General.AdditionalLogs == nil || len(config.General.AdditionalLogs) == 0) && config.General.DisableDefaultLogs {
+		log.Fatalln("Default logs are disabled, but no additional logs are configured. Please add at least one log to the config or enable default logs.")
 	}
 
 	config.General.AdditionalLogs = validLogs

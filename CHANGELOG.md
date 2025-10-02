@@ -7,10 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Added
-- Ability to store index of most recent cert per log to resume processing from that point after a restart (#49)
+- Ability to store and resume processing of certs from where it left off after a restart - see sample config "recovery" (#49)
 - New CLI switch for creating an index file from a CT log (#49)
 - Check for retired CT logs and prevent them from being watched / stop watching them (#77)
 - Accept websocket connections from all origins
+- Option to disable the default logs provided by Google - see sample config "disable_default_logs"
 ### Changed
 ### Removed
 ### Fixed

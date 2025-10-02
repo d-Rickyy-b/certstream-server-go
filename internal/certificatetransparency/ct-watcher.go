@@ -476,8 +476,8 @@ func certHandler(entryChan chan models.Entry) {
 	}
 }
 
-// getAllLogs returns a list of all CT logs.
-func getAllLogs() (loglist3.LogList, error) {
+// getGoogleLogList fetches the list of all CT logs from Google Chromes CT LogList.
+func getGoogleLogList() (loglist3.LogList, error) {
 	// Download the list of all logs from ctLogInfo and decode json
 	resp, err := http.Get(loglist3.LogListURL)
 	if err != nil {
@@ -499,9 +499,26 @@ func getAllLogs() (loglist3.LogList, error) {
 		return loglist3.LogList{}, parseErr
 	}
 
+	return *allLogs, nil
+}
+
+// getAllLogs returns a list of all CT logs.
+func getAllLogs() (loglist3.LogList, error) {
+	var allLogs loglist3.LogList
+	var err error
+
+	// Ability to disable default logs, if the user only wants to monitor custom logs.
+	if !config.AppConfig.General.DisableDefaultLogs {
+		allLogs, err = getGoogleLogList()
+		if err != nil {
+			log.Printf("Error fetching log list from Google: %s\n", err)
+			return loglist3.LogList{}, fmt.Errorf("failed to fetch log list from Google: %w", err)
+		}
+	}
+
 	// Add manually added logs from config to the allLogs list
 	if config.AppConfig.General.AdditionalLogs == nil {
-		return *allLogs, nil
+		return allLogs, nil
 	}
 
 	for _, additionalLog := range config.AppConfig.General.AdditionalLogs {
@@ -513,6 +530,7 @@ func getAllLogs() (loglist3.LogList, error) {
 		operatorFound := false
 		for _, operator := range allLogs.Operators {
 			if operator.Name == additionalLog.Operator {
+				// TODO Check if the log is already in the list
 				operator.Logs = append(operator.Logs, &customLog)
 				operatorFound = true
 				break
@@ -528,7 +546,7 @@ func getAllLogs() (loglist3.LogList, error) {
 		}
 	}
 
-	return *allLogs, nil
+	return allLogs, nil
 }
 
 func normalizeCtlogURL(input string) string {
