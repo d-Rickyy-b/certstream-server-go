@@ -149,7 +149,9 @@ func (w *Watcher) addNewlyAvailableLogs(logList loglist3.LogList) {
 			w.wg.Add(1)
 			newCTs++
 
-			lastCTIndex := metrics.GetCTIndex(transparencyLog.URL)
+			// Metrics are initialized with 0.
+			// Only if recovery is enabled, it is initialized with the last saved index.
+			lastCTIndex := metrics.GetCTIndex(normalizeCtlogURL(transparencyLog.URL))
 			ctWorker := worker{
 				name:         transparencyLog.Description,
 				operatorName: operator.Name,
