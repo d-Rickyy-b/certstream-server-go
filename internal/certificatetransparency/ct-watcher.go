@@ -158,7 +158,7 @@ func (w *Watcher) addNewlyAvailableLogs(logList loglist3.LogList) {
 				ctIndex:      lastCTIndex,
 			}
 			w.workers = append(w.workers, &ctWorker)
-			metrics.Init(operator.Name, transparencyLog.URL)
+			metrics.Init(operator.Name, normalizeCtlogURL(transparencyLog.URL))
 
 			// Start a goroutine for each worker
 			go func() {
@@ -269,7 +269,7 @@ func (w *Watcher) CreateIndexFile(filePath string) error {
 		// Iterate over each log of the operator
 		for _, transparencyLog := range operator.Logs {
 			// Check if the log is already being watched
-			metrics.Init(operator.Name, transparencyLog.URL)
+			metrics.Init(operator.Name, normalizeCtlogURL(transparencyLog.URL))
 			log.Println("Fetching STH for", transparencyLog.URL)
 
 			hc := http.Client{Timeout: 5 * time.Second}
