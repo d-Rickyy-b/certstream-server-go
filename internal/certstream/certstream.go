@@ -122,6 +122,7 @@ func (cs *Certstream) CreateIndexFile() error {
 	if cs.watcher == nil {
 		cs.watcher = &certificatetransparency.Watcher{}
 	}
+
 	return cs.watcher.CreateIndexFile(cs.config.General.Recovery.CTIndexFile)
 }
 

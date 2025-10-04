@@ -25,6 +25,8 @@ var (
 	upgrader      websocket.Upgrader
 )
 
+// WebServer is a struct that holds the necessary information to run a webserver.
+// It is used for the websocket server as well as the metrics server.
 type WebServer struct {
 	networkIf string
 	port      int
@@ -38,7 +40,7 @@ type WebServer struct {
 // in order to provide metrics for a prometheus server. This function signature was used, because VictoriaMetrics
 // offers exactly this function signature.
 func (ws *WebServer) RegisterPrometheus(url string, callback func(w io.Writer, exposeProcessMetrics bool)) {
-	ws.routes.HandleFunc(url, func(w http.ResponseWriter, r *http.Request) {
+	ws.routes.HandleFunc(url, func(w http.ResponseWriter, _ *http.Request) {
 		callback(w, config.AppConfig.Prometheus.ExposeSystemMetrics)
 	})
 }
@@ -51,14 +53,17 @@ func IPWhitelist(whitelist []string) func(next http.Handler) http.Handler {
 	var cidrList []net.IPNet
 
 	for _, element := range whitelist {
-		ip, ipNet, err := net.ParseCIDR(element)
+		_, ipNet, err := net.ParseCIDR(element)
 		if err != nil {
+			var ip net.IP
 			if ip = net.ParseIP(element); ip == nil {
 				log.Println("Invalid IP in metrics whitelist: ", element)
+
 				continue
 			}
 
 			ipList = append(ipList, ip)
+
 			continue
 		}
 
@@ -262,7 +267,7 @@ func NewWebsocketServer(networkIf string, port int, certPath, keyPath string) *W
 
 	upgrader = websocket.Upgrader{
 		EnableCompression: config.AppConfig.Webserver.CompressionEnabled,
-		CheckOrigin: func(r *http.Request) bool {
+		CheckOrigin: func(_ *http.Request) bool {
 			// Allow all connections by default
 			return true
 		},
@@ -302,6 +307,7 @@ func (ws *WebServer) Start() {
 	}
 }
 
+// Stop tries to stop the webserver gracefully. If it doesn't stop within 15 seconds, it is forcefully closed.
 func (ws *WebServer) Stop() {
 	log.Println("Stopping webserver...")
 

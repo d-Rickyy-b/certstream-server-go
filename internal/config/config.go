@@ -184,7 +184,6 @@ func validateConfig(config *Config) bool {
 	}
 
 	if config.Prometheus.Enabled {
-
 		if config.Prometheus.ListenAddr == "" || net.ParseIP(config.Prometheus.ListenAddr) == nil {
 			log.Fatalln("Metrics export IP is not a valid IP")
 			return false
@@ -222,7 +221,7 @@ func validateConfig(config *Config) bool {
 
 			validLogs = append(validLogs, ctLog)
 		}
-	} else if (config.General.AdditionalLogs == nil || len(config.General.AdditionalLogs) == 0) && config.General.DisableDefaultLogs {
+	} else if len(config.General.AdditionalLogs) == 0 && config.General.DisableDefaultLogs {
 		log.Fatalln("Default logs are disabled, but no additional logs are configured. Please add at least one log to the config or enable default logs.")
 	}
 

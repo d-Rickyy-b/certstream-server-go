@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"maps"
 	"os"
 	"sync"
 	"time"
@@ -16,7 +17,7 @@ type (
 	OperatorMetric map[string]int64
 	// CTMetrics is a map of operator names to a map of CT log urls to the number of certs processed by said log.
 	CTMetrics map[string]OperatorMetric
-	// CTCertIndex is a map of CT log urls to the last processed certficate index on the said log
+	// CTCertIndex is a map of CT log urls to the last processed certficate index on the said log.
 	CTCertIndex map[string]uint64
 )
 
@@ -40,13 +41,7 @@ func (m *LogMetrics) GetCTMetrics() CTMetrics {
 	defer m.mutex.RUnlock()
 
 	copiedMap := make(CTMetrics)
-
-	for operator, urls := range m.metrics {
-		copiedMap[operator] = make(OperatorMetric)
-		for url, count := range urls {
-			copiedMap[operator][url] = count
-		}
-	}
+	maps.Copy(copiedMap, m.metrics)
 
 	return copiedMap
 }
@@ -132,20 +127,19 @@ func (m *LogMetrics) Inc(operator, url string, index uint64) {
 	m.index[url] = index
 }
 
+// GetAllCTIndexes returns a copy of the internal CT index map.
 func (m *LogMetrics) GetAllCTIndexes() CTCertIndex {
 	m.mutex.RLock()
 	defer m.mutex.RUnlock()
 
-	// make a copy of the index and return it
-	// since map is a refrence type
+	// make a copy of the index and return it, since map is a reference type
 	copyOfIndex := make(map[string]uint64)
-	for k, v := range m.index {
-		copyOfIndex[k] = v
-	}
+	maps.Copy(copyOfIndex, m.index)
 
 	return copyOfIndex
 }
 
+// GetCTIndex returns the last cert index processed for a given CT url.
 func (m *LogMetrics) GetCTIndex(url string) uint64 {
 	m.mutex.RLock()
 	defer m.mutex.RUnlock()
@@ -158,7 +152,7 @@ func (m *LogMetrics) GetCTIndex(url string) uint64 {
 	return index
 }
 
-// LoadCTIndex loads the last cert index processed for each CT url if it exists
+// LoadCTIndex loads the last cert index processed for each CT url if it exists.
 func (m *LogMetrics) LoadCTIndex(ctIndexFilePath string) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
@@ -259,10 +253,12 @@ func (m *LogMetrics) SaveCertIndexes(tempFilePath, ctIndexFilePath string) {
 	}
 }
 
+// GetProcessedCerts returns the total number of processed certificates.
 func GetProcessedCerts() int64 {
 	return processedCerts
 }
 
+// GetProcessedPrecerts returns the total number of processed precertificates.
 func GetProcessedPrecerts() int64 {
 	return processedPrecerts
 }

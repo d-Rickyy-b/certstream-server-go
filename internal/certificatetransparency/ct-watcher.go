@@ -106,6 +106,7 @@ func (w *Watcher) updateLogs() {
 	}
 
 	w.addNewlyAvailableLogs(logList)
+
 	if *config.AppConfig.General.DropOldLogs {
 		w.dropRemovedLogs(logList)
 	}
@@ -133,6 +134,7 @@ func (w *Watcher) addNewlyAvailableLogs(logList loglist3.LogList) {
 
 			// Check if the log is already being watched
 			alreadyWatched := false
+
 			for _, ctWorker := range w.workers {
 				workerURL := normalizeCtlogURL(ctWorker.ctURL)
 				if workerURL == newURL {
@@ -360,11 +362,13 @@ func (w *worker) startDownloadingCerts(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 			log.Printf("Context was cancelled; Stopping worker for '%s'\n", w.ctURL)
+
 			return
 		default:
 			log.Printf("Worker for '%s' sleeping for 5 seconds due to error\n", w.ctURL)
 			time.Sleep(5 * time.Second)
 			log.Printf("Restarting worker for '%s'\n", w.ctURL)
+
 			continue
 		}
 	}
@@ -535,6 +539,7 @@ func getAllLogs() (loglist3.LogList, error) {
 				// TODO Check if the log is already in the list
 				operator.Logs = append(operator.Logs, &customLog)
 				operatorFound = true
+
 				break
 			}
 		}

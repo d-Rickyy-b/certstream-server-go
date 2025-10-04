@@ -94,14 +94,17 @@ func (c *client) listenWebsocket() {
 	_ = c.conn.SetReadDeadline(time.Now().Add(readWait))
 
 	defaultPingHandler := c.conn.PingHandler()
+
 	c.conn.SetPingHandler(func(appData string) error {
 		// Ping received - reset the deadline
 		err := c.conn.SetReadDeadline(time.Now().Add(readWait))
 		if err != nil {
 			return err
 		}
+
 		return defaultPingHandler(appData)
 	})
+
 	c.conn.SetPongHandler(func(string) error {
 		// Pong received - reset the deadline
 		err := c.conn.SetReadDeadline(time.Now().Add(readWait))

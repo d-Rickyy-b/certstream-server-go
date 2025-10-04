@@ -35,6 +35,7 @@ func main() {
 		if createErr != nil {
 			log.Fatalf("Error while creating index file: %v", createErr)
 		}
+
 		return
 	}
 
