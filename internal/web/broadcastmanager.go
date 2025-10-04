@@ -26,6 +26,7 @@ func (bm *BroadcastManager) registerClient(c *client) {
 // The client will no longer receive certificate broadcasts right after unregistering.
 func (bm *BroadcastManager) unregisterClient(c *client) {
 	bm.clientLock.Lock()
+
 	for i, client := range bm.clients {
 		if c == client {
 			// Copy the last element of the slice to the position of the removed element
@@ -40,6 +41,7 @@ func (bm *BroadcastManager) unregisterClient(c *client) {
 			break
 		}
 	}
+
 	bm.clientLock.Unlock()
 }
 
@@ -88,13 +90,15 @@ func (bm *BroadcastManager) GetSkippedCerts() map[string]uint64 {
 // broadcaster is run in a goroutine and handles the dispatching of entries to clients.
 func (bm *BroadcastManager) broadcaster() {
 	for {
+		var data []byte
+
 		entry := <-bm.Broadcast
 		dataLite := entry.JSONLite()
 		dataFull := entry.JSON()
 		dataDomain := entry.JSONDomains()
-		var data []byte
 
 		bm.clientLock.RLock()
+
 		for _, c := range bm.clients {
 			switch c.subType {
 			case SubTypeLite:
@@ -118,6 +122,7 @@ func (bm *BroadcastManager) broadcaster() {
 				}
 			}
 		}
+
 		bm.clientLock.RUnlock()
 	}
 }

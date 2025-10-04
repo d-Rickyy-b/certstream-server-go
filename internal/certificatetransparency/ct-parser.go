@@ -277,7 +277,8 @@ func parseName(input []string) *string {
 	return &result
 }
 
-// calculateHash takes a hash.Hash struct and calculates the fingerprint of the given data.
+// calculateHash takes a hash.Hash implementation and calculates the hash of the given data.
+// It returns the hash in the format "XX:XX:XX:...".
 func calculateHash(data []byte, certHasher hash.Hash) string {
 	_, e := certHasher.Write(data)
 	if e != nil {

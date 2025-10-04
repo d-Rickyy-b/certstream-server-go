@@ -90,6 +90,7 @@ func (cs *Certstream) Start() {
 	if cs.webserver == nil {
 		log.Fatalln("Webserver not initialized! Exiting...")
 	}
+
 	go cs.webserver.Start()
 
 	if cs.metricsServer != nil {

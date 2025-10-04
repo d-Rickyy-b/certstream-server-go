@@ -49,6 +49,7 @@ func (ws *WebServer) RegisterPrometheus(url string, callback func(w io.Writer, e
 func IPWhitelist(whitelist []string) func(next http.Handler) http.Handler {
 	// build a list of whitelisted IPs and CIDRs
 	log.Println("Building IP whitelist...")
+
 	var ipList []net.IP
 	var cidrList []net.IPNet
 
