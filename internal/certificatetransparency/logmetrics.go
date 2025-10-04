@@ -161,25 +161,11 @@ func (m *LogMetrics) LoadCTIndex(ctIndexFilePath string) {
 	if readErr != nil {
 		// Create the file if it doesn't exist
 		if os.IsNotExist(readErr) {
-			log.Printf("Specified CT index file does not exist: '%s'\n", ctIndexFilePath)
-			log.Println("Creating CT index file now!")
-			file, createErr := os.Create(ctIndexFilePath)
-			if createErr != nil {
+			err := createCTIndexFile(ctIndexFilePath, m)
+			if err != nil {
 				log.Printf("Error creating CT index file: '%s'\n", ctIndexFilePath)
-				log.Panicln(createErr)
+				log.Panicln(err)
 			}
-
-			var marshalErr error
-			bytes, marshalErr = json.Marshal(m.index)
-			if marshalErr != nil {
-				return
-			}
-			_, writeErr := file.Write(bytes)
-			if writeErr != nil {
-				log.Printf("Error writing to CT index file: '%s'\n", ctIndexFilePath)
-				log.Panicln(writeErr)
-			}
-			file.Close()
 		} else {
 			// If the file exists but we can't read it, log the error and panic
 			log.Panicln(readErr)
@@ -192,7 +178,31 @@ func (m *LogMetrics) LoadCTIndex(ctIndexFilePath string) {
 		log.Panicln(jerr)
 	}
 
-	log.Println("Sucessfuly loaded saved CT indexes")
+	log.Println("Successfully loaded saved CT indexes")
+}
+
+func createCTIndexFile(ctIndexFilePath string, m *LogMetrics) error {
+	log.Printf("Specified CT index file does not exist: '%s'\n", ctIndexFilePath)
+	log.Println("Creating CT index file now!")
+
+	file, createErr := os.Create(ctIndexFilePath)
+	if createErr != nil {
+		log.Printf("Error creating CT index file: '%s'\n", ctIndexFilePath)
+		log.Panicln(createErr)
+	}
+
+	bytes, marshalErr := json.Marshal(m.index)
+	if marshalErr != nil {
+		return marshalErr
+	}
+	_, writeErr := file.Write(bytes)
+	if writeErr != nil {
+		log.Printf("Error writing to CT index file: '%s'\n", ctIndexFilePath)
+		log.Panicln(writeErr)
+	}
+	file.Close()
+
+	return nil
 }
 
 // SaveCertIndexesAtInterval saves the index of CTLogs at given intervals.
