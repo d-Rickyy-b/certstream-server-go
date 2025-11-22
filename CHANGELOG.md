@@ -14,8 +14,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Option to disable the default logs provided by Google - see sample config "disable_default_logs"
 ### Changed
 ### Removed
+- Non-functional Dodo log from sample config (#78)
 ### Fixed
 - Properly remove stopped ct log workers (#74)
+- Added missing fields certificatePolicies and ctlPoisonByte (#85)
 ### Docs
 
 ## [v1.8.1] - 2025-05-04
