@@ -195,6 +195,14 @@ func leafCertFromX509cert(cert x509.Certificate) models.LeafCert {
 			leafCert.Extensions.AuthorityInfoAccess = &result
 		case extension.Id.Equal(x509.OIDExtensionCTPoison):
 			leafCert.Extensions.CTLPoisonByte = true
+		case extension.Id.Equal(x509.OIDExtensionCertificatePolicies):
+			var result string
+			for _, policy := range cert.PolicyIdentifiers {
+				// The current way of joining the string leaves us with a trailing newline,
+				// but that's how the original certstream server does it too.
+				result += fmt.Sprintf("Policy: %s\n", policy)
+			}
+			leafCert.Extensions.CertificatePolicies = &result
 		}
 	}
 
