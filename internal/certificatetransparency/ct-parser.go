@@ -72,6 +72,13 @@ func parseData(entry *ct.RawLogEntry, operatorName, logName, ctURL string) (mode
 		data.LeafCert.Fingerprint = calculatedHash
 		data.LeafCert.SHA1 = calculatedHash
 		data.LeafCert.SHA256 = calculateSHA256(rawData)
+
+		// Since we use the TBSCertificate to parse the LeafCert, the PoisonByte indicator cannot be set by our parser.
+		// According to RFC 6962 Section 3.2 the `"tbs_certificate" is the DER-encoded TBSCertificate (see [RFC5280])
+		// component of the Precertificate -- that is, without the signature and the poison extension.`
+		// Since the PoisonByte Extension `is to ensure that the Precertificate cannot be validated by a standard
+		// X.509v3 client`, we can safely set it for each precertificate.
+		data.LeafCert.Extensions.CTLPoisonByte = true
 	}
 
 	certAsDER := base64.StdEncoding.EncodeToString(entry.Cert.Data)
