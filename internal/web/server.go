@@ -20,10 +20,7 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-var (
-	ClientHandler = NewBroadcastManager()
-	upgrader      websocket.Upgrader
-)
+var upgrader websocket.Upgrader
 
 type contextKey int
 

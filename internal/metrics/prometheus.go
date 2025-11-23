@@ -10,8 +10,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/d-Rickyy-b/certstream-server-go/internal/certificatetransparency"
-
 	"github.com/VictoriaMetrics/metrics"
 )
 

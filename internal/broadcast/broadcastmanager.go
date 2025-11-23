@@ -57,10 +57,10 @@ func (bm *Dispatcher) UnregisterClient(clientName string) {
 			// Close the broadcast channel of the client, otherwise this leads to a memory leak
 			client.Close()
 
-            metrics.Prometheus.UnregisterClient(c.name)
+			metrics.Prometheus.UnregisterClient(client.Name())
 
-		    break
-        }
+			break
+		}
 	}
 
 	bm.clientLock.Unlock()
@@ -115,7 +115,7 @@ func (bm *Dispatcher) broadcaster() {
 		var data []byte
 
 		// Take entry out of broadcast channel and generate JSON representations for the entry.
-		entry := <-bm.Broadcast
+		entry := <-bm.MessageQueue
 		dataLite := entry.JSONLite()
 		dataFull := entry.JSON()
 		dataDomain := entry.JSONDomains()

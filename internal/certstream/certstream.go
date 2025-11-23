@@ -91,7 +91,7 @@ func NewCertstreamServer(config config.Config) (*Certstream, error) {
 		}
 	}
 
-	return &cs, nil
+	return cs, nil
 }
 
 // NewCertstreamFromConfigFile creates a new Certstream server from a config file.
