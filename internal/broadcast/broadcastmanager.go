@@ -105,6 +105,8 @@ func (bm *Dispatcher) GetSkippedCerts() map[string]uint64 {
 // broadcaster is run in a goroutine and handles the dispatching of certs to clients.
 func (bm *Dispatcher) broadcaster() {
 	for {
+		var data []byte
+
 		entry := <-bm.MessageQueue
 		dataLite := entry.JSONLite()
 		dataFull := entry.JSON()

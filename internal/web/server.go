@@ -19,9 +19,7 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-var (
-	upgrader websocket.Upgrader
-)
+var upgrader websocket.Upgrader
 
 // WebServer is a struct that holds the necessary information to run a webserver.
 // It is used for the websocket server as well as the metrics server.
@@ -52,7 +50,7 @@ func IPWhitelist(whitelist []string) func(next http.Handler) http.Handler {
 	var cidrList []net.IPNet
 
 	for _, element := range whitelist {
-		_, ipNet, err := net.ParseCIDR(element)
+		ip, ipNet, err := net.ParseCIDR(element)
 		if err != nil {
 			// If there is an error parsing the CIDR, it might be an IP address
 			if ip = net.ParseIP(element); ip == nil {
