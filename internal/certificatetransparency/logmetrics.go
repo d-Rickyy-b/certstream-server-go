@@ -227,18 +227,18 @@ func createCTIndexFile(ctIndexFilePath string, m *LogMetrics) error {
 // permanent index file. This prevents the last good index file from being clobbered if the program was shutdown/killed
 // in-between the write operation.
 func (m *LogMetrics) SaveCertIndexesAtInterval(interval time.Duration, ctIndexFilePath string) {
-	tempFilePath := fmt.Sprintf("%s.tmp", ctIndexFilePath)
-
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 
 	for range ticker.C {
-		m.SaveCertIndexes(tempFilePath, ctIndexFilePath)
+		m.SaveCertIndexes(ctIndexFilePath)
 	}
 }
 
 // SaveCertIndexes saves the index of CTLogs to a file.
-func (m *LogMetrics) SaveCertIndexes(tempFilePath, ctIndexFilePath string) {
+func (m *LogMetrics) SaveCertIndexes(ctIndexFilePath string) {
+	tempFilePath := fmt.Sprintf("%s.tmp", ctIndexFilePath)
+
 	// Get the index data
 	ctIndex := m.GetAllCTIndexes()
 	bytes, cerr := json.MarshalIndent(ctIndex, "", " ")

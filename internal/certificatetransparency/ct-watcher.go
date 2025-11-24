@@ -301,8 +301,7 @@ func (w *Watcher) CreateIndexFile(filePath string) error {
 	}
 	w.cancelFunc()
 
-	tempFilePath := fmt.Sprintf("%s.tmp", filePath)
-	metrics.SaveCertIndexes(tempFilePath, filePath)
+	metrics.SaveCertIndexes(filePath)
 	log.Println("Index file saved to", filePath)
 
 	return nil
