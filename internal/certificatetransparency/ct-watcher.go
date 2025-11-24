@@ -280,7 +280,7 @@ func (w *Watcher) CreateIndexFile(filePath string) error {
 		for _, transparencyLog := range operator.Logs {
 			// Check if the log is already being watched
 			metrics.Init(operator.Name, normalizeCtlogURL(transparencyLog.URL))
-			log.Println("Fetching STH for", transparencyLog.URL)
+			log.Println("Fetching STH for", normalizeCtlogURL(transparencyLog.URL))
 
 			hc := http.Client{Timeout: 5 * time.Second}
 			jsonClient, e := client.New(transparencyLog.URL, &hc, jsonclient.Options{UserAgent: userAgent})
