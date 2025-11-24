@@ -296,7 +296,7 @@ func (w *Watcher) CreateIndexFile(filePath string) error {
 				continue
 			}
 
-			metrics.index[transparencyLog.URL] = sth.TreeSize
+			metrics.SetCTIndex(normalizeCtlogURL(transparencyLog.URL), sth.TreeSize)
 		}
 	}
 	w.cancelFunc()

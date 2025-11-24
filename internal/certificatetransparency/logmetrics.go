@@ -157,6 +157,15 @@ func (m *LogMetrics) GetCTIndex(url string) uint64 {
 	return index
 }
 
+// SetCTIndex sets the index for a given CT url.
+func (m *LogMetrics) SetCTIndex(url string, index uint64) {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
+	log.Println("Setting CT index for ", url, " to ", index)
+	m.index[url] = index
+}
+
 // LoadCTIndex loads the last cert index processed for each CT url if it exists.
 func (m *LogMetrics) LoadCTIndex(ctIndexFilePath string) {
 	m.mutex.Lock()
