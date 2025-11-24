@@ -258,10 +258,11 @@ func (w *Watcher) dropRemovedLogs(logList loglist3.LogList) {
 func (w *Watcher) Stop() {
 	log.Printf("Stopping watcher\n")
 
-	// Store current CT Indexes before shutting down
-	filePath := config.AppConfig.General.Recovery.CTIndexFile
-	tempFilePath := fmt.Sprintf("%s.tmp", filePath)
-	metrics.SaveCertIndexes(tempFilePath, filePath)
+	if config.AppConfig.General.Recovery.Enabled {
+		// Store current CT Indexes before shutting down
+		filePath := config.AppConfig.General.Recovery.CTIndexFile
+		metrics.SaveCertIndexes(filePath)
+	}
 
 	w.cancelFunc()
 }
