@@ -1,3 +1,5 @@
+version: "2"
+
 # Options for analysis running.
 run:
   # The default concurrency value is the number of available CPU.
@@ -32,8 +34,8 @@ linters:
   # Default: false
   # fast: true
 
-  # Disable all linters.
-  disable-all: true
+  # Disable all linters for now.
+  default: none
 
   # Enable specific linter
   # https://golangci-lint.run/usage/linters/#enabled-by-default
@@ -41,7 +43,7 @@ linters:
     - bodyclose
     - containedctx
     # - deadcode
-    - depguard
+    # - depguard
     - dogsled
     - dupl
     - dupword
@@ -50,23 +52,16 @@ linters:
     - errchkjson
     - errname
     - errorlint
-    - execinquery
     - exhaustive
-    - exportloopref
     - gochecknoinits
     - gocritic
     - godot
     # - godox
-    - gofmt
-    # - gofumpt
-    - goimports
-    # - golint
     # - gomnd
     - gomoddirectives
     - gomodguard
     - goprintffuncname
     - gosec
-    - gosimple
     - govet
     - grouper
     - importas
@@ -91,9 +86,6 @@ linters:
     - reassign
     - revive
     - staticcheck
-    - stylecheck
-    - tenv
-    - typecheck
     - unconvert
     - unparam
     - unused
@@ -102,43 +94,51 @@ linters:
     - wastedassign
     - whitespace
     - wrapcheck
-    - wsl
+    # - wsl_v5
 
-linters-settings:
-  nlreturn:
-    # Size of the block (including return statement that is still "OK") so no return split required.
-    # Default: 1
-    block-size: 2
-  wsl:
-    enforce-err-cuddling: true
-    allow-cuddle-declarations: true
-    allow-assign-and-call: true
-    allow-cuddle-with-calls:
-      - log.Println
-      - log.Printf
-      - RLock
-      - RUnlock
-      - Lock
-      - Unlock
-    allow-assign-and-anything: true
-  gofumpt:
-    extra-rules: true
-  lll:
-    line-length: 160
-  varnamelen:
-    ignore-decls:
-      - w io.Writer
-      - w io.WriteCloser
-      - w http.ResponseWriter
-      - r *http.Request
-      - r chi.Router
-      - r *chi.Mux
-      - i int
+  exclusions:
+    rules:
+      # Exclude some linters from running on tests files.
+      - path: _test\.go
+        linters:
+          - nlreturn
 
-issues:
-  # List of regexps of issue texts to exclude.
-  exclude-rules:
-    # Exclude some linters from running on tests files.
-    - path: _test\.go
-      linters:
-        - nlreturn
+  settings:
+    nlreturn:
+      # Size of the block (including return statement that is still "OK") so no return split required.
+      # Default: 1
+      block-size: 2
+    wsl:
+      force-err-cuddling: true
+      allow-cuddle-declarations: true
+      allow-assign-and-call: true
+      allow-cuddle-with-calls:
+        - log.Println
+        - log.Printf
+        - RLock
+        - RUnlock
+        - Lock
+        - Unlock
+      allow-assign-and-anything: true
+    lll:
+      line-length: 160
+    varnamelen:
+      ignore-decls:
+        - w io.Writer
+        - w io.WriteCloser
+        - w http.ResponseWriter
+        - r *http.Request
+        - r chi.Router
+        - r *chi.Mux
+        - i int
+
+formatters:
+  enable:
+    # - gofmt
+    # - gofumpt
+    - goimports
+    # - golint
+
+  settings:
+    gofumpt:
+      extra-rules: true

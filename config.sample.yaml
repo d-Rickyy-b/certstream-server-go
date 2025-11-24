@@ -11,6 +11,11 @@ webserver:
   cert_path: ""
   cert_key_path: ""
   compression_enabled: false
+  # Use True-Client-IP, X-Real-IP or the X-Forwarded-For headers (in that order) to determine the real IP address of the client.
+  # If you are using a reverse proxy, you should set this to true.
+  real_ip: false
+  whitelist:
+    - "127.0.0.1/8"
 
 prometheus:
   enabled: true
@@ -21,6 +26,20 @@ prometheus:
   real_ip: false
   whitelist:
     - "127.0.0.1/8"
+
+# Configuration related to external stream processing tools go here.
+stream_processing:
+  - name: "kafka"
+    enabled: false
+    server_addr: "127.0.0.1"
+    server_port: 9092
+    topic: "certstream"
+
+  - name: "nqs"
+    enabled: true
+    server_addr: "127.0.0.1"
+    server_port: 9092
+    topic: "certstream"
 
 general:
   # DisableDefaultLogs indicates whether the default logs used in Google Chrome and provided by Google should be disabled.
@@ -39,9 +58,8 @@ general:
     websocket: 300
     # Buffer for each CT log connection
     ctlog: 1000
-    # Combined buffer for the broadcast manager
-    broadcastmanager: 10000
-
+    # Combined buffer for the cert dispatcher
+    dispatcher: 10000
   # Google regularly updates the log list. If this option is set to true, the server will remove all logs no longer listed in the Google log list.
   # This option defaults to true. See https://github.com/d-Rickyy-b/certstream-server-go/issues/51
   drop_old_logs: true
