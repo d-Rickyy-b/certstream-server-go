@@ -41,7 +41,12 @@ func (m *LogMetrics) GetCTMetrics() CTMetrics {
 	defer m.mutex.RUnlock()
 
 	copiedMap := make(CTMetrics)
-	maps.Copy(copiedMap, m.metrics)
+	for operator, urls := range m.metrics {
+		copiedMap[operator] = make(OperatorMetric)
+		for url, count := range urls {
+			copiedMap[operator][url] = count
+		}
+	}
 
 	return copiedMap
 }
@@ -133,7 +138,7 @@ func (m *LogMetrics) GetAllCTIndexes() CTCertIndex {
 	defer m.mutex.RUnlock()
 
 	// make a copy of the index and return it, since map is a reference type
-	copyOfIndex := make(map[string]uint64)
+	copyOfIndex := make(CTCertIndex)
 	maps.Copy(copyOfIndex, m.index)
 
 	return copyOfIndex
@@ -182,6 +187,9 @@ func (m *LogMetrics) LoadCTIndex(ctIndexFilePath string) {
 }
 
 func createCTIndexFile(ctIndexFilePath string, m *LogMetrics) error {
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
+
 	log.Printf("Specified CT index file does not exist: '%s'\n", ctIndexFilePath)
 	log.Println("Creating CT index file now!")
 

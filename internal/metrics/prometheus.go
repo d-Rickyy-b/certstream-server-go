@@ -19,6 +19,7 @@ var (
 
 	tempCertMetricsLastRefreshed = time.Time{}
 	tempCertMetrics              = certificatetransparency.CTMetrics{}
+	tempCertMetricsMutex         = &sync.RWMutex{}
 
 	// Number of currently connected clients.
 	fullClientCount = metrics.NewGauge("certstreamservergo_clients_total{type=\"full\"}", func() float64 {
@@ -78,6 +79,9 @@ func initCtLogMetrics() {
 // getCertCountForLog returns the number of certificates processed from a specific CT log.
 // It caches the result for 5 seconds. Subsequent calls to this method will return the cached result.
 func getCertCountForLog(operatorName, logname string) int64 {
+	tempCertMetricsMutex.Lock()
+	defer tempCertMetricsMutex.Unlock()
+
 	// Add some caching to avoid having to lock the mutex every time
 	if time.Since(tempCertMetricsLastRefreshed) > time.Second*5 {
 		tempCertMetricsLastRefreshed = time.Now()
