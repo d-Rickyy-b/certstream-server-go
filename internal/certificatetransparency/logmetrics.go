@@ -247,7 +247,7 @@ func (m *LogMetrics) SaveCertIndexes(ctIndexFilePath string) {
 	}
 
 	// Save data to a temporary file first
-	file, openErr := os.OpenFile(tempFilePath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+	file, openErr := os.OpenFile(tempFilePath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o644)
 	if openErr != nil {
 		log.Println("Could not save CT index to temporary file: ", openErr)
 		return
