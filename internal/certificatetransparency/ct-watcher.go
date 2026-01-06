@@ -396,9 +396,9 @@ func (w *worker) runWorker(ctx context.Context) error {
 		return errCreatingClient
 	}
 
-	// If recovery is enabled and the CT index is set, we start at the saved index. Otherwise we start at the latest STH.
-	validSavedCTIndexExists := config.AppConfig.General.Recovery.Enabled
-	if !validSavedCTIndexExists {
+	// If recovery is enabled, we start at the saved index. Otherwise, we start at the latest STH.
+	recoveryEnabled := config.AppConfig.General.Recovery.Enabled
+	if !recoveryEnabled {
 		sth, getSTHerr := jsonClient.GetSTH(ctx)
 		if getSTHerr != nil {
 			// TODO this can happen due to a 429 error. We should retry the request
