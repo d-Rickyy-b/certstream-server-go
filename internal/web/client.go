@@ -1,7 +1,9 @@
 package web
 
 import (
+	"fmt"
 	"log"
+	"net"
 	"strings"
 	"time"
 
@@ -18,20 +20,33 @@ type SubscriptionType int
 
 // client represents a single client's connection to the server.
 type client struct {
-	conn          *websocket.Conn
+	conn *websocket.Conn
+	// when behind a proxy, this holds the real IP of the client
+	realIP        net.IP
+	connectionIP  net.IP
+	userAgent     string
 	broadcastChan chan []byte
-	name          string
 	subType       SubscriptionType
 	skippedCerts  uint64
 }
 
-func newClient(conn *websocket.Conn, subType SubscriptionType, name string, certBufferSize int) *client {
+func newClient(conn *websocket.Conn, subType SubscriptionType, realIP, connectionIP net.IP, certBufferSize int, userAgent string) *client {
 	return &client{
 		conn:          conn,
 		broadcastChan: make(chan []byte, certBufferSize),
-		name:          name,
+		realIP:        realIP,
+		connectionIP:  connectionIP,
+		userAgent:     userAgent,
 		subType:       subType,
 	}
+}
+
+func (c *client) Name() string {
+	if c.connectionIP.Equal(c.realIP) {
+		return fmt.Sprintf("%s (Real IP: %s)", c.connectionIP, c.realIP)
+	}
+
+	return fmt.Sprintf("%s", c.connectionIP)
 }
 
 // Each client has a broadcastHandler that runs in the background and sends out the broadcast messages to the client.
@@ -128,6 +143,7 @@ func (c *client) listenWebsocket() {
 				log.Printf("Connection to client lost: %v\n", c.conn.RemoteAddr())
 			}
 
+			// TODO the client's IP address is not correctly shown here
 			log.Printf("Disconnecting client %v!\n", c.conn.RemoteAddr())
 
 			break

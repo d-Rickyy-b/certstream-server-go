@@ -81,7 +81,7 @@ func (bm *BroadcastManager) GetSkippedCerts() map[string]uint64 {
 
 	skippedCerts := make(map[string]uint64, len(bm.clients))
 	for _, c := range bm.clients {
-		skippedCerts[c.name] = c.skippedCerts
+		skippedCerts[c.Name()] = c.skippedCerts
 	}
 
 	return skippedCerts
@@ -108,7 +108,7 @@ func (bm *BroadcastManager) broadcaster() {
 			case SubTypeDomain:
 				data = dataDomain
 			default:
-				log.Printf("Unknown subscription type '%d' for client '%s'. Skipping this client!\n", c.subType, c.name)
+				log.Printf("Unknown subscription type '%d' for client '%s'. Skipping this client!\n", c.subType, c.Name())
 				continue
 			}
 
@@ -118,7 +118,7 @@ func (bm *BroadcastManager) broadcaster() {
 				// Default case is executed if the client's broadcast channel is full.
 				c.skippedCerts++
 				if c.skippedCerts%1000 == 1 {
-					log.Printf("Not providing client '%s' with cert because client's buffer is full. The client can't keep up. Skipped certs: %d\n", c.name, c.skippedCerts)
+					log.Printf("Not providing client '%s' with cert because client's buffer is full. The client can't keep up. Skipped certs: %d\n", c.Name(), c.skippedCerts)
 				}
 			}
 		}

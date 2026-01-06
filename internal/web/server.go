@@ -3,7 +3,6 @@ package web
 import (
 	"context"
 	"crypto/tls"
-	"fmt"
 	"io"
 	"log"
 	"net"
@@ -119,7 +118,7 @@ func initFullWebsocket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	setupClient(connection, SubTypeFull, r.RemoteAddr)
+	setupClient(connection, SubTypeFull, r.RemoteAddr, r.UserAgent())
 }
 
 // initLiteWebsocket is called when a client connects to the / endpoint.
@@ -131,7 +130,7 @@ func initLiteWebsocket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	setupClient(connection, SubTypeLite, r.RemoteAddr)
+	setupClient(connection, SubTypeLite, r.RemoteAddr, r.UserAgent())
 }
 
 // initDomainWebsocket is called when a client connects to the /domains-only endpoint.
@@ -143,21 +142,12 @@ func initDomainWebsocket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	setupClient(connection, SubTypeDomain, r.RemoteAddr)
+	setupClient(connection, SubTypeDomain, r.RemoteAddr, r.UserAgent())
 }
 
 // upgradeConnection upgrades the connection to a websocket and returns the connection.
 func upgradeConnection(w http.ResponseWriter, r *http.Request) (*websocket.Conn, error) {
-	var remoteAddr string
-
-	xForwardedFor := r.Header.Get("X-Forwarded-For")
-	if xForwardedFor != "" {
-		remoteAddr = fmt.Sprintf("'%s' (X-Forwarded-For: '%s')", r.RemoteAddr, xForwardedFor)
-	} else {
-		remoteAddr = fmt.Sprintf("'%s'", r.RemoteAddr)
-	}
-
-	log.Printf("Starting new websocket for %s - %s\n", remoteAddr, r.URL)
+	log.Printf("Starting new websocket for %s - %s\n", r.RemoteAddr, r.URL)
 
 	connection, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -166,7 +156,7 @@ func upgradeConnection(w http.ResponseWriter, r *http.Request) (*websocket.Conn,
 
 	defaultCloseHandler := connection.CloseHandler()
 	connection.SetCloseHandler(func(code int, text string) error {
-		log.Printf("Stopping websocket for %s - %s\n", remoteAddr, r.URL)
+		log.Printf("Stopping websocket for %s - %s\n", r.RemoteAddr, r.URL)
 		return defaultCloseHandler(code, text)
 	})
 
@@ -174,8 +164,27 @@ func upgradeConnection(w http.ResponseWriter, r *http.Request) (*websocket.Conn,
 }
 
 // setupClient initializes a client struct and starts the broadcastHandler and websocket listener.
-func setupClient(connection *websocket.Conn, subscriptionType SubscriptionType, name string) {
-	c := newClient(connection, subscriptionType, name, config.AppConfig.General.BufferSizes.Websocket)
+func setupClient(connection *websocket.Conn, subscriptionType SubscriptionType, remoteAddr, userAgent string) {
+	connectionHost, _, connectionSplitErr := net.SplitHostPort(connection.RemoteAddr().String())
+	if connectionSplitErr != nil {
+		log.Println("Error while trying to parse remote address:", connection.RemoteAddr().String())
+	}
+	connectionIP := net.ParseIP(connectionHost)
+
+	var realIP net.IP
+	if config.AppConfig.Webserver.RealIP {
+		// RealIP is either the real IP connecting to the server or the IP parsed from the X-Forwarded-For or X-Real-IP header if present.
+		realHost, _, realSplitErr := net.SplitHostPort(remoteAddr)
+		if realSplitErr != nil {
+			log.Println("Error while trying to parse remote address:", remoteAddr)
+		}
+		realIP = net.ParseIP(realHost)
+	} else {
+		// In case the RealIP option is not configured, just use the connection IP
+		realIP = connectionIP
+	}
+
+	c := newClient(connection, subscriptionType, realIP, connectionIP, config.AppConfig.General.BufferSizes.Websocket, userAgent)
 	go c.broadcastHandler()
 	go c.listenWebsocket()
 
