@@ -16,6 +16,7 @@ import (
 	"github.com/d-Rickyy-b/certstream-server-go/internal/config"
 	"github.com/d-Rickyy-b/certstream-server-go/internal/models"
 	"github.com/d-Rickyy-b/certstream-server-go/internal/web"
+	"github.com/google/trillian/client/backoff"
 
 	ct "github.com/google/certificate-transparency-go"
 	"github.com/google/certificate-transparency-go/client"
@@ -115,7 +116,7 @@ func (w *Watcher) updateLogs() {
 	defer w.workersMu.Unlock()
 
 	for _, operator := range logList.Operators {
-		// Iterate over each log of the operator
+		// Classic logs
 		for _, transparencyLog := range operator.Logs {
 			url := transparencyLog.URL
 			desc := transparencyLog.Description
@@ -127,7 +128,24 @@ func (w *Watcher) updateLogs() {
 			}
 
 			monitoredURLs[normURL] = struct{}{}
-			if w.addLogIfNew(operator.Name, desc, url) {
+			if w.addLogIfNew(operator.Name, desc, url, false) {
+				newCTs++
+			}
+		}
+
+		// Tiled logs
+		for _, transparencyLog := range operator.TiledLogs {
+			url := transparencyLog.MonitoringURL
+			desc := transparencyLog.Description
+			normURL := normalizeCtlogURL(url)
+
+			if transparencyLog.State.LogStatus() == loglist3.RetiredLogStatus {
+				log.Printf("Skipping retired CT log: %s\n", normURL)
+				continue
+			}
+
+			monitoredURLs[normURL] = struct{}{}
+			if w.addLogIfNew(operator.Name, desc, url, true) {
 				newCTs++
 			}
 		}
@@ -154,7 +172,7 @@ func (w *Watcher) updateLogs() {
 
 // addLogIfNew checks if a log is already being watched and adds it if not.
 // Returns true if a new log was added, false otherwise.
-func (w *Watcher) addLogIfNew(operatorName, description, url string) bool {
+func (w *Watcher) addLogIfNew(operatorName, description, url string, isTiled bool) bool {
 	normURL := normalizeCtlogURL(url)
 
 	// Check if the log is already being watched
@@ -175,6 +193,7 @@ func (w *Watcher) addLogIfNew(operatorName, description, url string) bool {
 		ctURL:        url,
 		entryChan:    w.certChan,
 		ctIndex:      lastCTIndex,
+		isTiled:      isTiled,
 	}
 	w.workers = append(w.workers, &ctWorker)
 	metrics.Init(operatorName, normURL)
@@ -269,6 +288,7 @@ type worker struct {
 	mu           sync.Mutex
 	running      bool
 	cancel       context.CancelFunc
+	isTiled      bool
 }
 
 // startDownloadingCerts starts downloading certificates from the CT log. This method is blocking.
@@ -298,7 +318,14 @@ func (w *worker) startDownloadingCerts(ctx context.Context) {
 
 	for {
 		log.Printf("Starting worker for CT log: %s\n", w.ctURL)
-		workerErr := w.runWorker(ctx)
+
+		var workerErr error
+		if w.isTiled {
+			workerErr = w.runTiledWorker(ctx)
+		} else {
+			workerErr = w.runStandardWorker(ctx)
+		}
+
 		if workerErr != nil {
 			if errors.Is(workerErr, errFetchingSTHFailed) {
 				// TODO this could happen due to a 429 error. We should retry the request
@@ -338,8 +365,8 @@ func (w *worker) stop() {
 	w.cancel()
 }
 
-// runWorker runs a single worker for a single CT log. This method is blocking.
-func (w *worker) runWorker(ctx context.Context) error {
+// runStandardWorker runs the worker for a single standard CT log. This method is blocking.
+func (w *worker) runStandardWorker(ctx context.Context) error {
 	hc := http.Client{Timeout: 30 * time.Second}
 	jsonClient, e := client.New(w.ctURL, &hc, jsonclient.Options{UserAgent: userAgent})
 	if e != nil {
@@ -380,6 +407,133 @@ func (w *worker) runWorker(ctx context.Context) error {
 	}
 
 	log.Printf("Exiting worker %s without error!\n", w.ctURL)
+
+	return nil
+}
+
+// runTiledWorker runs the worker for a single tiled CT log. This method is blocking.
+func (w *worker) runTiledWorker(ctx context.Context) error {
+	hc := &http.Client{Timeout: 30 * time.Second}
+
+	// If recovery is enabled and the CT index is set, we start at the saved index. Otherwise we start at the latest checkpoint.
+	validSavedCTIndexExists := config.AppConfig.General.Recovery.Enabled && w.ctIndex >= 0
+	if !validSavedCTIndexExists {
+		checkpoint, err := FetchCheckpoint(ctx, hc, w.ctURL)
+		if err != nil {
+			log.Printf("Could not get checkpoint for '%s': %s\n", w.ctURL, err)
+			return errFetchingSTHFailed
+		}
+		// Start at the latest checkpoint to skip all the past certificates
+		w.ctIndex = checkpoint.Size
+	}
+
+	// Initialize backoff for polling
+	pollBackoff := &backoff.Backoff{
+		Min:    1 * time.Second,
+		Max:    30 * time.Second,
+		Factor: 2,
+		Jitter: true,
+	}
+
+	// Continuous monitoring loop
+	for {
+		hadNewEntries, err := w.processTiledLogUpdates(ctx, hc)
+		if err != nil {
+			log.Printf("Error processing tiled log updates for '%s': %s\n", w.ctURL, err)
+			return err
+		}
+
+		// Reset backoff if we found new entries
+		if hadNewEntries {
+			pollBackoff.Reset()
+		}
+
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(pollBackoff.Duration()):
+			// Continue to the next iteration
+		}
+	}
+}
+
+// processTiledLogUpdates checks for new entries in the tiled log and processes them
+func (w *worker) processTiledLogUpdates(ctx context.Context, hc *http.Client) (bool, error) {
+	// Fetch current checkpoint
+	checkpoint, err := FetchCheckpoint(ctx, hc, w.ctURL)
+	if err != nil {
+		return false, fmt.Errorf("fetching checkpoint: %w", err)
+	}
+
+	currentTreeSize := checkpoint.Size
+	if currentTreeSize <= w.ctIndex {
+		// No new entries
+		return false, nil
+	}
+
+	log.Printf("Processing tiled log updates for '%s': from index %d to %d\n", w.ctURL, w.ctIndex, currentTreeSize)
+
+	// Process entries from current index to new tree size
+	startTile := w.ctIndex / TileSize
+	endTile := currentTreeSize / TileSize
+
+	// Process complete tiles
+	for tileIndex := startTile; tileIndex < endTile; tileIndex++ {
+		if err := w.processTile(ctx, hc, tileIndex, 0); err != nil {
+			return false, fmt.Errorf("processing tile %d: %w", tileIndex, err)
+		}
+	}
+
+	// Process partial tile if exists
+	partialSize := currentTreeSize % TileSize
+	if partialSize > 0 {
+		if err := w.processTile(ctx, hc, endTile, partialSize); err != nil {
+			log.Printf("Warning: error processing partial tile %d: %s\n", endTile, err)
+			// Don't return error for partial tiles as they might be incomplete
+		}
+	}
+
+	return true, nil
+}
+
+// processTile processes a single tile from the tiled log.
+// partialWidth of 0 means full tile, otherwise fetch partial tile with that width.
+func (w *worker) processTile(ctx context.Context, hc *http.Client, tileIndex uint64, partialWidth uint64) error {
+	leaves, err := FetchTile(ctx, hc, w.ctURL, tileIndex, partialWidth)
+	if err != nil {
+		return fmt.Errorf("fetching tile: %w", err)
+	}
+
+	// Calculate the starting index for entries in this tile
+	baseIndex := tileIndex * TileSize
+
+	for i, leaf := range leaves {
+		entryIndex := baseIndex + uint64(i)
+
+		// Skip entries we've already processed
+		if entryIndex <= w.ctIndex {
+			continue
+		}
+
+		// Convert TileLeaf to RawLogEntry for compatibility with existing parsing
+		rawEntry := ConvertTileLeafToRawLogEntry(leaf, entryIndex)
+
+		// Process the entry using existing callbacks
+		if leaf.EntryType == 0 { // x509_entry
+			w.foundCertCallback(rawEntry)
+		} else if leaf.EntryType == 1 { // precert_entry
+			w.foundPrecertCallback(rawEntry)
+		}
+
+		// Update the index
+		w.ctIndex = entryIndex
+	}
+
+	tileType := "complete"
+	if partialWidth > 0 {
+		tileType = "partial"
+	}
+	log.Printf("Processed tile %d for '%s' (%s): %d entries\n", tileIndex, w.ctURL, tileType, len(leaves))
 
 	return nil
 }
