@@ -32,6 +32,11 @@ general:
       operator: "DigiCert"
       description: "DigiCert Nessie2022 log"
 
+  additional_tiled_logs:
+    - url: https://ct.cloudflare.com/logs/raio2025h2b/
+      operator: "Cloudflare"
+      description: "Cloudflare 'Raio2025h2b'"
+
   # To optimize the performance of the server, you can overwrite the size of different buffers
   # For low CPU, low memory machines, you should reduce the buffer sizes to save memory in case the CPU is maxed.
   buffer_sizes:
