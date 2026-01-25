@@ -55,10 +55,11 @@ type Config struct {
 		// DisableDefaultLogs indicates whether the default logs used in Google Chrome and provided by Google should be disabled.
 		DisableDefaultLogs bool `yaml:"disable_default_logs"`
 		// AdditionalLogs contains additional logs provided by the user that can be used in addition to the default logs.
-		AdditionalLogs []LogConfig `yaml:"additional_logs"`
-		BufferSizes    BufferSizes `yaml:"buffer_sizes"`
-		DropOldLogs    *bool       `yaml:"drop_old_logs"`
-		Recovery       struct {
+		AdditionalLogs      []LogConfig `yaml:"additional_logs"`
+		AdditionalTiledLogs []LogConfig `yaml:"additional_tiled_logs"`
+		BufferSizes         BufferSizes `yaml:"buffer_sizes"`
+		DropOldLogs         *bool       `yaml:"drop_old_logs"`
+		Recovery            struct {
 			Enabled     bool   `yaml:"enabled"`
 			CTIndexFile string `yaml:"ct_index_file"`
 		} `yaml:"recovery"`
@@ -211,7 +212,7 @@ func validateConfig(config *Config) bool {
 		}
 	}
 
-	var validLogs []LogConfig
+	var validLogs, validTiledLogs []LogConfig
 	if len(config.General.AdditionalLogs) > 0 {
 		for _, ctLog := range config.General.AdditionalLogs {
 			if !URLRegex.MatchString(ctLog.URL) {
@@ -221,11 +222,25 @@ func validateConfig(config *Config) bool {
 
 			validLogs = append(validLogs, ctLog)
 		}
-	} else if len(config.General.AdditionalLogs) == 0 && config.General.DisableDefaultLogs {
-		log.Fatalln("Default logs are disabled, but no additional logs are configured. Please add at least one log to the config or enable default logs.")
+	}
+
+	if len(config.General.AdditionalTiledLogs) > 0 {
+		for _, ctLog := range config.General.AdditionalTiledLogs {
+			if !URLRegex.MatchString(ctLog.URL) {
+				log.Println("Ignoring invalid additional log URL: ", ctLog.URL)
+				continue
+			}
+
+			validTiledLogs = append(validTiledLogs, ctLog)
+		}
 	}
 
 	config.General.AdditionalLogs = validLogs
+	config.General.AdditionalTiledLogs = validTiledLogs
+
+	if len(config.General.AdditionalLogs) == 0 && len(config.General.AdditionalTiledLogs) == 0 && config.General.DisableDefaultLogs {
+		log.Fatalln("Default logs are disabled, but no additional logs are configured. Please add at least one log to the config or enable default logs.")
+	}
 
 	if config.General.BufferSizes.Websocket <= 0 {
 		config.General.BufferSizes.Websocket = 300

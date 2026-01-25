@@ -13,10 +13,11 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/google/trillian/client/backoff"
+
 	"github.com/d-Rickyy-b/certstream-server-go/internal/config"
 	"github.com/d-Rickyy-b/certstream-server-go/internal/models"
 	"github.com/d-Rickyy-b/certstream-server-go/internal/web"
-	"github.com/google/trillian/client/backoff"
 
 	ct "github.com/google/certificate-transparency-go"
 	"github.com/google/certificate-transparency-go/client"
@@ -569,7 +570,7 @@ func (w *worker) foundPrecertCallback(rawEntry *ct.RawLogEntry) {
 // certHandler takes the entries out of the entryChan channel and broadcasts them to all clients.
 // Only a single instance of the certHandler runs per certstream server.
 func certHandler(entryChan chan models.Entry) {
-	var processed int64
+	var processed uint64
 
 	for {
 		entry := <-entryChan
@@ -634,10 +635,11 @@ func getAllLogs() (loglist3.LogList, error) {
 	}
 
 	// Add manually added logs from config to the allLogs list
-	if config.AppConfig.General.AdditionalLogs == nil {
-		return allLogs, nil
-	}
+	// if config.AppConfig.General.AdditionalLogs == nil {
+	// 	return allLogs, nil
+	// }
 
+logFound:
 	for _, additionalLog := range config.AppConfig.General.AdditionalLogs {
 		customLog := loglist3.Log{
 			URL:         additionalLog.URL,
@@ -647,10 +649,16 @@ func getAllLogs() (loglist3.LogList, error) {
 		operatorFound := false
 		for _, operator := range allLogs.Operators {
 			if operator.Name == additionalLog.Operator {
-				// TODO Check if the log is already in the list
-				operator.Logs = append(operator.Logs, &customLog)
 				operatorFound = true
 
+				for _, ctlog := range operator.Logs {
+					if ctlog.URL == additionalLog.URL {
+						// Log already exists, skip it.
+						break logFound
+					}
+				}
+				// This works, since allLogs.Operators is a slice of pointers.
+				operator.Logs = append(operator.Logs, &customLog)
 				break
 			}
 		}
@@ -659,6 +667,39 @@ func getAllLogs() (loglist3.LogList, error) {
 			newOperator := loglist3.Operator{
 				Name: additionalLog.Operator,
 				Logs: []*loglist3.Log{&customLog},
+			}
+			allLogs.Operators = append(allLogs.Operators, &newOperator)
+		}
+	}
+
+	for _, additionalLog := range config.AppConfig.General.AdditionalTiledLogs {
+		customLog := loglist3.TiledLog{
+			MonitoringURL: additionalLog.URL,
+			Description:   additionalLog.Description,
+		}
+
+		operatorFound := false
+
+	tiledLogFound:
+		for _, operator := range allLogs.Operators {
+			if operator.Name == additionalLog.Operator {
+				operatorFound = true
+				for _, tl := range operator.TiledLogs {
+					if tl.MonitoringURL == additionalLog.URL {
+						// Log already exists, skip it.
+						break tiledLogFound
+					}
+				}
+				// This works, since allLogs.Operators is a slice of pointers.
+				operator.TiledLogs = append(operator.TiledLogs, &customLog)
+				break
+			}
+		}
+
+		if !operatorFound {
+			newOperator := loglist3.Operator{
+				Name:      additionalLog.Operator,
+				TiledLogs: []*loglist3.TiledLog{&customLog},
 			}
 			allLogs.Operators = append(allLogs.Operators, &newOperator)
 		}
