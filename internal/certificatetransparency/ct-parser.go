@@ -24,6 +24,7 @@ import (
 // parseData converts a *ct.RawLogEntry struct into a certstream.Data struct by copying some values and calculating others.
 func parseData(entry *ct.RawLogEntry, operatorName, logName, ctURL string) (models.Data, error) {
 	certLink := fmt.Sprintf("%s/ct/v1/get-entries?start=%d&end=%d", ctURL, entry.Index, entry.Index)
+	// TODO implement tiled cert link
 
 	// Create main data structure
 	data := models.Data{
