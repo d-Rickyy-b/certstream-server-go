@@ -375,9 +375,10 @@ func (w *worker) runStandardWorker(ctx context.Context) error {
 		return errCreatingClient
 	}
 
-	// If recovery is enabled, we start at the saved index. Otherwise, we start at the latest STH.
-	recoveryEnabled := config.AppConfig.General.Recovery.Enabled
-	if !recoveryEnabled {
+	// If recovery is enabled AND we have a saved index > 0, use it.
+	// Otherwise, fetch the current STH and start from there.
+	hasSavedIndex := config.AppConfig.General.Recovery.Enabled && w.ctIndex > 0
+	if !hasSavedIndex {
 		sth, getSTHerr := jsonClient.GetSTH(ctx)
 		if getSTHerr != nil {
 			// TODO this can happen due to a 429 error. We should retry the request
@@ -416,9 +417,10 @@ func (w *worker) runStandardWorker(ctx context.Context) error {
 func (w *worker) runTiledWorker(ctx context.Context) error {
 	hc := &http.Client{Timeout: 30 * time.Second}
 
-	// If recovery is enabled and the CT index is set, we start at the saved index. Otherwise we start at the latest checkpoint.
-	validSavedCTIndexExists := config.AppConfig.General.Recovery.Enabled && w.ctIndex >= 0
-	if !validSavedCTIndexExists {
+	// If recovery is enabled AND we have a saved index > 0, use it.
+	// Otherwise, fetch the current checkpoint and start from there.
+	hasSavedIndex := config.AppConfig.General.Recovery.Enabled && w.ctIndex > 0
+	if !hasSavedIndex {
 		checkpoint, err := FetchCheckpoint(ctx, hc, w.ctURL)
 		if err != nil {
 			log.Printf("Could not get checkpoint for '%s': %s\n", w.ctURL, err)
