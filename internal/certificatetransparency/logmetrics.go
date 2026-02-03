@@ -168,23 +168,34 @@ func (m *LogMetrics) SetCTIndex(url string, index uint64) {
 
 // LoadCTIndex loads the last cert index processed for each CT url if it exists.
 func (m *LogMetrics) LoadCTIndex(ctIndexFilePath string) {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
-
 	bytes, readErr := os.ReadFile(ctIndexFilePath)
 	if readErr != nil {
 		// Create the file if it doesn't exist
 		if os.IsNotExist(readErr) {
-			err := createCTIndexFile(ctIndexFilePath, m)
-			if err != nil {
+			log.Printf("Specified CT index file does not exist: '%s'\n", ctIndexFilePath)
+			log.Println("Creating CT index file now!")
+
+			m.mutex.Lock()
+			indexBytes, marshalErr := json.Marshal(m.index)
+			m.mutex.Unlock()
+			if marshalErr != nil {
+				log.Printf("Error marshalling CT index: %s\n", marshalErr)
+				log.Panicln(marshalErr)
+			}
+
+			if err := os.WriteFile(ctIndexFilePath, indexBytes, 0o644); err != nil {
 				log.Printf("Error creating CT index file: '%s'\n", ctIndexFilePath)
 				log.Panicln(err)
 			}
-		} else {
-			// If the file exists but we can't read it, log the error and panic
-			log.Panicln(readErr)
+			log.Println("Created empty CT index file")
+			return // File was just created with empty index, nothing to load
 		}
+		// If the file exists but we can't read it, log the error and panic
+		log.Panicln(readErr)
 	}
+
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
 
 	jerr := json.Unmarshal(bytes, &m.index)
 	if jerr != nil {
