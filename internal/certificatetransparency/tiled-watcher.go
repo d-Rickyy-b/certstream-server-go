@@ -189,39 +189,25 @@ func (tw *tiledWorker) parseTiledEntry(entry *sunlight.LogEntry, index int64) (m
 	var cert *x509.Certificate
 	var rawData []byte
 	var isPrecert bool
+	var err error
 
 	if entry.IsPrecert {
-		// For precerts, parse the TBS certificate
-		cert, err := x509.ParseCertificate(entry.Certificate)
+		// For precerts, entry.Certificate holds the raw TBS certificate bytes,
+		// not a full DER certificate, so ParseTBSCertificate must be used.
+		cert, err = x509.ParseTBSCertificate(entry.Certificate)
 		if err != nil {
 			return models.Entry{}, fmt.Errorf("failed to parse precert TBS certificate: %w", err)
 		}
 		rawData = entry.PreCertificate
 		isPrecert = true
-
-		// Create a minimal entry structure
-		data, err := tw.buildDataFromCert(cert, index, isPrecert, rawData)
+	} else {
+		cert, err = x509.ParseCertificate(entry.Certificate)
 		if err != nil {
-			return models.Entry{}, err
+			return models.Entry{}, fmt.Errorf("failed to parse certificate: %w", err)
 		}
-
-		certstreamEntry := models.Entry{
-			Data:        data,
-			MessageType: "certificate_update",
-		}
-		certstreamEntry.Data.UpdateType = "PrecertLogEntry"
-
-		return certstreamEntry, nil
+		rawData = entry.Certificate
+		isPrecert = false
 	}
-
-	// Regular certificate
-	var err error
-	cert, err = x509.ParseCertificate(entry.Certificate)
-	if err != nil {
-		return models.Entry{}, fmt.Errorf("failed to parse certificate: %w", err)
-	}
-	rawData = entry.Certificate
-	isPrecert = false
 
 	data, err := tw.buildDataFromCert(cert, index, isPrecert, rawData)
 	if err != nil {
@@ -232,7 +218,11 @@ func (tw *tiledWorker) parseTiledEntry(entry *sunlight.LogEntry, index int64) (m
 		Data:        data,
 		MessageType: "certificate_update",
 	}
-	certstreamEntry.Data.UpdateType = "X509LogEntry"
+	if isPrecert {
+		certstreamEntry.Data.UpdateType = "PrecertLogEntry"
+	} else {
+		certstreamEntry.Data.UpdateType = "X509LogEntry"
+	}
 
 	return certstreamEntry, nil
 }
