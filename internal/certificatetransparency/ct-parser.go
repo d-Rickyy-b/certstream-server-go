@@ -321,8 +321,10 @@ func buildSubject(certSubject pkix.Name) models.Subject {
 		ST: parseName(certSubject.StreetAddress),
 	}
 
-	// Convert to JSON format for aggregated field
-	aggregatedJSON, _ := json.Marshal(ParseNameJSON(certSubject))
+	// Convert to JSON format for aggregated field, omitting the 'names' array
+	n := ParseNameJSON(certSubject)
+	n.Names = nil
+	aggregatedJSON, _ := json.Marshal(n)
 	jsonSubject := string(aggregatedJSON)
 	subject.Aggregated = &jsonSubject
 
@@ -353,7 +355,7 @@ func formatKeyIDShort(keyID []byte) *string {
 }
 
 func formatSerialNumber(serialNumber *big.Int) string {
-	sn := fmt.Sprintf("%X", serialNumber)
+	sn := fmt.Sprintf("%x", serialNumber)
 	if len(sn)%2 == 1 {
 		sn = "0" + sn
 	}
