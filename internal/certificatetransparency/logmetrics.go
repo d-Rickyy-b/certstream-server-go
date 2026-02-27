@@ -168,6 +168,8 @@ func (m *LogMetrics) SetCTIndex(url string, index uint64) {
 
 // LoadCTIndex loads the last cert index processed for each CT url if it exists.
 func (m *LogMetrics) LoadCTIndex(ctIndexFilePath string) {
+	log.Println("Loading CT indexes from file: ", ctIndexFilePath)
+
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
@@ -175,13 +177,18 @@ func (m *LogMetrics) LoadCTIndex(ctIndexFilePath string) {
 	if readErr != nil {
 		// Create the file if it doesn't exist
 		if os.IsNotExist(readErr) {
-			err := createCTIndexFile(ctIndexFilePath, m)
+			log.Println("CT index file does not exist, creating a new one...")
+			if m.index == nil {
+				m.index = make(CTCertIndex)
+			}
+			err := m.createCTIndexFile(ctIndexFilePath)
 			if err != nil {
 				log.Printf("Error creating CT index file: '%s'\n", ctIndexFilePath)
 				log.Panicln(err)
 			}
+			bytes = []byte("{}")
 		} else {
-			// If the file exists but we can't read it, log the error and panic
+			// If the file exists, but we can't read it, log the error and panic
 			log.Panicln(readErr)
 		}
 	}
@@ -195,10 +202,7 @@ func (m *LogMetrics) LoadCTIndex(ctIndexFilePath string) {
 	log.Println("Successfully loaded saved CT indexes")
 }
 
-func createCTIndexFile(ctIndexFilePath string, m *LogMetrics) error {
-	m.mutex.RLock()
-	defer m.mutex.RUnlock()
-
+func (m *LogMetrics) createCTIndexFile(ctIndexFilePath string) error {
 	log.Printf("Specified CT index file does not exist: '%s'\n", ctIndexFilePath)
 	log.Println("Creating CT index file now!")
 
@@ -207,7 +211,11 @@ func createCTIndexFile(ctIndexFilePath string, m *LogMetrics) error {
 		log.Printf("Error creating CT index file: '%s'\n", ctIndexFilePath)
 		log.Panicln(createErr)
 	}
+	defer file.Close()
 
+	if m.index == nil {
+		m.index = make(CTCertIndex)
+	}
 	bytes, marshalErr := json.Marshal(m.index)
 	if marshalErr != nil {
 		return marshalErr
@@ -217,7 +225,6 @@ func createCTIndexFile(ctIndexFilePath string, m *LogMetrics) error {
 		log.Printf("Error writing to CT index file: '%s'\n", ctIndexFilePath)
 		log.Panicln(writeErr)
 	}
-	file.Close()
 
 	return nil
 }
