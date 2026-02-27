@@ -530,12 +530,6 @@ func (w *worker) processTile(ctx context.Context, hc *http.Client, tileIndex uin
 		w.ctIndex = entryIndex
 	}
 
-	tileType := "complete"
-	if partialWidth > 0 {
-		tileType = "partial"
-	}
-	log.Printf("Processed tile %d for '%s' (%s): %d entries\n", tileIndex, w.ctURL, tileType, len(leaves))
-
 	return nil
 }
 
