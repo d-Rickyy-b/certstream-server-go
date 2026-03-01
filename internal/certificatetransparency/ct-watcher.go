@@ -344,7 +344,7 @@ func (w *worker) startDownloadingCerts(ctx context.Context) {
 			log.Printf("Worker for '%s' failed with unexpected error: %s\n", w.ctURL, workerErr)
 		}
 
-		// Check if the context was cancelled
+		// Check if the context was canceled
 		select {
 		case <-ctx.Done():
 			log.Printf("Context was cancelled; Stopping worker for '%s'\n", w.ctURL)
@@ -417,7 +417,7 @@ func (w *worker) runStandardWorker(ctx context.Context) error {
 func (w *worker) runTiledWorker(ctx context.Context) error {
 	hc := &http.Client{Timeout: 30 * time.Second}
 
-	// If recovery is enabled and the CT index is set, we start at the saved index. Otherwise we start at the latest checkpoint.
+	// If recovery is enabled and the CT index is set, we start at the saved index. Otherwise, we start at the latest checkpoint.
 	validSavedCTIndexExists := config.AppConfig.General.Recovery.Enabled && w.ctIndex >= 0
 	if !validSavedCTIndexExists {
 		checkpoint, err := FetchCheckpoint(ctx, hc, w.ctURL)
@@ -577,7 +577,7 @@ func certHandler(entryChan chan models.Entry) {
 			web.SetExampleCert(entry)
 		}
 
-		// Run json encoding in the background and send the result to the clients.
+		// Run JSON encoding in the background and send the result to the clients.
 		web.ClientHandler.Broadcast <- entry
 
 		// Update metrics
@@ -591,7 +591,7 @@ func certHandler(entryChan chan models.Entry) {
 
 // getGoogleLogList fetches the list of all CT logs from Google Chromes CT LogList.
 func getGoogleLogList() (loglist3.LogList, error) {
-	// Download the list of all logs from ctLogInfo and decode json
+	// Download the list of all logs from ctLogInfo and decode JSON
 	resp, err := http.Get(loglist3.LogListURL)
 	if err != nil {
 		return loglist3.LogList{}, err
