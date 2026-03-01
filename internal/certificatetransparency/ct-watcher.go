@@ -473,8 +473,6 @@ func (w *worker) processTiledLogUpdates(ctx context.Context, hc *http.Client) (b
 		return false, nil
 	}
 
-	log.Printf("Processing tiled log updates for '%s': from index %d to %d\n", w.ctURL, w.ctIndex, currentTreeSize)
-
 	// Process entries from current index to new tree size
 	startTile := w.ctIndex / TileSize
 	endTile := currentTreeSize / TileSize
