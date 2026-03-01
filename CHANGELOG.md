@@ -21,16 +21,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Prevent race condition caused by simultaneous rw access to logmetrics
 ### Docs
 
-## [v1.8.2] - 2025-11-22
+## [1.8.2] - 2025-11-22
 ### Fixed
 - Added missing fields certificatePolicies and ctlPoisonByte (#85)
 
-## [v1.8.1] - 2025-05-04
+## [1.8.1] - 2025-05-04
 ### Fixed
 - No longer reject URLs with trailing slashes defined in the `additional_logs` config (#62)
 - When using `drop_old_logs` in the config, the server won't remove logs defined in `additional_logs` anymore (#64)
 
-## [v1.8.0] - 2025-05-03
+## [1.8.0] - 2025-05-03
 ### Security
 - Close several CVEs in x/crypto and x/net dependencies (#59)
 
