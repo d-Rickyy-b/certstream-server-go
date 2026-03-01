@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Ability to store and resume processing of certs from where it left off after a restart - see sample config "recovery" (#49)
 - New CLI switch for creating an index file from a CT log (#49)
+- Support for [Static CT](https://github.com/C2SP/C2SP/blob/main/static-ct-api.md) logs 
 - Check for retired CT logs and prevent them from being watched / stop watching them (#77)
 - Accept websocket connections from all origins
 - Option to disable the default logs provided by Google - see sample config "disable_default_logs"
@@ -19,6 +20,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Properly remove stopped ct log workers (#74)
 - Added missing fields certificatePolicies and ctlPoisonByte (#85)
 - Prevent race condition caused by simultaneous rw access to logmetrics
+- Properly display metrics for all initially watched logs (#95)
+- Properly add new metrics for all newly found logs (#96)
 ### Docs
 
 ## [1.8.2] - 2025-11-22
