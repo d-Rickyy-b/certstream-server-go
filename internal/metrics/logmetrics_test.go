@@ -1,4 +1,4 @@
-package certificatetransparency
+package metrics
 
 import (
 	"path/filepath"

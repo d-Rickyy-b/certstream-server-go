@@ -4,6 +4,7 @@ import (
 	"log"
 	"sync"
 
+	"github.com/d-Rickyy-b/certstream-server-go/internal/metrics"
 	"github.com/d-Rickyy-b/certstream-server-go/internal/models"
 )
 
@@ -13,12 +14,21 @@ type BroadcastManager struct {
 	clientLock sync.RWMutex
 }
 
+func NewBroadcastManager() *BroadcastManager {
+	bm := &BroadcastManager{}
+	metrics.Prometheus.RegisterGaugeMetricInt("certstreamservergo_clients_total{type=\"full\"}", bm.ClientFullCount)
+	metrics.Prometheus.RegisterGaugeMetricInt("certstreamservergo_clients_total{type=\"lite\"}", bm.ClientLiteCount)
+	metrics.Prometheus.RegisterGaugeMetricInt("certstreamservergo_clients_total{type=\"domain\"}", bm.ClientDomainsCount)
+	return bm
+}
+
 // registerClient adds a client to the list of clients of the BroadcastManager.
 // The client will receive certificate broadcasts right after registration.
 func (bm *BroadcastManager) registerClient(c *client) {
 	bm.clientLock.Lock()
 	bm.clients = append(bm.clients, c)
 	log.Printf("Clients: %d, Capacity: %d\n", len(bm.clients), cap(bm.clients))
+	metrics.Prometheus.RegisterClient(c.name, func() float64 { return float64(c.skippedCerts) })
 	bm.clientLock.Unlock()
 }
 
@@ -37,6 +47,8 @@ func (bm *BroadcastManager) unregisterClient(c *client) {
 
 			// Close the broadcast channel of the client, otherwise this leads to a memory leak
 			close(c.broadcastChan)
+
+			metrics.Prometheus.UnregisterClient(c.name)
 
 			break
 		}

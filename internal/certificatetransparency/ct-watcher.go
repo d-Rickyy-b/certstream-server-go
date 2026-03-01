@@ -16,6 +16,7 @@ import (
 	"github.com/google/trillian/client/backoff"
 
 	"github.com/d-Rickyy-b/certstream-server-go/internal/config"
+	"github.com/d-Rickyy-b/certstream-server-go/internal/metrics"
 	"github.com/d-Rickyy-b/certstream-server-go/internal/models"
 	"github.com/d-Rickyy-b/certstream-server-go/internal/web"
 
@@ -65,9 +66,9 @@ func (w *Watcher) Start() {
 			return
 		}
 		// Load Saved CT Indexes
-		metrics.LoadCTIndex(ctIndexFilePath)
+		metrics.Metrics.LoadCTIndex(ctIndexFilePath)
 		// Save CTIndexes at regular intervals
-		go metrics.SaveCertIndexesAtInterval(time.Second*30, ctIndexFilePath) // save indexes every X seconds
+		go metrics.Metrics.SaveCertIndexesAtInterval(time.Second*30, ctIndexFilePath) // save indexes every X seconds
 	}
 
 	// initialize the watcher with currently available logs
@@ -187,7 +188,7 @@ func (w *Watcher) addLogIfNew(operatorName, description, url string, isTiled boo
 	// Log is not being watched, so add it
 	w.wg.Add(1)
 
-	lastCTIndex := metrics.GetCTIndex(normURL)
+	lastCTIndex := metrics.Metrics.GetCTIndex(normURL)
 	ctWorker := worker{
 		name:         description,
 		operatorName: operatorName,
@@ -197,7 +198,7 @@ func (w *Watcher) addLogIfNew(operatorName, description, url string, isTiled boo
 		isTiled:      isTiled,
 	}
 	w.workers = append(w.workers, &ctWorker)
-	metrics.Init(operatorName, normURL)
+	metrics.Metrics.Init(operatorName, normURL)
 
 	// Start a goroutine for each worker
 	go func() {
@@ -232,7 +233,7 @@ func (w *Watcher) Stop() {
 	if config.AppConfig.General.Recovery.Enabled {
 		// Store current CT Indexes before shutting down
 		filePath := config.AppConfig.General.Recovery.CTIndexFile
-		metrics.SaveCertIndexes(filePath)
+		metrics.Metrics.SaveCertIndexes(filePath)
 	}
 
 	w.cancelFunc()
@@ -251,7 +252,7 @@ func (w *Watcher) CreateIndexFile(filePath string) error {
 		// Iterate over each log of the operator
 		for _, transparencyLog := range operator.Logs {
 			// Check if the log is already being watched
-			metrics.Init(operator.Name, normalizeCtlogURL(transparencyLog.URL))
+			metrics.Metrics.Init(operator.Name, normalizeCtlogURL(transparencyLog.URL))
 			log.Println("Fetching STH for", normalizeCtlogURL(transparencyLog.URL))
 
 			hc := http.Client{Timeout: 5 * time.Second}
@@ -268,12 +269,12 @@ func (w *Watcher) CreateIndexFile(filePath string) error {
 				continue
 			}
 
-			metrics.SetCTIndex(normalizeCtlogURL(transparencyLog.URL), sth.TreeSize)
+			metrics.Metrics.SetCTIndex(normalizeCtlogURL(transparencyLog.URL), sth.TreeSize)
 		}
 	}
 	w.cancelFunc()
 
-	metrics.SaveCertIndexes(filePath)
+	metrics.Metrics.SaveCertIndexes(filePath)
 	log.Println("Index file saved to", filePath)
 
 	return nil
@@ -544,7 +545,7 @@ func (w *worker) foundCertCallback(rawEntry *ct.RawLogEntry) {
 	entry.Data.UpdateType = "X509LogEntry"
 	w.entryChan <- entry
 
-	atomic.AddInt64(&processedCerts, 1)
+	atomic.AddInt64(&metrics.ProcessedCerts, 1)
 }
 
 // foundPrecertCallback is the callback that handles cases where new precerts are found.
@@ -558,7 +559,7 @@ func (w *worker) foundPrecertCallback(rawEntry *ct.RawLogEntry) {
 	entry.Data.UpdateType = "PrecertLogEntry"
 	w.entryChan <- entry
 
-	atomic.AddInt64(&processedPrecerts, 1)
+	atomic.AddInt64(&metrics.ProcessedPrecerts, 1)
 }
 
 // certHandler takes the entries out of the entryChan channel and broadcasts them to all clients.
@@ -584,7 +585,7 @@ func certHandler(entryChan chan models.Entry) {
 		operator := entry.Data.Source.Operator
 		index := entry.Data.CertIndex
 
-		metrics.Inc(operator, url, index)
+		metrics.Metrics.Inc(operator, url, index)
 	}
 }
 

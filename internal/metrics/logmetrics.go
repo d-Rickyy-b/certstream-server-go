@@ -1,4 +1,4 @@
-package certificatetransparency
+package metrics
 
 import (
 	"encoding/json"
@@ -22,9 +22,9 @@ type (
 )
 
 var (
-	processedCerts    int64
-	processedPrecerts int64
-	metrics           = LogMetrics{metrics: make(CTMetrics), index: make(CTCertIndex)}
+	ProcessedCerts    int64
+	ProcessedPrecerts int64
+	Metrics           = LogMetrics{metrics: make(CTMetrics), index: make(CTCertIndex)}
 )
 
 // LogMetrics is a struct that holds a map of metrics for each CT log grouped by operator.
@@ -91,6 +91,9 @@ func (m *LogMetrics) Init(operator, url string) {
 	if _, ok := m.index[url]; !ok {
 		m.index[url] = 0
 	}
+
+	// Register the metric for this operator and url with Prometheus
+	Prometheus.RegisterLog(operator, url)
 }
 
 // Get the metric for a given operator and ct url.
@@ -289,18 +292,18 @@ func (m *LogMetrics) SaveCertIndexes(ctIndexFilePath string) {
 
 // GetProcessedCerts returns the total number of processed certificates.
 func GetProcessedCerts() int64 {
-	return processedCerts
+	return ProcessedCerts
 }
 
 // GetProcessedPrecerts returns the total number of processed precertificates.
 func GetProcessedPrecerts() int64 {
-	return processedPrecerts
+	return ProcessedPrecerts
 }
 
 func GetCertMetrics() CTMetrics {
-	return metrics.GetCTMetrics()
+	return Metrics.GetCTMetrics()
 }
 
 func GetLogOperators() map[string][]string {
-	return metrics.OperatorLogMapping()
+	return Metrics.OperatorLogMapping()
 }
