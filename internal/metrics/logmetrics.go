@@ -165,7 +165,7 @@ func (m *LogMetrics) SetCTIndex(url string, index uint64) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
-	log.Println("Setting CT index for ", url, " to ", index)
+	log.Printf("Setting CT index for %s to %d\n", url, index)
 	m.index[url] = index
 }
 
