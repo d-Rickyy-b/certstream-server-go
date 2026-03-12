@@ -251,9 +251,15 @@ func (w *Watcher) CreateIndexFile(filePath string) error {
 	for _, operator := range logs.Operators {
 		// Iterate over each log of the operator
 		for _, transparencyLog := range operator.Logs {
+			if transparencyLog.State.LogStatus() == loglist3.RetiredLogStatus {
+				log.Printf("Skipping retired CT log: %s\n", transparencyLog.URL)
+				continue
+			}
+
+			normalizedURL := normalizeCtlogURL(transparencyLog.URL)
 			// Check if the log is already being watched
-			metrics.Metrics.Init(operator.Name, normalizeCtlogURL(transparencyLog.URL))
-			log.Println("Fetching STH for", normalizeCtlogURL(transparencyLog.URL))
+			metrics.Metrics.Init(operator.Name, normalizedURL)
+			log.Println("Fetching STH for", normalizedURL)
 
 			hc := http.Client{Timeout: 5 * time.Second}
 			jsonClient, e := client.New(transparencyLog.URL, &hc, jsonclient.Options{UserAgent: userAgent})
@@ -269,7 +275,26 @@ func (w *Watcher) CreateIndexFile(filePath string) error {
 				continue
 			}
 
-			metrics.Metrics.SetCTIndex(normalizeCtlogURL(transparencyLog.URL), sth.TreeSize)
+			metrics.Metrics.SetCTIndex(normalizedURL, sth.TreeSize)
+		}
+		for _, transparencyLog := range operator.TiledLogs {
+			if transparencyLog.State.LogStatus() == loglist3.RetiredLogStatus {
+				log.Printf("Skipping retired CT log: %s\n", transparencyLog.MonitoringURL)
+				continue
+			}
+			// Check if the log is already being watched
+			normalizedURL := normalizeCtlogURL(transparencyLog.MonitoringURL)
+			metrics.Metrics.Init(operator.Name, normalizedURL)
+			log.Println("Fetching checkpoint for", normalizedURL)
+
+			hc := &http.Client{Timeout: 10 * time.Second}
+			checkpoint, fetchErr := FetchCheckpoint(w.context, hc, transparencyLog.MonitoringURL)
+			if fetchErr != nil {
+				log.Printf("Could not get checkpoint for '%s': %s\n", transparencyLog.MonitoringURL, fetchErr)
+				return errFetchingSTHFailed
+			}
+
+			metrics.Metrics.SetCTIndex(normalizedURL, checkpoint.Size)
 		}
 	}
 	w.cancelFunc()
