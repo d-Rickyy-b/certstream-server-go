@@ -61,6 +61,7 @@ func EncodeTilePath(index uint64) string {
 
 // FetchCheckpoint fetches the checkpoint from a tiled CT log using the provided client
 func FetchCheckpoint(ctx context.Context, client *http.Client, baseURL string) (*TiledCheckpoint, error) {
+	baseURL = strings.TrimRight(baseURL, "/")
 	url := fmt.Sprintf("%s/checkpoint", baseURL)
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
@@ -107,6 +108,7 @@ func FetchCheckpoint(ctx context.Context, client *http.Client, baseURL string) (
 // FetchTile fetches a tile from the tiled CT log using the provided client.
 // If partialWidth > 0, fetches a partial tile with that width (1-255).
 func FetchTile(ctx context.Context, client *http.Client, baseURL string, tileIndex uint64, partialWidth uint64) ([]TileLeaf, error) {
+	baseURL = strings.TrimRight(baseURL, "/")
 	tilePath := EncodeTilePath(tileIndex)
 	if partialWidth > 0 {
 		tilePath = fmt.Sprintf("%s.p/%d", tilePath, partialWidth)
