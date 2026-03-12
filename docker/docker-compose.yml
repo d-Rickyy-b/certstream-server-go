@@ -11,6 +11,8 @@ services:
       # Don't forget to open the other port in case you run the Prometheus endpoint on another port than the websocket server.
       # - 127.0.0.1:8081:81
     volumes:
-      - ./certstream/config.yml:/app/config.yml
+      # Starting with v1.9.0, the docker container expects the config file in /app/config/config.yml.
+      # Mounting a config directory is suggested.
+      - ./certstream/config:/app/config
     networks:
       - monitoring
