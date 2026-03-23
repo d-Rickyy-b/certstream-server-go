@@ -48,7 +48,7 @@ create-index will create and pre fill the ct-index.json file with the current va
 		}
 		if _, statErr := os.Stat(outFileAbsPath); statErr == nil {
 			if !force {
-				fmt.Printf("Output file '%s' already exists. Use --force to overwrite it.\n", outFileAbsPath)
+				fmt.Printf("Output file '%s' already exists. Use --force to override it.\n", outFileAbsPath)
 				os.Exit(1)
 			}
 		}
@@ -66,5 +66,5 @@ func init() {
 	rootCmd.AddCommand(createIndexCmd)
 
 	createIndexCmd.Flags().StringP("out", "o", "ct_index.json", "Path to the index file to create")
-	createIndexCmd.Flags().BoolP("force", "f", false, "Whether to overwrite the index file if it already exists")
+	createIndexCmd.Flags().BoolP("force", "f", false, "Whether to override the index file if it already exists")
 }
