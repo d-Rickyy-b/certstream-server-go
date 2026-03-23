@@ -310,7 +310,7 @@ general:
 func TestReadConfigViper_MinimalValidFile(t *testing.T) {
 	configPath := writeConfigFile(t, minimalValidYAML)
 
-	cfg, err := ReadConfigViper(configPath)
+	cfg, err := ReadConfig(configPath)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -334,7 +334,7 @@ prometheus:
 `
 	configPath := writeConfigFile(t, yaml)
 
-	cfg, err := ReadConfigViper(configPath)
+	cfg, err := ReadConfig(configPath)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -363,7 +363,7 @@ general:
 `
 	configPath := writeConfigFile(t, yaml)
 
-	cfg, err := ReadConfigViper(configPath)
+	cfg, err := ReadConfig(configPath)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -389,7 +389,7 @@ general:
 `
 	configPath := writeConfigFile(t, yaml)
 
-	cfg, err := ReadConfigViper(configPath)
+	cfg, err := ReadConfig(configPath)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -420,7 +420,7 @@ general:
 `
 	configPath := writeConfigFile(t, yaml)
 
-	cfg, err := ReadConfigViper(configPath)
+	cfg, err := ReadConfig(configPath)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -439,7 +439,7 @@ general:
 `
 	configPath := writeConfigFile(t, yaml)
 
-	cfg, err := ReadConfigViper(configPath)
+	cfg, err := ReadConfig(configPath)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
