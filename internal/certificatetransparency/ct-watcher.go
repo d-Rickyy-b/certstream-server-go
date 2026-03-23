@@ -544,10 +544,13 @@ func (w *worker) processTile(ctx context.Context, hc *http.Client, tileIndex uin
 		rawEntry := ConvertTileLeafToRawLogEntry(leaf, entryIndex)
 
 		// Process the entry using existing callbacks
-		if leaf.EntryType == 0 { // x509_entry
+		switch leaf.EntryType {
+		case 0:
 			w.foundCertCallback(rawEntry)
-		} else if leaf.EntryType == 1 { // precert_entry
+		case 1:
 			w.foundPrecertCallback(rawEntry)
+		default:
+			log.Printf("Unknown entry type %d in tile %d, skipping entry at index %d\n", leaf.EntryType, tileIndex, entryIndex)
 		}
 
 		// Update the index
