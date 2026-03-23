@@ -1,147 +1,165 @@
 package config
 
 import (
+	"errors"
 	"log"
 	"net"
-	"os"
-	"path/filepath"
 	"regexp"
 	"strings"
 
-	"gopkg.in/yaml.v3"
+	"github.com/spf13/viper"
 )
 
 var (
-	AppConfig Config
-	Version   = "1.8.1"
+	AppConfig     Config
+	viperInstance *viper.Viper
+	Version       = "1.9.0"
 )
 
 type ServerConfig struct {
-	ListenAddr  string   `yaml:"listen_addr"`
-	ListenPort  int      `yaml:"listen_port"`
-	CertPath    string   `yaml:"cert_path"`
-	CertKeyPath string   `yaml:"cert_key_path"`
-	RealIP      bool     `yaml:"real_ip"`
-	Whitelist   []string `yaml:"whitelist"`
+	ListenAddr  string   `mapstructure:"listen_addr"`
+	ListenPort  int      `mapstructure:"listen_port"`
+	CertPath    string   `mapstructure:"cert_path"`
+	CertKeyPath string   `mapstructure:"cert_key_path"`
+	RealIP      bool     `mapstructure:"real_ip"`
+	Whitelist   []string `mapstructure:"whitelist"`
 }
 
 type LogConfig struct {
-	Operator    string `yaml:"operator"`
-	URL         string `yaml:"url"`
-	Description string `yaml:"description"`
+	Operator    string `mapstructure:"operator"`
+	URL         string `mapstructure:"url"`
+	Description string `mapstructure:"description"`
 }
 
 type BufferSizes struct {
-	Websocket        int `yaml:"websocket"`
-	CTLog            int `yaml:"ctlog"`
-	BroadcastManager int `yaml:"broadcastmanager"`
+	Websocket        int `mapstructure:"websocket"`
+	CTLog            int `mapstructure:"ctlog"`
+	BroadcastManager int `mapstructure:"broadcastmanager"`
 }
 
 type Config struct {
 	Webserver struct {
-		ServerConfig       `yaml:",inline"`
-		FullURL            string `yaml:"full_url"`
-		LiteURL            string `yaml:"lite_url"`
-		DomainsOnlyURL     string `yaml:"domains_only_url"`
-		CompressionEnabled bool   `yaml:"compression_enabled"`
+		ServerConfig       `mapstructure:",squash"`
+		FullURL            string `mapstructure:"full_url"`
+		LiteURL            string `mapstructure:"lite_url"`
+		DomainsOnlyURL     string `mapstructure:"domains_only_url"`
+		CompressionEnabled bool   `mapstructure:"compression_enabled"`
 	}
 	Prometheus struct {
-		ServerConfig        `yaml:",inline"`
-		Enabled             bool   `yaml:"enabled"`
-		MetricsURL          string `yaml:"metrics_url"`
-		ExposeSystemMetrics bool   `yaml:"expose_system_metrics"`
+		ServerConfig        `mapstructure:",squash"`
+		Enabled             bool   `mapstructure:"enabled"`
+		MetricsURL          string `mapstructure:"metrics_url"`
+		ExposeSystemMetrics bool   `mapstructure:"expose_system_metrics"`
 	}
 	General struct {
 		// DisableDefaultLogs indicates whether the default logs used in Google Chrome and provided by Google should be disabled.
-		DisableDefaultLogs bool `yaml:"disable_default_logs"`
+		DisableDefaultLogs bool `mapstructure:"disable_default_logs"`
 		// AdditionalLogs contains additional logs provided by the user that can be used in addition to the default logs.
-		AdditionalLogs      []LogConfig `yaml:"additional_logs"`
-		AdditionalTiledLogs []LogConfig `yaml:"additional_tiled_logs"`
-		BufferSizes         BufferSizes `yaml:"buffer_sizes"`
-		DropOldLogs         *bool       `yaml:"drop_old_logs"`
+		AdditionalLogs      []LogConfig `mapstructure:"additional_logs"`
+		AdditionalTiledLogs []LogConfig `mapstructure:"additional_tiled_logs"`
+		BufferSizes         BufferSizes `mapstructure:"buffer_sizes"`
+		DropOldLogs         *bool       `mapstructure:"drop_old_logs"`
 		Recovery            struct {
-			Enabled     bool   `yaml:"enabled"`
-			CTIndexFile string `yaml:"ct_index_file"`
-		} `yaml:"recovery"`
+			Enabled     bool   `mapstructure:"enabled"`
+			CTIndexFile string `mapstructure:"ct_index_file"`
+		} `mapstructure:"recovery"`
 	}
 }
 
-// ReadConfig reads the config file and returns a filled Config struct.
+// ReadConfig reads the configuration using Viper and returns a filled Config struct.
+// It also validates and stores the result in AppConfig.
 func ReadConfig(configPath string) (Config, error) {
-	log.Printf("Reading config file '%s'...\n", configPath)
-
-	conf, parseErr := parseConfigFromFile(configPath)
-	if parseErr != nil {
-		log.Fatalln("Error while parsing yaml file:", parseErr)
-	}
-
-	if !validateConfig(conf) {
-		log.Fatalln("Invalid config")
-	}
-	AppConfig = *conf
-
-	return *conf, nil
+	v := initViper(configPath)
+	return loadConfigFromViper(v)
 }
 
-// parseConfigFromFile reads the config file as bytes and passes it to parseConfigFromBytes.
-// It returns a filled Config struct.
-func parseConfigFromFile(configFile string) (*Config, error) {
-	if configFile == "" {
-		configFile = "config.yml"
-	}
-
-	// Check if the file exists
-	absPath, err := filepath.Abs(configFile)
-	if err != nil {
-		log.Printf("Couldn't convert to absolute path: '%s'\n", configFile)
-		return &Config{}, err
-	}
-
-	if _, statErr := os.Stat(absPath); os.IsNotExist(statErr) {
-		log.Printf("Config file '%s' does not exist\n", absPath)
-		ext := filepath.Ext(absPath)
-		absPath = strings.TrimSuffix(absPath, ext)
-
-		switch ext {
-		case ".yaml":
-			absPath += ".yml"
-		case ".yml":
-			absPath += ".yaml"
-		default:
-			log.Printf("Config file '%s' does not have a valid extension\n", configFile)
-			return &Config{}, statErr
-		}
-
-		if _, secondStatErr := os.Stat(absPath); os.IsNotExist(secondStatErr) {
-			log.Printf("Config file '%s' does not exist\n", absPath)
-			return &Config{}, secondStatErr
-		}
-	}
-	log.Printf("File '%s' exists\n", absPath)
-
-	yamlFileContent, readErr := os.ReadFile(absPath)
-	if readErr != nil {
-		return &Config{}, readErr
-	}
-
-	conf, parseErr := parseConfigFromBytes(yamlFileContent)
-	if parseErr != nil {
-		return &Config{}, parseErr
-	}
-
-	return conf, nil
+// ValidateConfig validates the config file and returns an error if the config is invalid.
+func ValidateConfig(configPath string) error {
+	_, parseErr := ReadConfig(configPath)
+	return parseErr
 }
 
-// parseConfigFromBytes parses the config bytes and returns a filled Config struct.
-func parseConfigFromBytes(data []byte) (*Config, error) {
-	var config Config
+// initViper sets up the viper instance with defaults, config file and environment variable support.
+// configPath is the path to the YAML config file (e.g. "config.yaml").
+// Environment variables are mapped with the prefix "CERTSTREAM" and "__" as key delimiter.
+// Example: CERTSTREAM_WEBSERVER__LISTEN_PORT overrides webserver.listen_port.
+func initViper(configPath string) *viper.Viper {
+	v := viper.NewWithOptions(viper.KeyDelimiter("."))
 
-	err := yaml.Unmarshal(data, &config)
-	if err != nil {
-		return &config, err
+	// Defaults
+	v.SetDefault("webserver.listen_addr", "0.0.0.0")
+	v.SetDefault("webserver.listen_port", 8080)
+	v.SetDefault("webserver.full_url", "/full-stream")
+	v.SetDefault("webserver.lite_url", "/")
+	v.SetDefault("webserver.domains_only_url", "/domains-only")
+	v.SetDefault("webserver.real_ip", false)
+	v.SetDefault("webserver.compression_enabled", false)
+
+	v.SetDefault("prometheus.enabled", false)
+	v.SetDefault("prometheus.listen_addr", "0.0.0.0")
+	v.SetDefault("prometheus.listen_port", 9090)
+	v.SetDefault("prometheus.metrics_url", "/metrics")
+	v.SetDefault("prometheus.expose_system_metrics", false)
+	v.SetDefault("prometheus.real_ip", false)
+
+	v.SetDefault("general.disable_default_logs", false)
+	v.SetDefault("general.buffer_sizes.websocket", 300)
+	v.SetDefault("general.buffer_sizes.ctlog", 1000)
+	v.SetDefault("general.buffer_sizes.broadcastmanager", 10000)
+	v.SetDefault("general.drop_old_logs", true)
+	v.SetDefault("general.recovery.enabled", false)
+	v.SetDefault("general.recovery.ct_index_file", "./ct_index.json")
+
+	// TODO check for missing file?!
+	// Config file
+	if configPath != "" {
+		v.SetConfigFile(configPath)
+	} else {
+		v.SetConfigName("config")
+		v.AddConfigPath(".")
+		v.AddConfigPath("/app/config")
 	}
 
-	return &config, nil
+	v.SetConfigType("yaml")
+
+	if err := v.ReadInConfig(); err != nil {
+		var notFound viper.ConfigFileNotFoundError
+		if errors.As(err, &notFound) {
+			log.Println("No config file found, using defaults and environment variables only")
+		} else {
+			log.Fatalf("Error reading config file: %v", err)
+		}
+	} else {
+		log.Printf("Using config file: %s\n", v.ConfigFileUsed())
+	}
+
+	// Environment variables
+	// Prefix: CERTSTREAM  (e.g. CERTSTREAM_WEBSERVER_LISTEN_PORT)
+	// Viper uses "." as key delimiter internally; environment variables use "_".
+	// We replace "." with "_" when looking up env vars automatically.
+	v.SetEnvPrefix("CERTSTREAM")
+	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+	v.AutomaticEnv()
+
+	viperInstance = v
+	return v
+}
+
+// loadConfigFromViper unmarshals a viper instance into a Config struct, validates it
+// and stores the result in AppConfig.
+func loadConfigFromViper(v *viper.Viper) (Config, error) {
+	var cfg Config
+
+	if err := v.Unmarshal(&cfg); err != nil {
+		return cfg, err
+	}
+
+	if !validateConfig(&cfg) {
+		return cfg, errors.New("invalid configuration")
+	}
+
+	AppConfig = cfg
+	return cfg, nil
 }
 
 // validateConfig validates the config values and sets defaults for missing values.
