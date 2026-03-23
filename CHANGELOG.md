@@ -13,13 +13,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Check for retired CT logs and prevent them from being watched / stop watching them (#77)
 - Accept websocket connections from all origins
 - Option to disable the default logs provided by Google - see sample config "disable_default_logs"
+- Use of cobra for CLI argument parsing. New commands for displaying version and creating an index file
 ### Changed
+- The configuration file for the docker container is now read from the /app/config/ directory (b9e5e6)
 ### Removed
 - Non-functional Dodo log from sample config (#78)
 ### Fixed
 - Properly remove stopped ct log workers (#74)
 - Added missing fields certificatePolicies and ctlPoisonByte (#85)
-- Prevent race condition caused by simultaneous rw access to logmetrics
+- Prevent race condition caused by simultaneous rw access to logmetrics (#91)
 - Properly display metrics for all initially watched logs (#95)
 - Properly add new metrics for all newly found logs (#96)
 ### Docs
