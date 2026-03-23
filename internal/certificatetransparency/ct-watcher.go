@@ -443,7 +443,7 @@ func (w *worker) runTiledWorker(ctx context.Context) error {
 	hc := &http.Client{Timeout: 30 * time.Second}
 
 	// If recovery is enabled and the CT index is set, we start at the saved index. Otherwise, we start at the latest checkpoint.
-	validSavedCTIndexExists := config.AppConfig.General.Recovery.Enabled && w.ctIndex >= 0
+	validSavedCTIndexExists := config.AppConfig.General.Recovery.Enabled
 	if !validSavedCTIndexExists {
 		checkpoint, err := FetchCheckpoint(ctx, hc, w.ctURL)
 		if err != nil {
