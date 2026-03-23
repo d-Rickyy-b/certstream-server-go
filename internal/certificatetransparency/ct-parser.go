@@ -11,6 +11,7 @@ import (
 	"hash"
 	"log"
 	"math/big"
+	"slices"
 	"strings"
 	"time"
 
@@ -132,14 +133,7 @@ func leafCertFromX509cert(cert x509.Certificate) models.LeafCert {
 
 	leafCert.Subject = buildSubject(cert.Subject)
 	if *leafCert.Subject.CN != "" && !leafCert.IsCA {
-		domainAlreadyAdded := false
-		// TODO check if CN matches domain regex
-		for _, domain := range leafCert.AllDomains {
-			if domain == *leafCert.Subject.CN {
-				domainAlreadyAdded = true
-				break
-			}
-		}
+		domainAlreadyAdded := slices.Contains(leafCert.AllDomains, *leafCert.Subject.CN)
 
 		if !domainAlreadyAdded {
 			leafCert.AllDomains = append(leafCert.AllDomains, *leafCert.Subject.CN)
