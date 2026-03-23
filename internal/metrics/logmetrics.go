@@ -40,6 +40,8 @@ func (m *LogMetrics) GetCTMetrics() CTMetrics {
 	m.mutex.RLock()
 	defer m.mutex.RUnlock()
 
+	// Using maps.copy() does not copy the nested maps.
+	// That leads to an issue where simultaneous reads and writes to the same nested map can happen.
 	copiedMap := make(CTMetrics)
 	for operator, urls := range m.metrics {
 		copiedMap[operator] = make(OperatorMetric)
