@@ -10,6 +10,7 @@ webserver:
   domains_only_url: "/domains-only"
   cert_path: ""
   cert_key_path: ""
+  # specify if the server should attempt to negotiate per message compression (RFC 7692)
   compression_enabled: false
 
 prometheus:
