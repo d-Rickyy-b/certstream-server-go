@@ -12,6 +12,7 @@ import (
 
 	"github.com/d-Rickyy-b/certstream-server-go/internal/certificatetransparency"
 	"github.com/d-Rickyy-b/certstream-server-go/internal/config"
+	"github.com/d-Rickyy-b/certstream-server-go/internal/models"
 
 	ct "github.com/google/certificate-transparency-go"
 	"github.com/google/certificate-transparency-go/client"
@@ -59,7 +60,7 @@ func main() {
 			log.Fatalln("Error creating raw log entry: ", err)
 		}
 
-		entry, parseErr := certificatetransparency.ParseCertstreamEntry(rawLogEntry, "N/A", "N/A", ctLog)
+		entry, parseErr := certificatetransparency.ParseCertstreamEntry(rawLogEntry, "N/A", "N/A", ctLog, models.SourceIsRFC6962)
 		if parseErr != nil {
 			log.Fatalln("Error parsing certstream entry: ", parseErr)
 		}
