@@ -81,8 +81,8 @@ func ValidateConfig(configPath string) error {
 
 // initViper sets up the viper instance with defaults, config file and environment variable support.
 // configPath is the path to the YAML config file (e.g. "config.yaml").
-// Environment variables are mapped with the prefix "CERTSTREAM" and "__" as key delimiter.
-// Example: CERTSTREAM_WEBSERVER__LISTEN_PORT overrides webserver.listen_port.
+// Environment variables are mapped with the prefix "CERTSTREAM" and "_" as key delimiter.
+// Example: CERTSTREAM_WEBSERVER_LISTEN_PORT overrides webserver.listen_port.
 func initViper(configPath string) *viper.Viper {
 	v := viper.NewWithOptions(viper.KeyDelimiter("."))
 
