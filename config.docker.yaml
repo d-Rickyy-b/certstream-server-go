@@ -13,7 +13,7 @@ webserver:
   compression_enabled: false
 
 prometheus:
-  enabled: true
+  enabled: false
   listen_addr: "0.0.0.0"
   listen_port: 8080
   metrics_url: "/metrics"
@@ -25,27 +25,6 @@ prometheus:
 general:
   # DisableDefaultLogs indicates whether the default logs used in Google Chrome and provided by Google should be disabled.
   disable_default_logs: false
-  # When you want to add logs that are not contained in the log list provided by
-  # Google (https://www.gstatic.com/ct/log_list/v3/log_list.json), you can add them here.
-  #additional_logs:
-  #  - url: https://ct.googleapis.com/logs/us1/mirrors/digicert_nessie2022
-  #    operator: "DigiCert"
-  #    description: "DigiCert Nessie2022 log"
-
-  #additional_tiled_logs:
-  #  - url: https://ct.cloudflare.com/logs/raio2025h2b/
-  #    operator: "Cloudflare"
-  #    description: "Cloudflare 'Raio2025h2b'"
-
-  # To optimize the performance of the server, you can overwrite the size of different buffers
-  # For low CPU, low memory machines, you should reduce the buffer sizes to save memory in case the CPU is maxed.
-  buffer_sizes:
-    # Buffer for each websocket connection
-    websocket: 300
-    # Buffer for each CT log connection
-    ctlog: 1000
-    # Combined buffer for the broadcast manager
-    broadcastmanager: 10000
 
   # Google regularly updates the log list. If this option is set to true, the server will remove all logs no longer listed in the Google log list.
   # This option defaults to true. See https://github.com/d-Rickyy-b/certstream-server-go/issues/51
@@ -58,7 +37,7 @@ general:
     # Be aware that this leads to a massive number of certificates being downloaded.
     # Depending on your server's performance and network connection, this could be up to 10.000 certificates per second.
     # Make sure your infrastructure can handle this!
-    enabled: true
+    enabled: false
     # Path to the file where indices are stored. Be aware that a temp file in the same path with the same name and ".tmp" as suffix will be created.
     # If there are no write permissions to the path, the server will not be able to store the indices.
-    ct_index_file: "./ct_index.json"
+    ct_index_file: "/app/config/ct_index.json"

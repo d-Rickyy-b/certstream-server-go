@@ -62,11 +62,11 @@ func (cs *Certstream) setupMetrics(webserver *web.WebServer) {
 		if (cs.config.Prometheus.ListenAddr == "" || cs.config.Prometheus.ListenAddr == cs.config.Webserver.ListenAddr) &&
 			(cs.config.Prometheus.ListenPort == 0 || cs.config.Prometheus.ListenPort == cs.config.Webserver.ListenPort) {
 			log.Println("Starting prometheus server on same interface as webserver")
-			webserver.RegisterPrometheus(cs.config.Prometheus.MetricsURL, metrics.WritePrometheus)
+			webserver.RegisterPrometheus(cs.config.Prometheus.MetricsURL, metrics.Prometheus.Write)
 		} else {
 			log.Println("Starting prometheus server on new interface")
 			cs.metricsServer = web.NewMetricsServer(cs.config.Prometheus.ListenAddr, cs.config.Prometheus.ListenPort, cs.config.Prometheus.CertPath, cs.config.Prometheus.CertKeyPath)
-			cs.metricsServer.RegisterPrometheus(cs.config.Prometheus.MetricsURL, metrics.WritePrometheus)
+			cs.metricsServer.RegisterPrometheus(cs.config.Prometheus.MetricsURL, metrics.Prometheus.Write)
 		}
 	}
 }
@@ -118,13 +118,13 @@ func (cs *Certstream) Stop() {
 
 // CreateIndexFile creates the index file for the certificate transparency logs.
 // It gets only called when the CLI flag --create-index-file is set.
-func (cs *Certstream) CreateIndexFile() error {
+func (cs *Certstream) CreateIndexFile(outFile string) error {
 	// If there is no watcher initialized, create a new one
 	if cs.watcher == nil {
 		cs.watcher = &certificatetransparency.Watcher{}
 	}
 
-	return cs.watcher.CreateIndexFile(cs.config.General.Recovery.CTIndexFile)
+	return cs.watcher.CreateIndexFile(outFile)
 }
 
 // signalHandler listens for signals in order to gracefully shut down the server.

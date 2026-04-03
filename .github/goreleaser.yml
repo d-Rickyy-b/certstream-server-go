@@ -43,7 +43,7 @@ dockers:
     goarch: amd64
     use: buildx
     extra_files:
-      - config.sample.yaml
+      - config.docker.yaml
     build_flag_templates:
       - "--pull"
       - "--label=org.opencontainers.image.title={{.ProjectName}}"
@@ -62,7 +62,7 @@ dockers:
     goarch: arm64
     use: buildx
     extra_files:
-      - config.sample.yaml
+      - config.docker.yaml
     build_flag_templates:
       - "--pull"
       - "--label=org.opencontainers.image.title={{.ProjectName}}"

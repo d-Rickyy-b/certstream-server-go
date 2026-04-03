@@ -1,4 +1,4 @@
-package certificatetransparency
+package metrics
 
 import (
 	"encoding/json"
@@ -22,9 +22,9 @@ type (
 )
 
 var (
-	processedCerts    int64
-	processedPrecerts int64
-	metrics           = LogMetrics{metrics: make(CTMetrics), index: make(CTCertIndex)}
+	ProcessedCerts    int64
+	ProcessedPrecerts int64
+	Metrics           = LogMetrics{metrics: make(CTMetrics), index: make(CTCertIndex)}
 )
 
 // LogMetrics is a struct that holds a map of metrics for each CT log grouped by operator.
@@ -40,6 +40,8 @@ func (m *LogMetrics) GetCTMetrics() CTMetrics {
 	m.mutex.RLock()
 	defer m.mutex.RUnlock()
 
+	// Using maps.copy() does not copy the nested maps.
+	// That leads to an issue where simultaneous reads and writes to the same nested map can happen.
 	copiedMap := make(CTMetrics)
 	for operator, urls := range m.metrics {
 		copiedMap[operator] = make(OperatorMetric)
@@ -91,6 +93,9 @@ func (m *LogMetrics) Init(operator, url string) {
 	if _, ok := m.index[url]; !ok {
 		m.index[url] = 0
 	}
+
+	// Register the metric for this operator and url with Prometheus
+	Prometheus.RegisterLog(operator, url)
 }
 
 // Get the metric for a given operator and ct url.
@@ -162,12 +167,14 @@ func (m *LogMetrics) SetCTIndex(url string, index uint64) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
-	log.Println("Setting CT index for ", url, " to ", index)
+	log.Printf("Setting CT index for %s to %d\n", url, index)
 	m.index[url] = index
 }
 
 // LoadCTIndex loads the last cert index processed for each CT url if it exists.
 func (m *LogMetrics) LoadCTIndex(ctIndexFilePath string) {
+	log.Println("Loading CT indexes from file: ", ctIndexFilePath)
+
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
@@ -175,13 +182,18 @@ func (m *LogMetrics) LoadCTIndex(ctIndexFilePath string) {
 	if readErr != nil {
 		// Create the file if it doesn't exist
 		if os.IsNotExist(readErr) {
-			err := createCTIndexFile(ctIndexFilePath, m)
+			log.Println("CT index file does not exist, creating a new one...")
+			if m.index == nil {
+				m.index = make(CTCertIndex)
+			}
+			err := m.createCTIndexFile(ctIndexFilePath)
 			if err != nil {
 				log.Printf("Error creating CT index file: '%s'\n", ctIndexFilePath)
 				log.Panicln(err)
 			}
+			bytes = []byte("{}")
 		} else {
-			// If the file exists but we can't read it, log the error and panic
+			// If the file exists, but we can't read it, log the error and panic
 			log.Panicln(readErr)
 		}
 	}
@@ -195,10 +207,7 @@ func (m *LogMetrics) LoadCTIndex(ctIndexFilePath string) {
 	log.Println("Successfully loaded saved CT indexes")
 }
 
-func createCTIndexFile(ctIndexFilePath string, m *LogMetrics) error {
-	m.mutex.RLock()
-	defer m.mutex.RUnlock()
-
+func (m *LogMetrics) createCTIndexFile(ctIndexFilePath string) error {
 	log.Printf("Specified CT index file does not exist: '%s'\n", ctIndexFilePath)
 	log.Println("Creating CT index file now!")
 
@@ -207,7 +216,11 @@ func createCTIndexFile(ctIndexFilePath string, m *LogMetrics) error {
 		log.Printf("Error creating CT index file: '%s'\n", ctIndexFilePath)
 		log.Panicln(createErr)
 	}
+	defer file.Close()
 
+	if m.index == nil {
+		m.index = make(CTCertIndex)
+	}
 	bytes, marshalErr := json.Marshal(m.index)
 	if marshalErr != nil {
 		return marshalErr
@@ -217,7 +230,6 @@ func createCTIndexFile(ctIndexFilePath string, m *LogMetrics) error {
 		log.Printf("Error writing to CT index file: '%s'\n", ctIndexFilePath)
 		log.Panicln(writeErr)
 	}
-	file.Close()
 
 	return nil
 }
@@ -282,18 +294,18 @@ func (m *LogMetrics) SaveCertIndexes(ctIndexFilePath string) {
 
 // GetProcessedCerts returns the total number of processed certificates.
 func GetProcessedCerts() int64 {
-	return processedCerts
+	return ProcessedCerts
 }
 
 // GetProcessedPrecerts returns the total number of processed precertificates.
 func GetProcessedPrecerts() int64 {
-	return processedPrecerts
+	return ProcessedPrecerts
 }
 
 func GetCertMetrics() CTMetrics {
-	return metrics.GetCTMetrics()
+	return Metrics.GetCTMetrics()
 }
 
 func GetLogOperators() map[string][]string {
-	return metrics.OperatorLogMapping()
+	return Metrics.OperatorLogMapping()
 }

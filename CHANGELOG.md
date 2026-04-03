@@ -9,28 +9,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Ability to store and resume processing of certs from where it left off after a restart - see sample config "recovery" (#49)
 - New CLI switch for creating an index file from a CT log (#49)
+- Support for [Static CT](https://github.com/C2SP/C2SP/blob/main/static-ct-api.md) logs 
 - Check for retired CT logs and prevent them from being watched / stop watching them (#77)
 - Accept websocket connections from all origins
 - Option to disable the default logs provided by Google - see sample config "disable_default_logs"
+- Use of cobra for CLI argument parsing. New commands for displaying version and creating an index file
 ### Changed
+- The configuration file for the docker container is now read from the /app/config/ directory (b9e5e6)
 ### Removed
 - Non-functional Dodo log from sample config (#78)
 ### Fixed
 - Properly remove stopped ct log workers (#74)
 - Added missing fields certificatePolicies and ctlPoisonByte (#85)
-- Prevent race condition caused by simultaneous rw access to logmetrics
+- Prevent race condition caused by simultaneous rw access to logmetrics (#91)
+- Properly display metrics for all initially watched logs (#95)
+- Properly add new metrics for all newly found logs (#96)
 ### Docs
 
-## [v1.8.2] - 2025-11-22
+## [1.8.2] - 2025-11-22
 ### Fixed
 - Added missing fields certificatePolicies and ctlPoisonByte (#85)
 
-## [v1.8.1] - 2025-05-04
+## [1.8.1] - 2025-05-04
 ### Fixed
 - No longer reject URLs with trailing slashes defined in the `additional_logs` config (#62)
 - When using `drop_old_logs` in the config, the server won't remove logs defined in `additional_logs` anymore (#64)
 
-## [v1.8.0] - 2025-05-03
+## [1.8.0] - 2025-05-03
 ### Security
 - Close several CVEs in x/crypto and x/net dependencies (#59)
 

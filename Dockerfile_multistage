@@ -42,11 +42,11 @@ COPY --from=builder /etc/group /etc/group
 
 # Copy our static executable.
 COPY --from=builder /go/bin/certstream-server-go /app/certstream-server-go
-COPY --chown=certstreamserver:certstreamserver ./config.sample.yaml /app/config.yaml
+COPY --chown=certstreamserver:certstreamserver ./config.docker.yaml /app/config/config.yaml
 
 # Use an unprivileged user.
 USER certstreamserver:certstreamserver
 
 EXPOSE 8080
 
-ENTRYPOINT ["/app/certstream-server-go"]
+ENTRYPOINT ["/app/certstream-server-go", "-config", "/app/config/config.yaml"]

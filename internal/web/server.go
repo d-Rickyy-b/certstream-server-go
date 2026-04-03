@@ -21,7 +21,7 @@ import (
 )
 
 var (
-	ClientHandler = BroadcastManager{}
+	ClientHandler = NewBroadcastManager()
 	upgrader      websocket.Upgrader
 )
 

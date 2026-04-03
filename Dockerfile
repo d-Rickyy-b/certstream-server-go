@@ -17,11 +17,12 @@ RUN adduser \
 
 # Copy our static executable.
 COPY certstream-server-go /app/certstream-server-go
-COPY ./config.sample.yaml /app/config.yaml
+COPY ./config.docker.yaml /app/config/config.yaml
+RUN chown -R certstreamserver:certstreamserver /app/
 
 # Use an unprivileged user.
 USER certstreamserver:certstreamserver
 
 EXPOSE 8080
 
-ENTRYPOINT ["/app/certstream-server-go"]
+ENTRYPOINT ["/app/certstream-server-go", "-config", "/app/config/config.yaml"]

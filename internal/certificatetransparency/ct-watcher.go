@@ -13,7 +13,10 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/google/trillian/client/backoff"
+
 	"github.com/d-Rickyy-b/certstream-server-go/internal/config"
+	"github.com/d-Rickyy-b/certstream-server-go/internal/metrics"
 	"github.com/d-Rickyy-b/certstream-server-go/internal/models"
 	"github.com/d-Rickyy-b/certstream-server-go/internal/web"
 
@@ -63,9 +66,9 @@ func (w *Watcher) Start() {
 			return
 		}
 		// Load Saved CT Indexes
-		metrics.LoadCTIndex(ctIndexFilePath)
+		metrics.Metrics.LoadCTIndex(ctIndexFilePath)
 		// Save CTIndexes at regular intervals
-		go metrics.SaveCertIndexesAtInterval(time.Second*30, ctIndexFilePath) // save indexes every X seconds
+		go metrics.Metrics.SaveCertIndexesAtInterval(time.Second*30, ctIndexFilePath) // save indexes every X seconds
 	}
 
 	// initialize the watcher with currently available logs
@@ -115,7 +118,7 @@ func (w *Watcher) updateLogs() {
 	defer w.workersMu.Unlock()
 
 	for _, operator := range logList.Operators {
-		// Iterate over each log of the operator
+		// Classic logs
 		for _, transparencyLog := range operator.Logs {
 			url := transparencyLog.URL
 			desc := transparencyLog.Description
@@ -127,7 +130,24 @@ func (w *Watcher) updateLogs() {
 			}
 
 			monitoredURLs[normURL] = struct{}{}
-			if w.addLogIfNew(operator.Name, desc, url) {
+			if w.addLogIfNew(operator.Name, desc, url, false) {
+				newCTs++
+			}
+		}
+
+		// Tiled logs
+		for _, transparencyLog := range operator.TiledLogs {
+			url := transparencyLog.MonitoringURL
+			desc := transparencyLog.Description
+			normURL := normalizeCtlogURL(url)
+
+			if transparencyLog.State.LogStatus() == loglist3.RetiredLogStatus {
+				log.Printf("Skipping retired CT log: %s\n", normURL)
+				continue
+			}
+
+			monitoredURLs[normURL] = struct{}{}
+			if w.addLogIfNew(operator.Name, desc, url, true) {
 				newCTs++
 			}
 		}
@@ -154,7 +174,7 @@ func (w *Watcher) updateLogs() {
 
 // addLogIfNew checks if a log is already being watched and adds it if not.
 // Returns true if a new log was added, false otherwise.
-func (w *Watcher) addLogIfNew(operatorName, description, url string) bool {
+func (w *Watcher) addLogIfNew(operatorName, description, url string, isTiled bool) bool {
 	normURL := normalizeCtlogURL(url)
 
 	// Check if the log is already being watched
@@ -168,16 +188,17 @@ func (w *Watcher) addLogIfNew(operatorName, description, url string) bool {
 	// Log is not being watched, so add it
 	w.wg.Add(1)
 
-	lastCTIndex := metrics.GetCTIndex(normURL)
+	lastCTIndex := metrics.Metrics.GetCTIndex(normURL)
 	ctWorker := worker{
 		name:         description,
 		operatorName: operatorName,
 		ctURL:        url,
 		entryChan:    w.certChan,
 		ctIndex:      lastCTIndex,
+		isTiled:      isTiled,
 	}
 	w.workers = append(w.workers, &ctWorker)
-	metrics.Init(operatorName, normURL)
+	metrics.Metrics.Init(operatorName, normURL)
 
 	// Start a goroutine for each worker
 	go func() {
@@ -212,7 +233,7 @@ func (w *Watcher) Stop() {
 	if config.AppConfig.General.Recovery.Enabled {
 		// Store current CT Indexes before shutting down
 		filePath := config.AppConfig.General.Recovery.CTIndexFile
-		metrics.SaveCertIndexes(filePath)
+		metrics.Metrics.SaveCertIndexes(filePath)
 	}
 
 	w.cancelFunc()
@@ -230,9 +251,15 @@ func (w *Watcher) CreateIndexFile(filePath string) error {
 	for _, operator := range logs.Operators {
 		// Iterate over each log of the operator
 		for _, transparencyLog := range operator.Logs {
+			if transparencyLog.State.LogStatus() == loglist3.RetiredLogStatus {
+				log.Printf("Skipping retired CT log: %s\n", transparencyLog.URL)
+				continue
+			}
+
+			normalizedURL := normalizeCtlogURL(transparencyLog.URL)
 			// Check if the log is already being watched
-			metrics.Init(operator.Name, normalizeCtlogURL(transparencyLog.URL))
-			log.Println("Fetching STH for", normalizeCtlogURL(transparencyLog.URL))
+			metrics.Metrics.Init(operator.Name, normalizedURL)
+			log.Println("Fetching STH for", normalizedURL)
 
 			hc := http.Client{Timeout: 5 * time.Second}
 			jsonClient, e := client.New(transparencyLog.URL, &hc, jsonclient.Options{UserAgent: userAgent})
@@ -248,12 +275,31 @@ func (w *Watcher) CreateIndexFile(filePath string) error {
 				continue
 			}
 
-			metrics.SetCTIndex(normalizeCtlogURL(transparencyLog.URL), sth.TreeSize)
+			metrics.Metrics.SetCTIndex(normalizedURL, sth.TreeSize)
+		}
+		for _, transparencyLog := range operator.TiledLogs {
+			if transparencyLog.State.LogStatus() == loglist3.RetiredLogStatus {
+				log.Printf("Skipping retired CT log: %s\n", transparencyLog.MonitoringURL)
+				continue
+			}
+			// Check if the log is already being watched
+			normalizedURL := normalizeCtlogURL(transparencyLog.MonitoringURL)
+			metrics.Metrics.Init(operator.Name, normalizedURL)
+			log.Println("Fetching checkpoint for", normalizedURL)
+
+			hc := &http.Client{Timeout: 10 * time.Second}
+			checkpoint, fetchErr := FetchCheckpoint(w.context, hc, transparencyLog.MonitoringURL)
+			if fetchErr != nil {
+				log.Printf("Could not get checkpoint for '%s': %s\n", transparencyLog.MonitoringURL, fetchErr)
+				return errFetchingSTHFailed
+			}
+
+			metrics.Metrics.SetCTIndex(normalizedURL, checkpoint.Size)
 		}
 	}
 	w.cancelFunc()
 
-	metrics.SaveCertIndexes(filePath)
+	metrics.Metrics.SaveCertIndexes(filePath)
 	log.Println("Index file saved to", filePath)
 
 	return nil
@@ -269,6 +315,7 @@ type worker struct {
 	mu           sync.Mutex
 	running      bool
 	cancel       context.CancelFunc
+	isTiled      bool
 }
 
 // startDownloadingCerts starts downloading certificates from the CT log. This method is blocking.
@@ -298,7 +345,14 @@ func (w *worker) startDownloadingCerts(ctx context.Context) {
 
 	for {
 		log.Printf("Starting worker for CT log: %s\n", w.ctURL)
-		workerErr := w.runWorker(ctx)
+
+		var workerErr error
+		if w.isTiled {
+			workerErr = w.runTiledWorker(ctx)
+		} else {
+			workerErr = w.runStandardWorker(ctx)
+		}
+
 		if workerErr != nil {
 			if errors.Is(workerErr, errFetchingSTHFailed) {
 				// TODO this could happen due to a 429 error. We should retry the request
@@ -315,7 +369,7 @@ func (w *worker) startDownloadingCerts(ctx context.Context) {
 			log.Printf("Worker for '%s' failed with unexpected error: %s\n", w.ctURL, workerErr)
 		}
 
-		// Check if the context was cancelled
+		// Check if the context was canceled
 		select {
 		case <-ctx.Done():
 			log.Printf("Context was cancelled; Stopping worker for '%s'\n", w.ctURL)
@@ -338,8 +392,8 @@ func (w *worker) stop() {
 	w.cancel()
 }
 
-// runWorker runs a single worker for a single CT log. This method is blocking.
-func (w *worker) runWorker(ctx context.Context) error {
+// runStandardWorker runs the worker for a single standard CT log. This method is blocking.
+func (w *worker) runStandardWorker(ctx context.Context) error {
 	hc := http.Client{Timeout: 30 * time.Second}
 	jsonClient, e := client.New(w.ctURL, &hc, jsonclient.Options{UserAgent: userAgent})
 	if e != nil {
@@ -384,6 +438,128 @@ func (w *worker) runWorker(ctx context.Context) error {
 	return nil
 }
 
+// runTiledWorker runs the worker for a single tiled CT log. This method is blocking.
+func (w *worker) runTiledWorker(ctx context.Context) error {
+	hc := &http.Client{Timeout: 30 * time.Second}
+
+	// If recovery is enabled and the CT index is set, we start at the saved index. Otherwise, we start at the latest checkpoint.
+	validSavedCTIndexExists := config.AppConfig.General.Recovery.Enabled
+	if !validSavedCTIndexExists {
+		checkpoint, err := FetchCheckpoint(ctx, hc, w.ctURL)
+		if err != nil {
+			log.Printf("Could not get checkpoint for '%s': %s\n", w.ctURL, err)
+			return errFetchingSTHFailed
+		}
+		// Start at the latest checkpoint to skip all the past certificates
+		w.ctIndex = checkpoint.Size
+	}
+
+	// Initialize backoff for polling
+	pollBackoff := &backoff.Backoff{
+		Min:    1 * time.Second,
+		Max:    30 * time.Second,
+		Factor: 2,
+		Jitter: true,
+	}
+
+	// Continuous monitoring loop
+	for {
+		hadNewEntries, err := w.processTiledLogUpdates(ctx, hc)
+		if err != nil {
+			log.Printf("Error processing tiled log updates for '%s': %s\n", w.ctURL, err)
+			return err
+		}
+
+		// Reset backoff if we found new entries
+		if hadNewEntries {
+			pollBackoff.Reset()
+		}
+
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(pollBackoff.Duration()):
+			// Continue to the next iteration
+		}
+	}
+}
+
+// processTiledLogUpdates checks for new entries in the tiled log and processes them
+func (w *worker) processTiledLogUpdates(ctx context.Context, hc *http.Client) (bool, error) {
+	// Fetch current checkpoint
+	checkpoint, err := FetchCheckpoint(ctx, hc, w.ctURL)
+	if err != nil {
+		return false, fmt.Errorf("fetching checkpoint: %w", err)
+	}
+
+	currentTreeSize := checkpoint.Size
+	if currentTreeSize <= w.ctIndex {
+		// No new entries
+		return false, nil
+	}
+
+	// Process entries from current index to new tree size
+	startTile := w.ctIndex / TileSize
+	endTile := currentTreeSize / TileSize
+
+	// Process complete tiles
+	for tileIndex := startTile; tileIndex < endTile; tileIndex++ {
+		if err := w.processTile(ctx, hc, tileIndex, 0); err != nil {
+			return false, fmt.Errorf("processing tile %d: %w", tileIndex, err)
+		}
+	}
+
+	// Process partial tile if exists
+	partialSize := currentTreeSize % TileSize
+	if partialSize > 0 {
+		if err := w.processTile(ctx, hc, endTile, partialSize); err != nil {
+			log.Printf("Warning: error processing partial tile %d: %s\n", endTile, err)
+			// Don't return error for partial tiles as they might be incomplete
+		}
+	}
+
+	return true, nil
+}
+
+// processTile processes a single tile from the tiled log.
+// partialWidth of 0 means full tile, otherwise fetch partial tile with that width.
+func (w *worker) processTile(ctx context.Context, hc *http.Client, tileIndex uint64, partialWidth uint64) error {
+	leaves, err := FetchTile(ctx, hc, w.ctURL, tileIndex, partialWidth)
+	if err != nil {
+		return fmt.Errorf("fetching tile: %w", err)
+	}
+
+	// Calculate the starting index for entries in this tile
+	baseIndex := tileIndex * TileSize
+
+	for i, leaf := range leaves {
+		entryIndex := baseIndex + uint64(i)
+
+		// Skip entries we've already processed
+		if entryIndex <= w.ctIndex {
+			continue
+		}
+
+		// Convert TileLeaf to RawLogEntry for compatibility with existing parsing
+		rawEntry := ConvertTileLeafToRawLogEntry(leaf, entryIndex)
+
+		// Process the entry using existing callbacks
+		switch leaf.EntryType {
+		case 0:
+			w.foundCertCallback(rawEntry)
+		case 1:
+			w.foundPrecertCallback(rawEntry)
+		default:
+			log.Printf("Unknown entry type %d in tile %d, skipping entry at index %d\n", leaf.EntryType, tileIndex, entryIndex)
+		}
+
+		// Update the index
+		w.ctIndex = entryIndex
+	}
+
+	return nil
+}
+
 // foundCertCallback is the callback that handles cases where new regular certs are found.
 func (w *worker) foundCertCallback(rawEntry *ct.RawLogEntry) {
 	entry, parseErr := ParseCertstreamEntry(rawEntry, w.operatorName, w.name, w.ctURL)
@@ -395,7 +571,7 @@ func (w *worker) foundCertCallback(rawEntry *ct.RawLogEntry) {
 	entry.Data.UpdateType = "X509LogEntry"
 	w.entryChan <- entry
 
-	atomic.AddInt64(&processedCerts, 1)
+	atomic.AddInt64(&metrics.ProcessedCerts, 1)
 }
 
 // foundPrecertCallback is the callback that handles cases where new precerts are found.
@@ -409,13 +585,13 @@ func (w *worker) foundPrecertCallback(rawEntry *ct.RawLogEntry) {
 	entry.Data.UpdateType = "PrecertLogEntry"
 	w.entryChan <- entry
 
-	atomic.AddInt64(&processedPrecerts, 1)
+	atomic.AddInt64(&metrics.ProcessedPrecerts, 1)
 }
 
 // certHandler takes the entries out of the entryChan channel and broadcasts them to all clients.
 // Only a single instance of the certHandler runs per certstream server.
 func certHandler(entryChan chan models.Entry) {
-	var processed int64
+	var processed uint64
 
 	for {
 		entry := <-entryChan
@@ -427,7 +603,7 @@ func certHandler(entryChan chan models.Entry) {
 			web.SetExampleCert(entry)
 		}
 
-		// Run json encoding in the background and send the result to the clients.
+		// Run JSON encoding in the background and send the result to the clients.
 		web.ClientHandler.Broadcast <- entry
 
 		// Update metrics
@@ -435,13 +611,13 @@ func certHandler(entryChan chan models.Entry) {
 		operator := entry.Data.Source.Operator
 		index := entry.Data.CertIndex
 
-		metrics.Inc(operator, url, index)
+		metrics.Metrics.Inc(operator, url, index)
 	}
 }
 
 // getGoogleLogList fetches the list of all CT logs from Google Chromes CT LogList.
 func getGoogleLogList() (loglist3.LogList, error) {
-	// Download the list of all logs from ctLogInfo and decode json
+	// Download the list of all logs from ctLogInfo and decode JSON
 	resp, err := http.Get(loglist3.LogListURL)
 	if err != nil {
 		return loglist3.LogList{}, err
@@ -480,10 +656,11 @@ func getAllLogs() (loglist3.LogList, error) {
 	}
 
 	// Add manually added logs from config to the allLogs list
-	if config.AppConfig.General.AdditionalLogs == nil {
-		return allLogs, nil
-	}
+	// if config.AppConfig.General.AdditionalLogs == nil {
+	// 	return allLogs, nil
+	// }
 
+logFound:
 	for _, additionalLog := range config.AppConfig.General.AdditionalLogs {
 		customLog := loglist3.Log{
 			URL:         additionalLog.URL,
@@ -493,10 +670,16 @@ func getAllLogs() (loglist3.LogList, error) {
 		operatorFound := false
 		for _, operator := range allLogs.Operators {
 			if operator.Name == additionalLog.Operator {
-				// TODO Check if the log is already in the list
-				operator.Logs = append(operator.Logs, &customLog)
 				operatorFound = true
 
+				for _, ctlog := range operator.Logs {
+					if ctlog.URL == additionalLog.URL {
+						// Log already exists, skip it.
+						break logFound
+					}
+				}
+				// This works, since allLogs.Operators is a slice of pointers.
+				operator.Logs = append(operator.Logs, &customLog)
 				break
 			}
 		}
@@ -505,6 +688,39 @@ func getAllLogs() (loglist3.LogList, error) {
 			newOperator := loglist3.Operator{
 				Name: additionalLog.Operator,
 				Logs: []*loglist3.Log{&customLog},
+			}
+			allLogs.Operators = append(allLogs.Operators, &newOperator)
+		}
+	}
+
+	for _, additionalLog := range config.AppConfig.General.AdditionalTiledLogs {
+		customLog := loglist3.TiledLog{
+			MonitoringURL: additionalLog.URL,
+			Description:   additionalLog.Description,
+		}
+
+		operatorFound := false
+
+	tiledLogFound:
+		for _, operator := range allLogs.Operators {
+			if operator.Name == additionalLog.Operator {
+				operatorFound = true
+				for _, tl := range operator.TiledLogs {
+					if tl.MonitoringURL == additionalLog.URL {
+						// Log already exists, skip it.
+						break tiledLogFound
+					}
+				}
+				// This works, since allLogs.Operators is a slice of pointers.
+				operator.TiledLogs = append(operator.TiledLogs, &customLog)
+				break
+			}
+		}
+
+		if !operatorFound {
+			newOperator := loglist3.Operator{
+				Name:      additionalLog.Operator,
+				TiledLogs: []*loglist3.TiledLog{&customLog},
 			}
 			allLogs.Operators = append(allLogs.Operators, &newOperator)
 		}
