@@ -562,7 +562,12 @@ func (w *worker) processTile(ctx context.Context, hc *http.Client, tileIndex uin
 
 // foundCertCallback is the callback that handles cases where new regular certs are found.
 func (w *worker) foundCertCallback(rawEntry *ct.RawLogEntry) {
-	entry, parseErr := ParseCertstreamEntry(rawEntry, w.operatorName, w.name, w.ctURL)
+	logType := models.SourceIsRFC6962
+	if w.isTiled {
+		logType = models.SourceIsTiled
+	}
+
+	entry, parseErr := ParseCertstreamEntry(rawEntry, w.operatorName, w.name, w.ctURL, logType)
 	if parseErr != nil {
 		log.Println("Error parsing certstream entry: ", parseErr)
 		return
@@ -576,7 +581,12 @@ func (w *worker) foundCertCallback(rawEntry *ct.RawLogEntry) {
 
 // foundPrecertCallback is the callback that handles cases where new precerts are found.
 func (w *worker) foundPrecertCallback(rawEntry *ct.RawLogEntry) {
-	entry, parseErr := ParseCertstreamEntry(rawEntry, w.operatorName, w.name, w.ctURL)
+	logType := models.SourceIsRFC6962
+	if w.isTiled {
+		logType = models.SourceIsTiled
+	}
+
+	entry, parseErr := ParseCertstreamEntry(rawEntry, w.operatorName, w.name, w.ctURL, logType)
 	if parseErr != nil {
 		log.Println("Error parsing certstream entry: ", parseErr)
 		return

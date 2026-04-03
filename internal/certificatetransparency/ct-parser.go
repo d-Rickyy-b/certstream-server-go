@@ -23,9 +23,12 @@ import (
 )
 
 // parseData converts a *ct.RawLogEntry struct into a certstream.Data struct by copying some values and calculating others.
-func parseData(entry *ct.RawLogEntry, operatorName, logName, ctURL string) (models.Data, error) {
-	certLink := fmt.Sprintf("%s/ct/v1/get-entries?start=%d&end=%d", ctURL, entry.Index, entry.Index)
-	// TODO implement tiled cert link
+func parseData(entry *ct.RawLogEntry, operatorName, logName, ctURL, logType string) (models.Data, error) {
+	var certLink string
+	// There is no direct link for tiled ct logs
+	if logType == models.SourceIsRFC6962 {
+		certLink = fmt.Sprintf("%s/ct/v1/get-entries?start=%d&end=%d", ctURL, entry.Index, entry.Index)
+	}
 
 	// Create main data structure
 	data := models.Data{
@@ -38,6 +41,7 @@ func parseData(entry *ct.RawLogEntry, operatorName, logName, ctURL string) (mode
 			Timestamp:     float64(entry.Leaf.TimestampedEntry.Timestamp) / 1_000,
 			Operator:      operatorName,
 			NormalizedURL: normalizeCtlogURL(ctURL),
+			Type:          logType,
 		},
 		UpdateType: "X509LogEntry",
 	}
@@ -414,12 +418,12 @@ func keyUsageToString(k x509.KeyUsage) string {
 }
 
 // ParseCertstreamEntry creates an Entry from a ct.RawLogEntry.
-func ParseCertstreamEntry(rawEntry *ct.RawLogEntry, operatorName, logname, ctURL string) (models.Entry, error) {
+func ParseCertstreamEntry(rawEntry *ct.RawLogEntry, operatorName, logname, ctURL, logType string) (models.Entry, error) {
 	if rawEntry == nil {
 		return models.Entry{}, errors.New("certstream entry is nil")
 	}
 
-	data, err := parseData(rawEntry, operatorName, logname, ctURL)
+	data, err := parseData(rawEntry, operatorName, logname, ctURL, logType)
 	if err != nil {
 		return models.Entry{}, err
 	}
