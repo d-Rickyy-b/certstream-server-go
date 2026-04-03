@@ -103,7 +103,7 @@ func parseCertificateChain(logEntry *ct.LogEntry) ([]models.LeafCert, error) {
 
 	for i, chainEntry := range logEntry.Chain {
 		myCert, parseErr := x509.ParseCertificate(chainEntry.Data)
-		if parseErr != nil {
+		if parseErr != nil || myCert == nil {
 			log.Println("Error parsing certificate: ", parseErr)
 			return nil, parseErr
 		}
