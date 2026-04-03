@@ -35,6 +35,7 @@ func parseData(entry *ct.RawLogEntry, operatorName, logName, ctURL string) (mode
 		Source: models.Source{
 			Name:          logName,
 			URL:           ctURL,
+			Timestamp:     float64(entry.Leaf.TimestampedEntry.Timestamp) / 1_000,
 			Operator:      operatorName,
 			NormalizedURL: normalizeCtlogURL(ctURL),
 		},

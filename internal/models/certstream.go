@@ -97,10 +97,11 @@ type Data struct {
 }
 
 type Source struct {
-	Name          string `json:"name"`
-	URL           string `json:"url"`
-	Operator      string `json:"-"`
-	NormalizedURL string `json:"-"`
+	Name          string  `json:"name"`
+	URL           string  `json:"url"`
+	Timestamp     float64 `json:"timestamp"`
+	Operator      string  `json:"-"`
+	NormalizedURL string  `json:"-"`
 }
 
 type LeafCert struct {
