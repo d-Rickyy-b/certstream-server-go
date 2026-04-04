@@ -12,6 +12,10 @@ import (
 
 var Prometheus = NewPrometheusExporter()
 
+// PrometheusExporter is holds the metrics for the Prometheus exporter. It also provides helper functions
+// to register new metrics and write the metrics data to an http response.
+//
+//nolint:unused
 type PrometheusExporter struct {
 	// Number of currently connected clients.
 	fullClientCount   metrics.Gauge
