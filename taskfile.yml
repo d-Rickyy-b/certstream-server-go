@@ -1,0 +1,21 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+
+version: '3'
+
+tasks:
+  docker:
+    desc: Build a Docker image for your current OS and architecture.
+
+    cmds:
+      - docker build -t certstream-server-go:latest -f docker/Dockerfile.multistage .
+    silent: true
+
+  test:
+    desc: Run test suite.
+    cmds:
+      - go test -v ./...
+
+  build:
+    desc: Build the server binary for your current OS and architecture.
+    cmds:
+      - go build ./cmd/certstream-server-go
