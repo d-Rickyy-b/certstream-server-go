@@ -354,14 +354,14 @@ func (w *worker) startDownloadingCerts(ctx context.Context) {
 		}
 
 		if workerErr != nil {
-			if errors.Is(workerErr, errFetchingSTHFailed) {
-				// TODO this could happen due to a 429 error. We should retry the request
+			switch {
+			case errors.Is(workerErr, errFetchingSTHFailed):
 				log.Printf("Worker for '%s' failed - could not fetch STH\n", w.ctURL)
 				return
-			} else if errors.Is(workerErr, errCreatingClient) {
+			case errors.Is(workerErr, errCreatingClient):
 				log.Printf("Worker for '%s' failed - could not create client\n", w.ctURL)
 				return
-			} else if strings.Contains(workerErr.Error(), "no such host") {
+			case strings.Contains(workerErr.Error(), "no such host"):
 				log.Printf("Worker for '%s' failed to resolve host: %s\n", w.ctURL, workerErr)
 				return
 			}
