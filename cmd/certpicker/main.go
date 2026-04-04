@@ -40,17 +40,15 @@ func main() {
 	}
 
 	// Initialize the http client and json client provided by the ct library
-	hc := http.Client{Timeout: 30 * time.Second}
-	jsonClient, e := client.New(ctLog, &hc, jsonclient.Options{UserAgent: userAgent})
+	httpClient := http.Client{Timeout: 30 * time.Second}
+	jsonClient, e := client.New(ctLog, &httpClient, jsonclient.Options{UserAgent: userAgent})
 	if e != nil {
 		log.Fatalln("Error creating JSON client:", e)
 	}
 
-	// Get entries from CT log
-	c, _ := context.WithTimeout(context.Background(), 10*time.Second)
-	entries, getEntriesErr := jsonClient.GetRawEntries(c, certID, certID)
-	if getEntriesErr != nil {
-		log.Fatalln("Error getting entries from CT log: ", getEntriesErr)
+	entries, getEntryErr := getEntry(jsonClient, certID)
+	if getEntryErr != nil {
+		log.Fatalln("Error getting entry from CT log: ", getEntryErr)
 	}
 
 	// Loop over entries and pars each one.
@@ -99,4 +97,13 @@ func main() {
 
 		fmt.Println(string(result))
 	}
+}
+
+// getEntry fetches a single cert from an RFC6962 CT log by its ID.
+func getEntry(jsonClient *client.LogClient, certID int64) (*ct.GetEntriesResponse, error) {
+	// Get entries from CT log
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	return jsonClient.GetRawEntries(ctx, certID, certID)
 }
