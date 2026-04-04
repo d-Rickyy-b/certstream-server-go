@@ -45,8 +45,6 @@ func NewPrometheusExporter() *PrometheusExporter {
 
 // Write is a callback function that is called by a webserver in order to write metrics data to the http response.
 func (pm *PrometheusExporter) Write(w io.Writer, exposeProcessMetrics bool) {
-	// getSkippedCertMetrics()
-
 	metrics.WritePrometheus(w, exposeProcessMetrics)
 }
 
