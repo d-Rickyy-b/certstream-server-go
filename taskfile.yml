@@ -19,3 +19,14 @@ tasks:
     desc: Build the server binary for your current OS and architecture.
     cmds:
       - go build ./cmd/certstream-server-go
+
+  lint:
+    desc: Run linters.
+    cmds:
+      - golangci-lint run --config .golangci.yml
+
+  update-deps:
+    desc: Update dependencies.
+    cmds:
+      - go get -u ./...
+      - go mod tidy
