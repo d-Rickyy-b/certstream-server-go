@@ -45,6 +45,7 @@ func (m *LogMetrics) GetCTMetrics() CTMetrics {
 	for operator, urls := range m.metrics {
 		copiedMap[operator] = make(OperatorMetric)
 		for url, count := range urls {
+			//nolint:modernize
 			copiedMap[operator][url] = count
 		}
 	}
