@@ -47,6 +47,7 @@ This command deserializes the config and checks for errors.`,
 	},
 }
 
+//nolint:gochecknoinits
 func init() {
 	rootCmd.AddCommand(validateCmd)
 }
