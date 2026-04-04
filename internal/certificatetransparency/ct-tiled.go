@@ -45,18 +45,18 @@ func EncodeTilePath(index uint64) string {
 	}
 
 	// Build path from groups in reverse
-	var b strings.Builder
+	var builder strings.Builder
 	for i := len(groups) - 1; i >= 0; i-- {
 		if i < len(groups)-1 {
-			b.WriteByte('/')
+			builder.WriteByte('/')
 		}
 		if i > 0 {
-			b.WriteByte('x')
+			builder.WriteByte('x')
 		}
-		fmt.Fprintf(&b, "%03d", groups[i])
+		fmt.Fprintf(&builder, "%03d", groups[i])
 	}
 
-	return b.String()
+	return builder.String()
 }
 
 // FetchCheckpoint fetches the checkpoint from a tiled CT log using the provided client.

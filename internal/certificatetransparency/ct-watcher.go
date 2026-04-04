@@ -440,12 +440,12 @@ func (w *worker) runStandardWorker(ctx context.Context) error {
 
 // runTiledWorker runs the worker for a single tiled CT log. This method is blocking.
 func (w *worker) runTiledWorker(ctx context.Context) error {
-	hc := &http.Client{Timeout: 30 * time.Second}
+	httpClient := &http.Client{Timeout: 30 * time.Second}
 
 	// If recovery is enabled and the CT index is set, we start at the saved index. Otherwise, we start at the latest checkpoint.
 	validSavedCTIndexExists := config.AppConfig.General.Recovery.Enabled
 	if !validSavedCTIndexExists {
-		checkpoint, err := FetchCheckpoint(ctx, hc, w.ctURL)
+		checkpoint, err := FetchCheckpoint(ctx, httpClient, w.ctURL)
 		if err != nil {
 			log.Printf("Could not get checkpoint for '%s': %s\n", w.ctURL, err)
 			return errFetchingSTHFailed
@@ -464,7 +464,7 @@ func (w *worker) runTiledWorker(ctx context.Context) error {
 
 	// Continuous monitoring loop
 	for {
-		hadNewEntries, err := w.processTiledLogUpdates(ctx, hc)
+		hadNewEntries, err := w.processTiledLogUpdates(ctx, httpClient)
 		if err != nil {
 			log.Printf("Error processing tiled log updates for '%s': %s\n", w.ctURL, err)
 			return err
@@ -485,11 +485,11 @@ func (w *worker) runTiledWorker(ctx context.Context) error {
 }
 
 // processTiledLogUpdates checks for new entries in the tiled log and processes them.
-func (w *worker) processTiledLogUpdates(ctx context.Context, hc *http.Client) (bool, error) {
+func (w *worker) processTiledLogUpdates(ctx context.Context, httpClient *http.Client) (bool, error) {
 	// Fetch current checkpoint
-	checkpoint, err := FetchCheckpoint(ctx, hc, w.ctURL)
-	if err != nil {
-		return false, fmt.Errorf("fetching checkpoint: %w", err)
+	checkpoint, fetchErr := FetchCheckpoint(ctx, httpClient, w.ctURL)
+	if fetchErr != nil {
+		return false, fmt.Errorf("fetching checkpoint: %w", fetchErr)
 	}
 
 	currentTreeSize := checkpoint.Size
@@ -504,7 +504,7 @@ func (w *worker) processTiledLogUpdates(ctx context.Context, hc *http.Client) (b
 
 	// Process complete tiles
 	for tileIndex := startTile; tileIndex < endTile; tileIndex++ {
-		if err := w.processTile(ctx, hc, tileIndex, 0); err != nil {
+		if err := w.processTile(ctx, httpClient, tileIndex, 0); err != nil {
 			return false, fmt.Errorf("processing tile %d: %w", tileIndex, err)
 		}
 	}
@@ -512,7 +512,7 @@ func (w *worker) processTiledLogUpdates(ctx context.Context, hc *http.Client) (b
 	// Process partial tile if exists
 	partialSize := currentTreeSize % TileSize
 	if partialSize > 0 {
-		if err := w.processTile(ctx, hc, endTile, partialSize); err != nil {
+		if err := w.processTile(ctx, httpClient, endTile, partialSize); err != nil {
 			log.Printf("Warning: error processing partial tile %d: %s\n", endTile, err)
 			// Don't return error for partial tiles as they might be incomplete
 		}
