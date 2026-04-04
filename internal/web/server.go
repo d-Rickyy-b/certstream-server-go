@@ -25,9 +25,9 @@ var (
 	upgrader      websocket.Upgrader
 )
 
-// WebServer is a struct that holds the necessary information to run a webserver.
+// Server is a struct that holds the necessary information to run a webserver.
 // It is used for the websocket server as well as the metrics server.
-type WebServer struct {
+type Server struct {
 	networkIf string
 	port      int
 	routes    *chi.Mux
@@ -39,7 +39,7 @@ type WebServer struct {
 // RegisterPrometheus registers a new handler that listens on the given url and calls the given function
 // in order to provide metrics for a prometheus server. This function signature was used, because VictoriaMetrics
 // offers exactly this function signature.
-func (ws *WebServer) RegisterPrometheus(url string, callback func(w io.Writer, exposeProcessMetrics bool)) {
+func (ws *Server) RegisterPrometheus(url string, callback func(w io.Writer, exposeProcessMetrics bool)) {
 	ws.routes.HandleFunc(url, func(w http.ResponseWriter, _ *http.Request) {
 		callback(w, config.AppConfig.Prometheus.ExposeSystemMetrics)
 	})
@@ -203,7 +203,7 @@ func setupWebsocketRoutes(r *chi.Mux) {
 	})
 }
 
-func (ws *WebServer) initServer() {
+func (ws *Server) initServer() {
 	addr := net.JoinHostPort(ws.networkIf, strconv.Itoa(ws.port))
 
 	tlsConfig := &tls.Config{
@@ -230,8 +230,8 @@ func (ws *WebServer) initServer() {
 }
 
 // NewMetricsServer creates a new webserver that listens on the given port and provides metrics for a metrics server.
-func NewMetricsServer(networkIf string, port int, certPath, keyPath string) *WebServer {
-	server := &WebServer{
+func NewMetricsServer(networkIf string, port int, certPath, keyPath string) *Server {
+	server := &Server{
 		networkIf: networkIf,
 		port:      port,
 		routes:    chi.NewRouter(),
@@ -257,8 +257,8 @@ func NewMetricsServer(networkIf string, port int, certPath, keyPath string) *Web
 // NewWebsocketServer starts a new webserver and initialized it with the necessary routes.
 // It also starts the broadcaster in ClientHandler as a background job and takes care of
 // setting up websocket.Upgrader.
-func NewWebsocketServer(networkIf string, port int, certPath, keyPath string) *WebServer {
-	server := &WebServer{
+func NewWebsocketServer(networkIf string, port int, certPath, keyPath string) *Server {
+	server := &Server{
 		networkIf: networkIf,
 		port:      port,
 		routes:    chi.NewRouter(),
@@ -293,7 +293,7 @@ func NewWebsocketServer(networkIf string, port int, certPath, keyPath string) *W
 }
 
 // Start initializes the webserver and starts listening for connections.
-func (ws *WebServer) Start() {
+func (ws *Server) Start() {
 	log.Printf("Starting webserver on %s\n", ws.server.Addr)
 
 	var err error
@@ -309,7 +309,7 @@ func (ws *WebServer) Start() {
 }
 
 // Stop tries to stop the webserver gracefully. If it doesn't stop within 15 seconds, it is forcefully closed.
-func (ws *WebServer) Stop() {
+func (ws *Server) Stop() {
 	log.Println("Stopping webserver...")
 
 	// If the server did not stop within 15 seconds, forcefully close it

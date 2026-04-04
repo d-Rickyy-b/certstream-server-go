@@ -17,8 +17,8 @@ import (
 )
 
 type Certstream struct {
-	webserver     *web.WebServer
-	metricsServer *web.WebServer
+	webserver     *web.Server
+	metricsServer *web.Server
 	watcher       *certificatetransparency.Watcher
 	config        config.Config
 }
@@ -56,7 +56,7 @@ func NewCertstreamFromConfigFile(configPath string) (*Certstream, error) {
 }
 
 // setupMetrics configures the webserver to handle prometheus metrics according to the config.
-func (cs *Certstream) setupMetrics(webserver *web.WebServer) {
+func (cs *Certstream) setupMetrics(webserver *web.Server) {
 	if cs.config.Prometheus.Enabled {
 		// If prometheus is enabled, and interface is either unconfigured or same as webserver config, use existing webserver
 		if (cs.config.Prometheus.ListenAddr == "" || cs.config.Prometheus.ListenAddr == cs.config.Webserver.ListenAddr) &&
