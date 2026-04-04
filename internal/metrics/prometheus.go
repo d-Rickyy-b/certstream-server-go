@@ -27,7 +27,7 @@ type PrometheusExporter struct {
 
 // NewPrometheusExporter creates a new PrometheusExporter and registers the default metrics for the number of processed certificates.
 func NewPrometheusExporter() *PrometheusExporter {
-	e := &PrometheusExporter{}
+	exporter := &PrometheusExporter{}
 	// Register metrics for the total number of certificates processed by the CT watcher.
 	metrics.GetOrCreateGauge("certstreamservergo_certificates_total{type=\"regular\"}", func() float64 {
 		return float64(GetProcessedCerts())
@@ -35,7 +35,8 @@ func NewPrometheusExporter() *PrometheusExporter {
 	metrics.GetOrCreateGauge("certstreamservergo_certificates_total{type=\"precert\"}", func() float64 {
 		return float64(GetProcessedPrecerts())
 	})
-	return e
+
+	return exporter
 }
 
 // Write is a callback function that is called by a webserver in order to write metrics data to the http response.
