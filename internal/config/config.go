@@ -38,14 +38,16 @@ type BufferSizes struct {
 
 type Config struct {
 	Webserver struct {
-		ServerConfig       `mapstructure:",squash"`
+		ServerConfig `mapstructure:",squash"`
+
 		FullURL            string `mapstructure:"full_url"`
 		LiteURL            string `mapstructure:"lite_url"`
 		DomainsOnlyURL     string `mapstructure:"domains_only_url"`
 		CompressionEnabled bool   `mapstructure:"compression_enabled"`
 	}
 	Prometheus struct {
-		ServerConfig        `mapstructure:",squash"`
+		ServerConfig `mapstructure:",squash"`
+
 		Enabled             bool   `mapstructure:"enabled"`
 		MetricsURL          string `mapstructure:"metrics_url"`
 		ExposeSystemMetrics bool   `mapstructure:"expose_system_metrics"`
