@@ -40,12 +40,12 @@ certificate transparency logs via websocket connections to connected clients.`,
 			return fmt.Errorf("config file '%s' does not exist", configPath)
 		}
 
-		cs, err := certstream.NewCertstreamFromConfigFile(configPath)
+		certstreamServer, err := certstream.NewCertstreamFromConfigFile(configPath)
 		if err != nil {
 			log.Fatalf("Error while creating certstream server: %v", err)
 		}
 
-		cs.Start()
+		certstreamServer.Start()
 
 		return nil
 	},

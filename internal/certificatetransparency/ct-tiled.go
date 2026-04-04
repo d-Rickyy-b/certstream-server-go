@@ -144,12 +144,12 @@ func FetchTile(ctx context.Context, client *http.Client, baseURL string, tileInd
 // ParseTileData parses the binary tile data into TileLeaf entries using cryptobyte.
 func ParseTileData(data []byte) ([]TileLeaf, error) {
 	var leaves []TileLeaf
-	s := cryptobyte.String(data)
+	parser := cryptobyte.String(data)
 
-	for !s.Empty() {
+	for !parser.Empty() {
 		var leaf TileLeaf
 
-		if !s.ReadUint64(&leaf.Timestamp) || !s.ReadUint16(&leaf.EntryType) {
+		if !parser.ReadUint64(&leaf.Timestamp) || !parser.ReadUint16(&leaf.EntryType) {
 			return nil, errors.New("invalid data tile header")
 		}
 
@@ -157,9 +157,9 @@ func ParseTileData(data []byte) ([]TileLeaf, error) {
 		case 0: // x509_entry
 			var cert cryptobyte.String
 			var extensions, fingerprints cryptobyte.String
-			if !s.ReadUint24LengthPrefixed(&cert) ||
-				!s.ReadUint16LengthPrefixed(&extensions) ||
-				!s.ReadUint16LengthPrefixed(&fingerprints) {
+			if !parser.ReadUint24LengthPrefixed(&cert) ||
+				!parser.ReadUint16LengthPrefixed(&extensions) ||
+				!parser.ReadUint16LengthPrefixed(&fingerprints) {
 				return nil, errors.New("invalid data tile x509_entry")
 			}
 			leaf.X509Entry = append([]byte(nil), cert...)
@@ -174,11 +174,11 @@ func ParseTileData(data []byte) ([]TileLeaf, error) {
 		case 1: // precert_entry
 			var issuerKeyHash [32]byte
 			var defangedCrt, extensions, entry, fingerprints cryptobyte.String
-			if !s.CopyBytes(issuerKeyHash[:]) ||
-				!s.ReadUint24LengthPrefixed(&defangedCrt) ||
-				!s.ReadUint16LengthPrefixed(&extensions) ||
-				!s.ReadUint24LengthPrefixed(&entry) ||
-				!s.ReadUint16LengthPrefixed(&fingerprints) {
+			if !parser.CopyBytes(issuerKeyHash[:]) ||
+				!parser.ReadUint24LengthPrefixed(&defangedCrt) ||
+				!parser.ReadUint16LengthPrefixed(&extensions) ||
+				!parser.ReadUint24LengthPrefixed(&entry) ||
+				!parser.ReadUint16LengthPrefixed(&fingerprints) {
 				return nil, errors.New("invalid data tile precert_entry")
 			}
 			leaf.PrecertEntry = append([]byte(nil), defangedCrt...)

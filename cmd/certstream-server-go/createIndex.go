@@ -29,7 +29,7 @@ create-index will create and pre fill the ct-index.json file with the current va
 		if readConfErr != nil {
 			return readConfErr
 		}
-		cs := certstream.NewRawCertstream(conf)
+		certstreamServer := certstream.NewRawCertstream(conf)
 
 		force, err := cmd.Flags().GetBool("force")
 		if err != nil {
@@ -53,7 +53,7 @@ create-index will create and pre fill the ct-index.json file with the current va
 			}
 		}
 
-		createErr := cs.CreateIndexFile(outFilePath)
+		createErr := certstreamServer.CreateIndexFile(outFilePath)
 		if createErr != nil {
 			log.Fatalf("Error while creating index file: %v", createErr)
 		}
