@@ -12,7 +12,7 @@ import (
 	"github.com/d-Rickyy-b/certstream-server-go/internal/config"
 )
 
-// createIndexCmd represents the createIndex command
+// createIndexCmd represents the createIndex command.
 var createIndexCmd = &cobra.Command{
 	Use:   "create-index",
 	Short: "Create the ct_index.json based on current STHs/Checkpoints",

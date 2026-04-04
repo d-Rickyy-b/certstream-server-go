@@ -11,7 +11,7 @@ import (
 	"github.com/d-Rickyy-b/certstream-server-go/internal/config"
 )
 
-// rootCmd represents the base command when called without any subcommands
+// rootCmd represents the base command when called without any subcommands.
 var rootCmd = &cobra.Command{
 	Use:   "certstream-server-go",
 	Short: "A drop-in replacement for the certstream server by Calidog",

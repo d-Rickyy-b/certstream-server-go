@@ -15,14 +15,14 @@ import (
 
 const TileSize = 256
 
-// TiledCheckpoint represents the checkpoint information from a tiled CT log
+// TiledCheckpoint represents the checkpoint information from a tiled CT log.
 type TiledCheckpoint struct {
 	Origin string
 	Size   uint64
 	Hash   string
 }
 
-// TileLeaf represents a single entry in a tile
+// TileLeaf represents a single entry in a tile.
 type TileLeaf struct {
 	Timestamp     uint64
 	EntryType     uint16
@@ -32,7 +32,7 @@ type TileLeaf struct {
 	IssuerKeyHash [32]byte
 }
 
-// EncodeTilePath encodes a tile index into the proper path format
+// EncodeTilePath encodes a tile index into the proper path format.
 func EncodeTilePath(index uint64) string {
 	if index == 0 {
 		return "000"
@@ -59,7 +59,7 @@ func EncodeTilePath(index uint64) string {
 	return b.String()
 }
 
-// FetchCheckpoint fetches the checkpoint from a tiled CT log using the provided client
+// FetchCheckpoint fetches the checkpoint from a tiled CT log using the provided client.
 func FetchCheckpoint(ctx context.Context, client *http.Client, baseURL string) (*TiledCheckpoint, error) {
 	baseURL = strings.TrimRight(baseURL, "/")
 	url := fmt.Sprintf("%s/checkpoint", baseURL)
@@ -139,7 +139,7 @@ func FetchTile(ctx context.Context, client *http.Client, baseURL string, tileInd
 	return ParseTileData(data)
 }
 
-// ParseTileData parses the binary tile data into TileLeaf entries using cryptobyte
+// ParseTileData parses the binary tile data into TileLeaf entries using cryptobyte.
 func ParseTileData(data []byte) ([]TileLeaf, error) {
 	var leaves []TileLeaf
 	s := cryptobyte.String(data)
@@ -198,7 +198,7 @@ func ParseTileData(data []byte) ([]TileLeaf, error) {
 	return leaves, nil
 }
 
-// ConvertTileLeafToRawLogEntry converts a TileLeaf to ct.RawLogEntry for compatibility
+// ConvertTileLeafToRawLogEntry converts a TileLeaf to ct.RawLogEntry for compatibility.
 func ConvertTileLeafToRawLogEntry(leaf TileLeaf, index uint64) *ct.RawLogEntry {
 	rawEntry := &ct.RawLogEntry{
 		Index: int64(index),

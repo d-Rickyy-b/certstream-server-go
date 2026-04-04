@@ -239,7 +239,7 @@ func (w *Watcher) Stop() {
 	w.cancelFunc()
 }
 
-// CreateIndexFile creates a ct_index.json file based on the current STHs of all availble logs.
+// CreateIndexFile creates a ct_index.json file based on the current STHs of all available logs.
 func (w *Watcher) CreateIndexFile(filePath string) error {
 	logs, err := getAllLogs()
 	if err != nil {
@@ -484,7 +484,7 @@ func (w *worker) runTiledWorker(ctx context.Context) error {
 	}
 }
 
-// processTiledLogUpdates checks for new entries in the tiled log and processes them
+// processTiledLogUpdates checks for new entries in the tiled log and processes them.
 func (w *worker) processTiledLogUpdates(ctx context.Context, hc *http.Client) (bool, error) {
 	// Fetch current checkpoint
 	checkpoint, err := FetchCheckpoint(ctx, hc, w.ctURL)
