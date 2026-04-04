@@ -261,6 +261,7 @@ func (m *LogMetrics) SaveCertIndexes(ctIndexFilePath string) {
 		log.Println("Could not save CT index to temporary file: ", openErr)
 		return
 	}
+	defer file.Close()
 
 	truncateErr := file.Truncate(0)
 	if truncateErr != nil {
@@ -280,8 +281,6 @@ func (m *LogMetrics) SaveCertIndexes(ctIndexFilePath string) {
 		log.Println("Error syncing CT index temp file: ", syncErr)
 		return
 	}
-
-	file.Close()
 
 	// Atomically move the temp file to the permanent file
 	renameErr := os.Rename(tempFilePath, ctIndexFilePath)
