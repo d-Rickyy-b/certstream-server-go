@@ -19,7 +19,7 @@ var createIndexCmd = &cobra.Command{
 	Long: `When using the recovery feature, certstream will store an index of the processed certificates for each CT log.
 create-index will create and pre fill the ct-index.json file with the current values of the most recent certificate for each CT log.`,
 
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: func(cmd *cobra.Command, _ []string) error {
 		configPath, err := cmd.Flags().GetString("config")
 		if err != nil {
 			return err

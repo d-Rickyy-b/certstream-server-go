@@ -18,7 +18,7 @@ var rootCmd = &cobra.Command{
 	Long: `This tool aggregates, parses, and streams certificate data from multiple 
 certificate transparency logs via websocket connections to connected clients.`,
 
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: func(cmd *cobra.Command, _ []string) error {
 		// Handle --version flag
 		versionBool, err := cmd.Flags().GetBool("version")
 		if err != nil {

@@ -10,14 +10,14 @@ import (
 	"github.com/d-Rickyy-b/certstream-server-go/internal/config"
 )
 
-// validateCmd represents the validate command
+// validateCmd represents the validate command.
 var validateCmd = &cobra.Command{
 	Use:   "validate",
 	Short: "Tests whether the config file is valid",
 	Long: `Validates a configuration file, then exits.
 
 This command deserializes the config and checks for errors.`,
-	PreRunE: func(cmd *cobra.Command, args []string) error {
+	PreRunE: func(cmd *cobra.Command, _ []string) error {
 		// Check if config file exists
 		configPath, err := cmd.Flags().GetString("config")
 		if err != nil {
@@ -31,7 +31,7 @@ This command deserializes the config and checks for errors.`,
 
 		return nil
 	},
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: func(cmd *cobra.Command, _ []string) error {
 		configPath, err := cmd.Flags().GetString("config")
 		if err != nil {
 			return err
