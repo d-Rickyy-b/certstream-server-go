@@ -39,6 +39,7 @@ dockers_v2:
   - images:
       - "0rickyy0/{{.ProjectName}}"
       - "ghcr.io/d-rickyy-b/{{.ProjectName}}"
+    dockerfile: docker/Dockerfile.goreleaser
     tags:
         - "{{.Tag}}"
         - "{{ if not .Prerelease }}latest{{ end }}"

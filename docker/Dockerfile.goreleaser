@@ -1,0 +1,31 @@
+# This Dockerfile builds an image from a precompiled certstream binary.
+# The binary is built using goreleaser and stored in the $TARGETPLATFORM directory.
+FROM alpine
+ARG TARGETPLATFORM
+
+WORKDIR /app
+
+ENV USER=certstreamserver
+ENV UID=10001
+
+# Create user
+RUN adduser \
+    --disabled-password \
+    --gecos "" \
+    --home "/nonexistent" \
+    --shell "/sbin/nologin" \
+    --no-create-home \
+    --uid "${UID}" \
+    "${USER}"
+
+# Copy our static executable.
+COPY $TARGETPLATFORM/certstream-server-go /app/certstream-server-go
+COPY ./config.docker.yaml /app/config/config.yaml
+RUN chown -R certstreamserver:certstreamserver /app/
+
+# Use an unprivileged user.
+USER certstreamserver:certstreamserver
+
+EXPOSE 8080
+
+ENTRYPOINT ["/app/certstream-server-go", "-config", "/app/config/config.yaml"]
