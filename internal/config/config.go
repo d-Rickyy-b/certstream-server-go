@@ -11,9 +11,8 @@ import (
 )
 
 var (
-	AppConfig     Config
-	viperInstance *viper.Viper
-	Version       = "1.9.0"
+	AppConfig Config
+	Version   = "1.9.0"
 )
 
 type ServerConfig struct {
@@ -140,8 +139,6 @@ func initViper(configPath string) *viper.Viper {
 	v.SetEnvPrefix("CERTSTREAM")
 	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	v.AutomaticEnv()
-
-	viperInstance = v
 
 	return v
 }
