@@ -312,11 +312,17 @@ func (ws *Server) Start() {
 func (ws *Server) Stop() {
 	log.Println("Stopping webserver...")
 
+	if err := ws.shutdown(); err != nil {
+		log.Fatal("Error while stopping webserver: ", err)
+	}
+}
+
+// shutdown is called by Stop() and tries to stops the webserver gracefully.
+// If it doesn't stop within 15 seconds, it is forcefully closed.
+func (ws *Server) shutdown() error {
 	// If the server did not stop within 15 seconds, forcefully close it
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
-	if err := ws.server.Shutdown(ctx); err != nil {
-		log.Fatal("Error while stopping webserver: ", err)
-	}
+	return ws.server.Shutdown(ctx)
 }
