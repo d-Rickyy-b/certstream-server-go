@@ -64,7 +64,7 @@ func FetchCheckpoint(ctx context.Context, client *http.Client, baseURL string) (
 	baseURL = strings.TrimRight(baseURL, "/")
 	url := fmt.Sprintf("%s/checkpoint", baseURL)
 
-	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("creating request: %w", err)
 	}
@@ -117,7 +117,7 @@ func FetchTile(ctx context.Context, client *http.Client, baseURL string, tileInd
 	}
 	url := fmt.Sprintf("%s/tile/data/%s", baseURL, tilePath)
 
-	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("creating request: %w", err)
 	}
