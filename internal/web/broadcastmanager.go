@@ -19,6 +19,7 @@ func NewBroadcastManager() *BroadcastManager {
 	metrics.Prometheus.RegisterGaugeMetricInt("certstreamservergo_clients_total{type=\"full\"}", bm.ClientFullCount)
 	metrics.Prometheus.RegisterGaugeMetricInt("certstreamservergo_clients_total{type=\"lite\"}", bm.ClientLiteCount)
 	metrics.Prometheus.RegisterGaugeMetricInt("certstreamservergo_clients_total{type=\"domain\"}", bm.ClientDomainsCount)
+
 	return bm
 }
 

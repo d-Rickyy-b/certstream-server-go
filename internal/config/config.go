@@ -142,6 +142,7 @@ func initViper(configPath string) *viper.Viper {
 	v.AutomaticEnv()
 
 	viperInstance = v
+
 	return v
 }
 
@@ -159,6 +160,7 @@ func loadConfigFromViper(v *viper.Viper) (Config, error) {
 	}
 
 	AppConfig = cfg
+
 	return cfg, nil
 }
 

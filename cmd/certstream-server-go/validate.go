@@ -42,6 +42,7 @@ This command deserializes the config and checks for errors.`,
 			log.Fatalln(readConfErr)
 		}
 		log.Println("Config file is valid!")
+
 		return nil
 	},
 }

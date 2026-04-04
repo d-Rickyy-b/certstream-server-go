@@ -253,6 +253,7 @@ func (m *LogMetrics) SaveCertIndexes(ctIndexFilePath string) {
 
 	// Get the index data
 	ctIndex := m.GetAllCTIndexes()
+
 	bytes, cerr := json.MarshalIndent(ctIndex, "", " ")
 	if cerr != nil {
 		log.Panic(cerr)
@@ -270,12 +271,14 @@ func (m *LogMetrics) SaveCertIndexes(ctIndexFilePath string) {
 		log.Println("Error truncating CT index temp file: ", truncateErr)
 		return
 	}
+
 	// TODO: check for short writes
 	_, writeErr := file.Write(bytes)
 	if writeErr != nil {
 		log.Println("Error writing to CT index temp file: ", writeErr)
 		return
 	}
+
 	syncErr := file.Sync()
 	if syncErr != nil {
 		log.Println("Error syncing CT index temp file: ", syncErr)

@@ -690,6 +690,7 @@ logFound:
 				}
 				// This works, since allLogs.Operators is a slice of pointers.
 				operator.Logs = append(operator.Logs, &customLog)
+
 				break
 			}
 		}
@@ -721,8 +722,10 @@ logFound:
 						break tiledLogFound
 					}
 				}
+
 				// This works, since allLogs.Operators is a slice of pointers.
 				operator.TiledLogs = append(operator.TiledLogs, &customLog)
+
 				break
 			}
 		}

@@ -63,10 +63,12 @@ func EncodeTilePath(index uint64) string {
 func FetchCheckpoint(ctx context.Context, client *http.Client, baseURL string) (*TiledCheckpoint, error) {
 	baseURL = strings.TrimRight(baseURL, "/")
 	url := fmt.Sprintf("%s/checkpoint", baseURL)
+
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("creating request: %w", err)
 	}
+
 	req.Header.Set("User-Agent", userAgent)
 
 	resp, err := client.Do(req)
@@ -195,6 +197,7 @@ func ParseTileData(data []byte) ([]TileLeaf, error) {
 
 		leaves = append(leaves, leaf)
 	}
+
 	return leaves, nil
 }
 
