@@ -36,7 +36,12 @@ func NewCertstreamServer(config config.Config) (*Certstream, error) {
 	cs.config = config
 
 	// Initialize the webserver used for the websocket server
-	webserver := web.NewWebsocketServer(config.Webserver.ListenAddr, config.Webserver.ListenPort, config.Webserver.CertPath, config.Webserver.CertKeyPath)
+	webserver := web.NewWebsocketServer(
+		config.Webserver.ListenAddr,
+		config.Webserver.ListenPort,
+		config.Webserver.CertPath,
+		config.Webserver.CertKeyPath,
+	)
 	cs.webserver = webserver
 
 	// Setup metrics server
@@ -65,7 +70,12 @@ func (cs *Certstream) setupMetrics(webserver *web.Server) {
 			webserver.RegisterPrometheus(cs.config.Prometheus.MetricsURL, metrics.Prometheus.Write)
 		} else {
 			log.Println("Starting prometheus server on new interface")
-			cs.metricsServer = web.NewMetricsServer(cs.config.Prometheus.ListenAddr, cs.config.Prometheus.ListenPort, cs.config.Prometheus.CertPath, cs.config.Prometheus.CertKeyPath)
+			cs.metricsServer = web.NewMetricsServer(
+				cs.config.Prometheus.ListenAddr,
+				cs.config.Prometheus.ListenPort,
+				cs.config.Prometheus.CertPath,
+				cs.config.Prometheus.CertKeyPath,
+			)
 			cs.metricsServer.RegisterPrometheus(cs.config.Prometheus.MetricsURL, metrics.Prometheus.Write)
 		}
 	}
