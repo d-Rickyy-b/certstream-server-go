@@ -3,6 +3,7 @@ package certificatetransparency
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
