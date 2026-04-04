@@ -2,7 +2,6 @@ package metrics
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"maps"
 	"os"
@@ -249,7 +248,7 @@ func (m *LogMetrics) SaveCertIndexesAtInterval(interval time.Duration, ctIndexFi
 
 // SaveCertIndexes saves the index of CTLogs to a file.
 func (m *LogMetrics) SaveCertIndexes(ctIndexFilePath string) {
-	tempFilePath := fmt.Sprintf("%s.tmp", ctIndexFilePath)
+	tempFilePath := ctIndexFilePath + ".tmp"
 
 	// Get the index data
 	ctIndex := m.GetAllCTIndexes()

@@ -62,7 +62,7 @@ func EncodeTilePath(index uint64) string {
 // FetchCheckpoint fetches the checkpoint from a tiled CT log using the provided client.
 func FetchCheckpoint(ctx context.Context, client *http.Client, baseURL string) (*TiledCheckpoint, error) {
 	baseURL = strings.TrimRight(baseURL, "/")
-	url := fmt.Sprintf("%s/checkpoint", baseURL)
+	url := baseURL + "/checkpoint"
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
@@ -150,7 +150,7 @@ func ParseTileData(data []byte) ([]TileLeaf, error) {
 		var leaf TileLeaf
 
 		if !s.ReadUint64(&leaf.Timestamp) || !s.ReadUint16(&leaf.EntryType) {
-			return nil, fmt.Errorf("invalid data tile header")
+			return nil, errors.New("invalid data tile header")
 		}
 
 		switch leaf.EntryType {
@@ -160,13 +160,13 @@ func ParseTileData(data []byte) ([]TileLeaf, error) {
 			if !s.ReadUint24LengthPrefixed(&cert) ||
 				!s.ReadUint16LengthPrefixed(&extensions) ||
 				!s.ReadUint16LengthPrefixed(&fingerprints) {
-				return nil, fmt.Errorf("invalid data tile x509_entry")
+				return nil, errors.New("invalid data tile x509_entry")
 			}
 			leaf.X509Entry = append([]byte(nil), cert...)
 			for !fingerprints.Empty() {
 				var fp [32]byte
 				if !fingerprints.CopyBytes(fp[:]) {
-					return nil, fmt.Errorf("invalid fingerprints: truncated")
+					return nil, errors.New("invalid fingerprints: truncated")
 				}
 				leaf.Chain = append(leaf.Chain, fp[:])
 			}
@@ -179,14 +179,14 @@ func ParseTileData(data []byte) ([]TileLeaf, error) {
 				!s.ReadUint16LengthPrefixed(&extensions) ||
 				!s.ReadUint24LengthPrefixed(&entry) ||
 				!s.ReadUint16LengthPrefixed(&fingerprints) {
-				return nil, fmt.Errorf("invalid data tile precert_entry")
+				return nil, errors.New("invalid data tile precert_entry")
 			}
 			leaf.PrecertEntry = append([]byte(nil), defangedCrt...)
 			leaf.IssuerKeyHash = issuerKeyHash
 			for !fingerprints.Empty() {
 				var fp [32]byte
 				if !fingerprints.CopyBytes(fp[:]) {
-					return nil, fmt.Errorf("invalid fingerprints: truncated")
+					return nil, errors.New("invalid fingerprints: truncated")
 				}
 				leaf.Chain = append(leaf.Chain, fp[:])
 			}

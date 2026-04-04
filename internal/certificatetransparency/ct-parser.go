@@ -196,13 +196,16 @@ func leafCertFromX509cert(cert x509.Certificate) models.LeafCert {
 		case extension.Id.Equal(x509.OIDExtensionCTPoison):
 			leafCert.Extensions.CTLPoisonByte = true
 		case extension.Id.Equal(x509.OIDExtensionCertificatePolicies):
-			var result string
+			var builder strings.Builder
 			for _, policy := range cert.PolicyIdentifiers {
 				// The current way of joining the string leaves us with a trailing newline,
 				// but that's how the original certstream server does it too.
-				result += fmt.Sprintf("Policy: %s\n", policy)
+				builder.WriteString("Policy: ")
+				builder.WriteString(policy.String())
+				builder.WriteString("\n")
 			}
-			leafCert.Extensions.CertificatePolicies = &result
+			policyString := builder.String()
+			leafCert.Extensions.CertificatePolicies = &policyString
 		}
 	}
 
@@ -223,27 +226,27 @@ func buildSubject(certSubject pkix.Name) models.Subject {
 	var aggregated string
 
 	if subject.C != nil {
-		aggregated += fmt.Sprintf("/C=%s", *subject.C)
+		aggregated += "/C=" + *subject.C
 	}
 
 	if subject.CN != nil {
-		aggregated += fmt.Sprintf("/CN=%s", *subject.CN)
+		aggregated += "/CN=" + *subject.CN
 	}
 
 	if subject.L != nil {
-		aggregated += fmt.Sprintf("/L=%s", *subject.L)
+		aggregated += "/L=" + *subject.L
 	}
 
 	if subject.O != nil {
-		aggregated += fmt.Sprintf("/O=%s", *subject.O)
+		aggregated += "/O=" + *subject.O
 	}
 
 	if subject.OU != nil {
-		aggregated += fmt.Sprintf("/OU=%s", *subject.OU)
+		aggregated += "/OU=" + *subject.OU
 	}
 
 	if subject.ST != nil {
-		aggregated += fmt.Sprintf("/ST=%s", *subject.ST)
+		aggregated += "/ST=" + *subject.ST
 	}
 
 	subject.Aggregated = &aggregated
@@ -261,7 +264,7 @@ func formatKeyID(keyID []byte) *string {
 	}
 
 	digest = strings.TrimLeft(digest, ":")
-	digest = fmt.Sprintf("keyid:%s", digest)
+	digest = "keyid:" + digest
 
 	return &digest
 }
