@@ -695,12 +695,8 @@ func getAllLogs(logListFetcher LogListFetcher) (loglist3.LogList, error) {
 		}
 	}
 
-	// Add manually added logs from config to the allLogs list
-	// if config.AppConfig.General.AdditionalLogs == nil {
-	// 	return allLogs, nil
-	// }
-
 logFound:
+	//
 	for _, additionalLog := range config.AppConfig.General.AdditionalLogs {
 		customLog := loglist3.Log{
 			URL:         additionalLog.URL,
@@ -708,21 +704,27 @@ logFound:
 		}
 
 		operatorFound := false
+
 		for _, operator := range allLogs.Operators {
-			if operator.Name == additionalLog.Operator {
-				operatorFound = true
-
-				for _, ctlog := range operator.Logs {
-					if ctlog.URL == additionalLog.URL {
-						// Log already exists, skip it.
-						break logFound
-					}
-				}
-				// This works, since allLogs.Operators is a slice of pointers.
-				operator.Logs = append(operator.Logs, &customLog)
-
-				break
+			// Only compare logs with the same operator
+			if operator.Name != additionalLog.Operator {
+				continue
 			}
+
+			operatorFound = true
+
+			// Check if user provided log is already in our loglist
+			for _, ctlog := range operator.Logs {
+				if ctlog.URL == additionalLog.URL {
+					// Log already exists, skip it.
+					break logFound
+				}
+			}
+
+			// This works, since allLogs.Operators is a slice of pointers.
+			operator.Logs = append(operator.Logs, &customLog)
+
+			break
 		}
 
 		if !operatorFound {
