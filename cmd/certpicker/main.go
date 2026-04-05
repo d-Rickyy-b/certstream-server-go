@@ -39,8 +39,20 @@ func main() {
 		ctLog = "https://" + ctLog
 	}
 
-	// Initialize the http client and json client provided by the ct library
-	httpClient := http.Client{Timeout: 30 * time.Second}
+	// Initialize the httpClient and jsonClient provided by the ct library
+	httpClient := http.Client{
+		Timeout: 30 * time.Second,
+		Transport: &http.Transport{
+			TLSHandshakeTimeout:   30 * time.Second,
+			ResponseHeaderTimeout: 30 * time.Second,
+			MaxIdleConnsPerHost:   10,
+			DisableKeepAlives:     false,
+			MaxIdleConns:          100,
+			IdleConnTimeout:       90 * time.Second,
+			ExpectContinueTimeout: 1 * time.Second,
+		},
+	}
+
 	jsonClient, e := client.New(ctLog, &httpClient, jsonclient.Options{UserAgent: userAgent})
 	if e != nil {
 		log.Fatalln("Error creating JSON client:", e)

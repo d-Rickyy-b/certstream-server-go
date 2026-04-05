@@ -248,6 +248,9 @@ func (w *Watcher) CreateIndexFile(filePath string) error {
 
 	w.context, w.cancelFunc = context.WithCancel(context.Background())
 	log.Println("Fetching current STH for all logs...")
+
+	httpClient := newHTTPClient()
+
 	for _, operator := range logs.Operators {
 		// Iterate over each log of the operator
 		for _, transparencyLog := range operator.Logs {
@@ -261,8 +264,7 @@ func (w *Watcher) CreateIndexFile(filePath string) error {
 			metrics.Metrics.Init(operator.Name, normalizedURL)
 			log.Println("Fetching STH for", normalizedURL)
 
-			hc := http.Client{Timeout: 5 * time.Second}
-			jsonClient, e := client.New(transparencyLog.URL, &hc, jsonclient.Options{UserAgent: userAgent})
+			jsonClient, e := client.New(transparencyLog.URL, httpClient, jsonclient.Options{UserAgent: userAgent})
 			if e != nil {
 				log.Printf("Error creating JSON client: %s\n", e)
 				continue
@@ -287,8 +289,7 @@ func (w *Watcher) CreateIndexFile(filePath string) error {
 			metrics.Metrics.Init(operator.Name, normalizedURL)
 			log.Println("Fetching checkpoint for", normalizedURL)
 
-			hc := &http.Client{Timeout: 10 * time.Second}
-			checkpoint, fetchErr := FetchCheckpoint(w.context, hc, transparencyLog.MonitoringURL)
+			checkpoint, fetchErr := FetchCheckpoint(w.context, httpClient, transparencyLog.MonitoringURL)
 			if fetchErr != nil {
 				log.Printf("Could not get checkpoint for '%s': %s\n", transparencyLog.MonitoringURL, fetchErr)
 				return errFetchingSTHFailed
@@ -394,8 +395,7 @@ func (w *worker) stop() {
 
 // runStandardWorker runs the worker for a single standard CT log. This method is blocking.
 func (w *worker) runStandardWorker(ctx context.Context) error {
-	hc := http.Client{Timeout: 30 * time.Second}
-	jsonClient, e := client.New(w.ctURL, &hc, jsonclient.Options{UserAgent: userAgent})
+	jsonClient, e := client.New(w.ctURL, newHTTPClient(), jsonclient.Options{UserAgent: userAgent})
 	if e != nil {
 		log.Printf("Error creating JSON client: %s\n", e)
 		return errCreatingClient
@@ -440,7 +440,7 @@ func (w *worker) runStandardWorker(ctx context.Context) error {
 
 // runTiledWorker runs the worker for a single tiled CT log. This method is blocking.
 func (w *worker) runTiledWorker(ctx context.Context) error {
-	httpClient := &http.Client{Timeout: 30 * time.Second}
+	httpClient := newHTTPClient()
 
 	// If recovery is enabled and the CT index is set, we start at the saved index. Otherwise, we start at the latest checkpoint.
 	validSavedCTIndexExists := config.AppConfig.General.Recovery.Enabled
@@ -748,4 +748,22 @@ func normalizeCtlogURL(input string) string {
 	input = strings.TrimSuffix(input, "/")
 
 	return input
+}
+
+// newHTTPClient creates a new http.Client with reasonable timeouts and connection settings for interacting with CT logs.
+func newHTTPClient() *http.Client {
+	httpClient := http.Client{
+		Timeout: 30 * time.Second,
+		Transport: &http.Transport{
+			TLSHandshakeTimeout:   30 * time.Second,
+			ResponseHeaderTimeout: 30 * time.Second,
+			MaxIdleConnsPerHost:   10,
+			DisableKeepAlives:     false,
+			MaxIdleConns:          100,
+			IdleConnTimeout:       90 * time.Second,
+			ExpectContinueTimeout: 1 * time.Second,
+		},
+	}
+
+	return &httpClient
 }
