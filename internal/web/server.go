@@ -224,7 +224,7 @@ func (ws *Server) initServer() {
 		TLSConfig:         tlsConfig,
 		IdleTimeout:       time.Minute,
 		ReadTimeout:       10 * time.Second,
-		ReadHeaderTimeout: 2 * time.Second,
+		ReadHeaderTimeout: 10 * time.Second,
 		WriteTimeout:      10 * time.Second,
 	}
 }
