@@ -25,4 +25,4 @@ USER certstreamserver:certstreamserver
 
 EXPOSE 8080
 
-ENTRYPOINT ["/app/certstream-server-go", "-config", "/app/config/config.yaml"]
+ENTRYPOINT ["/app/certstream-server-go", "--config", "/app/config/config.yaml"]
