@@ -43,6 +43,9 @@ dockers_v2:
     tags:
         - "{{.Tag}}"
         - "{{ if not .Prerelease }}latest{{ end }}"
+    platforms:
+      - linux/amd64
+      - linux/arm64
     extra_files:
       - config.docker.yaml
     labels:
