@@ -33,7 +33,8 @@ var (
 	userAgent            = fmt.Sprintf("Certstream Server v%s (github.com/d-Rickyy-b/certstream-server-go)", config.Version)
 )
 
-// Watcher describes a component that watches for new certificates in a CT log.
+// Watcher is a central component within certstream-server-go. It manages the workers for all the monitored ct logs.
+// It keeps track of all the monitored logs and periodically checks for new logs that aren't monitored yet.
 type Watcher struct {
 	workers    []*worker
 	workersMu  sync.RWMutex
@@ -74,10 +75,11 @@ func (w *Watcher) Start() {
 			log.Printf("Error getting absolute path for CT index file: '%s', %s\n", config.AppConfig.General.Recovery.CTIndexFile, err)
 			return
 		}
-		// Load Saved CT Indexes
+
+		// Load saved CT indexes from provided index file
 		metrics.Metrics.LoadCTIndex(ctIndexFilePath)
-		// Save CTIndexes at regular intervals
 		go metrics.Metrics.SaveCertIndexesAtInterval(time.Second*30, ctIndexFilePath) // save indexes every X seconds
+		// Start background job to save CTIndexes at regular intervals
 	}
 
 	// initialize the watcher with currently available logs
@@ -92,8 +94,8 @@ func (w *Watcher) Start() {
 	close(w.certChan)
 }
 
-// watchNewLogs monitors the ct log list for new logs and starts a worker for each new log found.
-// This method is blocking. It can be stopped by cancelling the context.
+// watchNewLogs is a blocking method that continuously monitors the Google log list for new logs and starts
+// a worker for each new log found. It can be stopped by cancelling the watcher's context (e.g. via Stop()).
 func (w *Watcher) watchNewLogs() {
 	// Check for new logs once every hour
 	ticker := time.NewTicker(1 * time.Hour)
@@ -108,7 +110,7 @@ func (w *Watcher) watchNewLogs() {
 	}
 }
 
-// updateLogs checks the transparency log list for new logs and adds new workers for those to the watcher.
+// updateLogs checks the Google log list for new logs once and adds new workers for those to the watcher.
 func (w *Watcher) updateLogs() {
 	// Get a list of urls of all CT logs
 	logList, err := getAllLogs()
@@ -194,7 +196,7 @@ func (w *Watcher) addLogIfNew(operatorName, description, url string, isTiled boo
 		}
 	}
 
-	// Log is not being watched, so add it
+	// Log is not being watched yet, so add it
 	w.wg.Add(1)
 
 	lastCTIndex := metrics.Metrics.GetCTIndex(normURL)
