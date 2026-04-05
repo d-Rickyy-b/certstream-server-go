@@ -24,6 +24,7 @@ certificate transparency logs via websocket connections to connected clients.`,
 		if err != nil {
 			return err
 		}
+
 		if versionBool {
 			fmt.Printf("certstream-server-go v%s\n", config.Version)
 			return nil
@@ -34,6 +35,7 @@ certificate transparency logs via websocket connections to connected clients.`,
 		if err != nil {
 			return err
 		}
+
 		// Check if path exists and is a file
 		_, statErr := os.Stat(configPath)
 		if os.IsNotExist(statErr) {

@@ -23,6 +23,7 @@ This command deserializes the config and checks for errors.`,
 		if err != nil {
 			return err
 		}
+
 		// Check if path exists and is a file
 		_, statErr := os.Stat(configPath)
 		if os.IsNotExist(statErr) {
@@ -41,6 +42,7 @@ This command deserializes the config and checks for errors.`,
 		if readConfErr != nil {
 			log.Fatalln(readConfErr)
 		}
+
 		log.Println("Config file is valid!")
 
 		return nil

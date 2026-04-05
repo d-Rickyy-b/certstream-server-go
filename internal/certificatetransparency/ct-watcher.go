@@ -268,10 +268,10 @@ func (w *Watcher) CreateIndexFile(filePath string) error {
 		return err
 	}
 
-	w.context, w.cancelFunc = context.WithCancel(context.Background())
-	log.Println("Fetching current STH for all logs...")
-
 	httpClient := newHTTPClient()
+	w.context, w.cancelFunc = context.WithCancel(context.Background())
+
+	log.Println("Fetching current STH for all logs...")
 
 	for _, operator := range logs.Operators {
 		// Iterate over each log of the operator

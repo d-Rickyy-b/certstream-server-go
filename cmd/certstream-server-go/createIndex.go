@@ -29,6 +29,7 @@ create-index will create and pre fill the ct-index.json file with the current va
 		if readConfErr != nil {
 			return readConfErr
 		}
+
 		certstreamServer := certstream.NewRawCertstream(conf)
 
 		force, err := cmd.Flags().GetBool("force")
@@ -46,6 +47,7 @@ create-index will create and pre fill the ct-index.json file with the current va
 		if err != nil {
 			return err
 		}
+
 		if _, statErr := os.Stat(outFileAbsPath); statErr == nil {
 			if !force {
 				fmt.Printf("Output file '%s' already exists. Use --force to override it.\n", outFileAbsPath)

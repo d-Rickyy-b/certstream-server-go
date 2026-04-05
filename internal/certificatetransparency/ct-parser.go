@@ -91,12 +91,13 @@ func parseData(entry *ct.RawLogEntry, operatorName, logName, ctURL, logType stri
 	certAsDER := base64.StdEncoding.EncodeToString(entry.Cert.Data)
 	data.LeafCert.AsDER = certAsDER
 
-	var parseErr error
-	data.Chain, parseErr = parseCertificateChain(logEntry)
+	chain, parseErr := parseCertificateChain(logEntry)
 	if parseErr != nil {
 		log.Println("Could not parse certificate chain: ", parseErr)
 		return models.Data{}, parseErr
 	}
+
+	data.Chain = chain
 
 	return data, nil
 }
@@ -204,6 +205,7 @@ func leafCertFromX509cert(cert x509.Certificate) models.LeafCert {
 				builder.WriteString(policy.String())
 				builder.WriteString("\n")
 			}
+
 			policyString := builder.String()
 			leafCert.Extensions.CertificatePolicies = &policyString
 		}
@@ -312,6 +314,7 @@ func calculateHash(data []byte, certHasher hash.Hash) string {
 		if i%2 == 0 && i > 0 {
 			result.WriteByte(':')
 		}
+
 		c := certHash[i]
 		result.WriteByte(c)
 	}

@@ -68,6 +68,7 @@ func (m *LogMetrics) OperatorLogMapping() OperatorLogs {
 			urlList[counter] = url
 			counter++
 		}
+
 		logOperators[operator] = urlList
 	}
 
@@ -218,10 +219,12 @@ func (m *LogMetrics) createCTIndexFile(ctIndexFilePath string) error {
 	if m.index == nil {
 		m.index = make(CTCertIndex)
 	}
+
 	bytes, marshalErr := json.Marshal(m.index)
 	if marshalErr != nil {
 		return marshalErr
 	}
+
 	_, writeErr := file.Write(bytes)
 	if writeErr != nil {
 		log.Printf("Error writing to CT index file: '%s'\n", ctIndexFilePath)

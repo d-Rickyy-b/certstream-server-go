@@ -51,9 +51,11 @@ func EncodeTilePath(index uint64) string {
 		if i < len(groups)-1 {
 			builder.WriteByte('/')
 		}
+
 		if i > 0 {
 			builder.WriteByte('x')
 		}
+
 		fmt.Fprintf(&builder, "%03d", groups[i])
 	}
 
@@ -65,16 +67,16 @@ func FetchCheckpoint(ctx context.Context, client *http.Client, baseURL string) (
 	baseURL = strings.TrimRight(baseURL, "/")
 	url := baseURL + "/checkpoint"
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-	if err != nil {
-		return nil, fmt.Errorf("creating request: %w", err)
+	req, parseErr := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if parseErr != nil {
+		return nil, fmt.Errorf("creating request: %w", parseErr)
 	}
 
 	req.Header.Set("User-Agent", userAgent)
 
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("fetching checkpoint: %w", err)
+	resp, parseErr := client.Do(req)
+	if parseErr != nil {
+		return nil, fmt.Errorf("fetching checkpoint: %w", parseErr)
 	}
 	defer resp.Body.Close()
 
@@ -82,23 +84,24 @@ func FetchCheckpoint(ctx context.Context, client *http.Client, baseURL string) (
 		return nil, fmt.Errorf("checkpoint request failed with status: %d", resp.StatusCode)
 	}
 
-	scanner := bufio.NewScanner(resp.Body)
 	lines := make([]string, 0, 3)
+
+	scanner := bufio.NewScanner(resp.Body)
 	for scanner.Scan() {
 		lines = append(lines, scanner.Text())
 	}
 
-	if err := scanner.Err(); err != nil {
-		return nil, fmt.Errorf("reading checkpoint response: %w", err)
+	if scanErr := scanner.Err(); scanErr != nil {
+		return nil, fmt.Errorf("reading checkpoint response: %w", scanErr)
 	}
 
 	if len(lines) < 3 {
 		return nil, fmt.Errorf("invalid checkpoint format: expected at least 3 lines, got %d", len(lines))
 	}
 
-	size, err := strconv.ParseUint(lines[1], 10, 64)
-	if err != nil {
-		return nil, fmt.Errorf("parsing tree size: %w", err)
+	size, parseErr := strconv.ParseUint(lines[1], 10, 64)
+	if parseErr != nil {
+		return nil, fmt.Errorf("parsing tree size: %w", parseErr)
 	}
 
 	return &TiledCheckpoint{
@@ -113,6 +116,7 @@ func FetchCheckpoint(ctx context.Context, client *http.Client, baseURL string) (
 func FetchTile(ctx context.Context, client *http.Client, baseURL string, tileIndex uint64, partialWidth uint64) ([]TileLeaf, error) {
 	baseURL = strings.TrimRight(baseURL, "/")
 	tilePath := EncodeTilePath(tileIndex)
+
 	if partialWidth > 0 {
 		tilePath = fmt.Sprintf("%s.p/%d", tilePath, partialWidth)
 	}
@@ -160,17 +164,21 @@ func ParseTileData(data []byte) ([]TileLeaf, error) {
 		case 0: // x509_entry
 			var cert cryptobyte.String
 			var extensions, fingerprints cryptobyte.String
+
 			if !parser.ReadUint24LengthPrefixed(&cert) ||
 				!parser.ReadUint16LengthPrefixed(&extensions) ||
 				!parser.ReadUint16LengthPrefixed(&fingerprints) {
 				return nil, errors.New("invalid data tile x509_entry")
 			}
+
 			leaf.X509Entry = append([]byte(nil), cert...)
+
 			for !fingerprints.Empty() {
 				var fp [32]byte
 				if !fingerprints.CopyBytes(fp[:]) {
 					return nil, errors.New("invalid fingerprints: truncated")
 				}
+
 				leaf.Chain = append(leaf.Chain, fp[:])
 			}
 
@@ -194,6 +202,7 @@ func ParseTileData(data []byte) ([]TileLeaf, error) {
 				if !fingerprints.CopyBytes(fp[:]) {
 					return nil, errors.New("invalid fingerprints: truncated")
 				}
+
 				leaf.Chain = append(leaf.Chain, fp[:])
 			}
 

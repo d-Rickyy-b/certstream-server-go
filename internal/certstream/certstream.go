@@ -70,6 +70,7 @@ func (cs *Certstream) setupMetrics(webserver *web.Server) {
 			webserver.RegisterPrometheus(cs.config.Prometheus.MetricsURL, metrics.Prometheus.Write)
 		} else {
 			log.Println("Starting prometheus server on new interface")
+
 			cs.metricsServer = web.NewMetricsServer(
 				cs.config.Prometheus.ListenAddr,
 				cs.config.Prometheus.ListenPort,
@@ -89,6 +90,7 @@ func (cs *Certstream) Start() {
 	// handle signals in a separate goroutine
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)
+
 	go signalHandler(signals, cs.Stop)
 
 	// If there is no watcher initialized, create a new one
@@ -141,6 +143,7 @@ func (cs *Certstream) CreateIndexFile(outFile string) error {
 // Executes the callback function when a signal is received.
 func signalHandler(signals chan os.Signal, callback func()) {
 	log.Println("Listening for signals...")
+
 	sig := <-signals
 	log.Printf("Received signal %v. Shutting down...\n", sig)
 	callback()
