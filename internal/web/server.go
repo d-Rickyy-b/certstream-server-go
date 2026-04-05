@@ -231,34 +231,34 @@ func (ws *Server) initServer() {
 
 // NewMetricsServer creates a new webserver that listens on the given port and provides metrics for a metrics server.
 func NewMetricsServer(networkIf string, port int, certPath, keyPath string) *Server {
-	server := &Server{
+	metricsServer := &Server{
 		networkIf: networkIf,
 		port:      port,
 		routes:    chi.NewRouter(),
 		certPath:  certPath,
 		keyPath:   keyPath,
 	}
-	server.routes.Use(middleware.Recoverer)
+	metricsServer.routes.Use(middleware.Recoverer)
 
 	if config.AppConfig.Prometheus.RealIP {
-		server.routes.Use(middleware.RealIP)
+		metricsServer.routes.Use(middleware.RealIP)
 	}
 
 	// Enable IP whitelist if configured
 	if len(config.AppConfig.Prometheus.Whitelist) > 0 {
-		server.routes.Use(IPWhitelist(config.AppConfig.Prometheus.Whitelist))
+		metricsServer.routes.Use(IPWhitelist(config.AppConfig.Prometheus.Whitelist))
 	}
 
-	server.initServer()
+	metricsServer.initServer()
 
-	return server
+	return metricsServer
 }
 
 // NewWebsocketServer starts a new webserver and initialized it with the necessary routes.
 // It also starts the broadcaster in ClientHandler as a background job and takes care of
 // setting up websocket.Upgrader.
 func NewWebsocketServer(networkIf string, port int, certPath, keyPath string) *Server {
-	server := &Server{
+	websocketServer := &Server{
 		networkIf: networkIf,
 		port:      port,
 		routes:    chi.NewRouter(),
@@ -275,21 +275,21 @@ func NewWebsocketServer(networkIf string, port int, certPath, keyPath string) *S
 	}
 
 	if config.AppConfig.Webserver.RealIP {
-		server.routes.Use(middleware.RealIP)
+		websocketServer.routes.Use(middleware.RealIP)
 	}
 
 	// Enable IP whitelist if configured
 	if len(config.AppConfig.Webserver.Whitelist) > 0 {
-		server.routes.Use(IPWhitelist(config.AppConfig.Webserver.Whitelist))
+		websocketServer.routes.Use(IPWhitelist(config.AppConfig.Webserver.Whitelist))
 	}
 
-	setupWebsocketRoutes(server.routes)
-	server.initServer()
+	setupWebsocketRoutes(websocketServer.routes)
+	websocketServer.initServer()
 
 	ClientHandler.Broadcast = make(chan models.Entry, config.AppConfig.General.BufferSizes.BroadcastManager)
 	go ClientHandler.broadcaster()
 
-	return server
+	return websocketServer
 }
 
 // Start initializes the webserver and starts listening for connections.
