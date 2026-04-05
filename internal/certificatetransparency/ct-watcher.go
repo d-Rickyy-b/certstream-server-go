@@ -547,7 +547,7 @@ func (w *worker) processTiledLogUpdates(ctx context.Context, httpClient *http.Cl
 
 // processTile processes a single tile from the tiled log.
 // partialWidth of 0 means full tile, otherwise fetch partial tile with that width.
-func (w *worker) processTile(ctx context.Context, hc *http.Client, tileIndex uint64, partialWidth uint64) error {
+func (w *worker) processTile(ctx context.Context, hc *http.Client, tileIndex, partialWidth uint64) error {
 	leaves, err := FetchTile(ctx, hc, w.ctURL, tileIndex, partialWidth)
 	if err != nil {
 		return fmt.Errorf("fetching tile: %w", err)

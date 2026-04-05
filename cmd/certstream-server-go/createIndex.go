@@ -64,7 +64,6 @@ create-index will create and pre fill the ct-index.json file with the current va
 	},
 }
 
-//nolint:gochecknoinits
 func init() {
 	rootCmd.AddCommand(createIndexCmd)
 

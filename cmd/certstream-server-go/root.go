@@ -62,7 +62,6 @@ func Execute() {
 	}
 }
 
-//nolint:gochecknoinits
 func init() {
 	rootCmd.PersistentFlags().StringP("config", "c", "config.yml", "Path to the config file")
 	rootCmd.Flags().BoolP("version", "v", false, "Print the version and exit")

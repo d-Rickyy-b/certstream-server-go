@@ -11,7 +11,8 @@ import (
 // minimalValidYAML is the smallest config that passes validateConfig.
 // It only sets the fields that validateConfig strictly requires, leaving
 // everything else at its viper default so we can assert default values.
-const minimalValidYAML = `
+const (
+	minimalValidYAML = `
 webserver:
   listen_addr: "0.0.0.0"
   listen_port: 8080
@@ -19,12 +20,15 @@ webserver:
   lite_url: "/"
   domains_only_url: "/domains-only"
 `
+	domainsOnlyURL = "/domains-only"
+	fullStreamURL  = "/full-stream"
+)
 
 // writeConfigFile writes content to a temporary YAML file and returns its path.
 func writeConfigFile(t *testing.T, content string) string {
 	t.Helper()
 	path := filepath.Join(t.TempDir(), "config.yaml")
-	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
 		t.Fatalf("failed to write temp config file: %v", err)
 	}
 	return path
@@ -44,11 +48,11 @@ webserver:
 
 	cases := []struct {
 		key  string
-		want interface{}
+		want any
 	}{
-		{"webserver.full_url", "/full-stream"},
+		{"webserver.full_url", fullStreamURL},
 		{"webserver.lite_url", "/"},
-		{"webserver.domains_only_url", "/domains-only"},
+		{"webserver.domains_only_url", domainsOnlyURL},
 		{"webserver.real_ip", false},
 		{"webserver.compression_enabled", false},
 	}
@@ -143,8 +147,8 @@ webserver:
 	}
 
 	// Keys absent from the file must still return the registered defaults.
-	if got := v.GetString("webserver.full_url"); got != "/full-stream" {
-		t.Errorf("full_url (default): want '/full-stream', got %q", got)
+	if got := v.GetString("webserver.full_url"); got != fullStreamURL {
+		t.Errorf("full_url (default): want '%q', got %q", fullStreamURL, got)
 	}
 }
 
@@ -217,14 +221,15 @@ func TestLoadConfigFromViper_UnmarshalsWebserver(t *testing.T) {
 	if cfg.Webserver.ListenPort != 8080 {
 		t.Errorf("ListenPort: want 8080, got %d", cfg.Webserver.ListenPort)
 	}
-	if cfg.Webserver.FullURL != "/full-stream" {
-		t.Errorf("FullURL: want '/full-stream', got %q", cfg.Webserver.FullURL)
+	if cfg.Webserver.FullURL != fullStreamURL {
+		t.Errorf("FullURL: want '%q', got %q", fullStreamURL, cfg.Webserver.FullURL)
 	}
 	if cfg.Webserver.LiteURL != "/" {
 		t.Errorf("LiteURL: want '/', got %q", cfg.Webserver.LiteURL)
 	}
-	if cfg.Webserver.DomainsOnlyURL != "/domains-only" {
-		t.Errorf("DomainsOnlyURL: want '/domains-only', got %q", cfg.Webserver.DomainsOnlyURL)
+
+	if cfg.Webserver.DomainsOnlyURL != domainsOnlyURL {
+		t.Errorf("DomainsOnlyURL: want '%q', got %q", domainsOnlyURL, cfg.Webserver.DomainsOnlyURL)
 	}
 }
 

@@ -24,12 +24,10 @@ func buildLogList(operators []struct {
 		operator := &loglist3.Operator{Name: op.name}
 
 		for _, u := range op.logs {
-			u := u
 			operator.Logs = append(operator.Logs, &loglist3.Log{URL: u})
 		}
 
 		for _, u := range op.tiledLogs {
-			u := u
 			operator.TiledLogs = append(operator.TiledLogs, &loglist3.TiledLog{MonitoringURL: u})
 		}
 
@@ -39,7 +37,7 @@ func buildLogList(operators []struct {
 	return ll
 }
 
-// newMockListFetcher returns a function that returns the passed loglist
+// newMockListFetcher returns a function that returns the passed loglist.
 func newMockListFetcher(t *testing.T, loglist loglist3.LogList, err error) LogListFetcher {
 	t.Helper()
 

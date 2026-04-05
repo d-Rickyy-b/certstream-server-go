@@ -113,7 +113,7 @@ func FetchCheckpoint(ctx context.Context, client *http.Client, baseURL string) (
 
 // FetchTile fetches a tile from the tiled CT log using the provided client.
 // If partialWidth > 0, fetches a partial tile with that width (1-255).
-func FetchTile(ctx context.Context, client *http.Client, baseURL string, tileIndex uint64, partialWidth uint64) ([]TileLeaf, error) {
+func FetchTile(ctx context.Context, client *http.Client, baseURL string, tileIndex, partialWidth uint64) ([]TileLeaf, error) {
 	baseURL = strings.TrimRight(baseURL, "/")
 	tilePath := EncodeTilePath(tileIndex)
 
