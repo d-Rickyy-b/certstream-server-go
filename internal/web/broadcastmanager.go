@@ -107,6 +107,7 @@ func (bm *BroadcastManager) broadcaster() {
 	for {
 		var data []byte
 
+		// Take entry out of broadcast channel and generate JSON representations for the entry.
 		entry := <-bm.Broadcast
 		dataLite := entry.JSONLite()
 		dataFull := entry.JSON()
