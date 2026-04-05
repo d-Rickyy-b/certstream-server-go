@@ -32,8 +32,7 @@ func NewRawCertstream(config config.Config) *Certstream {
 
 // NewCertstreamServer creates a new Certstream server from a config struct.
 func NewCertstreamServer(config config.Config) (*Certstream, error) {
-	cs := Certstream{}
-	cs.config = config
+	cs := NewRawCertstream(config)
 
 	// Initialize the webserver used for the websocket server
 	webserver := web.NewWebsocketServer(
@@ -43,11 +42,12 @@ func NewCertstreamServer(config config.Config) (*Certstream, error) {
 		config.Webserver.CertKeyPath,
 	)
 	cs.webserver = webserver
+	cs.watcher = certificatetransparency.NewWatcher()
 
 	// Setup metrics server
 	cs.setupMetrics(webserver)
 
-	return &cs, nil
+	return cs, nil
 }
 
 // NewCertstreamFromConfigFile creates a new Certstream server from a config file.
@@ -93,7 +93,7 @@ func (cs *Certstream) Start() {
 
 	// If there is no watcher initialized, create a new one
 	if cs.watcher == nil {
-		cs.watcher = &certificatetransparency.Watcher{}
+		cs.watcher = certificatetransparency.NewWatcher()
 	}
 
 	// Start webserver and metrics server
@@ -131,7 +131,7 @@ func (cs *Certstream) Stop() {
 func (cs *Certstream) CreateIndexFile(outFile string) error {
 	// If there is no watcher initialized, create a new one
 	if cs.watcher == nil {
-		cs.watcher = &certificatetransparency.Watcher{}
+		cs.watcher = certificatetransparency.NewWatcher()
 	}
 
 	return cs.watcher.CreateIndexFile(outFile)

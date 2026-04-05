@@ -44,7 +44,16 @@ type Watcher struct {
 }
 
 // NewWatcher creates a new Watcher.
-func NewWatcher(certChan chan models.Entry) *Watcher {
+func NewWatcher() *Watcher {
+	certChan := make(chan models.Entry, 5000)
+
+	return &Watcher{
+		certChan: certChan,
+	}
+}
+
+// NewWatcherWithChannel creates a new Watcher and initializes it with the provided cert channel.
+func NewWatcherWithChannel(certChan chan models.Entry) *Watcher {
 	return &Watcher{
 		certChan: certChan,
 	}
