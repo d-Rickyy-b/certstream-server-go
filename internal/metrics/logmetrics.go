@@ -187,6 +187,7 @@ func (m *LogMetrics) LoadCTIndex(ctIndexFilePath string) {
 				log.Printf("Error creating CT index file: '%s'\n", ctIndexFilePath)
 				log.Panicln(err)
 			}
+
 			bytes = []byte("{}")
 		} else {
 			// If the file exists, but we can't read it, log the error and panic

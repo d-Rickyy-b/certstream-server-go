@@ -116,12 +116,14 @@ func FetchTile(ctx context.Context, client *http.Client, baseURL string, tileInd
 	if partialWidth > 0 {
 		tilePath = fmt.Sprintf("%s.p/%d", tilePath, partialWidth)
 	}
+
 	url := fmt.Sprintf("%s/tile/data/%s", baseURL, tilePath)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("creating request: %w", err)
 	}
+
 	req.Header.Set("User-Agent", userAgent)
 
 	resp, err := client.Do(req)
@@ -175,6 +177,7 @@ func ParseTileData(data []byte) ([]TileLeaf, error) {
 		case 1: // precert_entry
 			var issuerKeyHash [32]byte
 			var defangedCrt, extensions, entry, fingerprints cryptobyte.String
+
 			if !parser.CopyBytes(issuerKeyHash[:]) ||
 				!parser.ReadUint24LengthPrefixed(&defangedCrt) ||
 				!parser.ReadUint16LengthPrefixed(&extensions) ||
@@ -182,8 +185,10 @@ func ParseTileData(data []byte) ([]TileLeaf, error) {
 				!parser.ReadUint16LengthPrefixed(&fingerprints) {
 				return nil, errors.New("invalid data tile precert_entry")
 			}
+
 			leaf.PrecertEntry = append([]byte(nil), defangedCrt...)
 			leaf.IssuerKeyHash = issuerKeyHash
+
 			for !fingerprints.Empty() {
 				var fp [32]byte
 				if !fingerprints.CopyBytes(fp[:]) {

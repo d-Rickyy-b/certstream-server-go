@@ -182,16 +182,19 @@ func validateConfig(config *Config) bool {
 
 	if config.Webserver.FullURL == "" || !URLPathRegex.MatchString(config.Webserver.FullURL) {
 		log.Println("Webhook full URL is not set or does not match pattern '/...'")
+
 		config.Webserver.FullURL = "/full-stream"
 	}
 
 	if config.Webserver.LiteURL == "" || !URLPathRegex.MatchString(config.Webserver.FullURL) {
 		log.Println("Webhook lite URL is not set or does not match pattern '/...'")
+
 		config.Webserver.LiteURL = "/"
 	}
 
 	if config.Webserver.DomainsOnlyURL == "" || !URLPathRegex.MatchString(config.Webserver.DomainsOnlyURL) {
 		log.Println("Webhook domains only URL is not set or does not match pattern '/...'")
+
 		config.Webserver.FullURL = "/domains-only"
 	}
 
@@ -232,6 +235,7 @@ func validateConfig(config *Config) bool {
 	}
 
 	var validLogs, validTiledLogs []LogConfig
+
 	if len(config.General.AdditionalLogs) > 0 {
 		for _, ctLog := range config.General.AdditionalLogs {
 			if !URLRegex.MatchString(ctLog.URL) {
@@ -276,12 +280,14 @@ func validateConfig(config *Config) bool {
 	// If the cleanup flag is not set, default to true
 	if config.General.DropOldLogs == nil {
 		log.Println("drop_old_logs is not set, defaulting to true")
+
 		defaultCleanup := true
 		config.General.DropOldLogs = &defaultCleanup
 	}
 
 	if config.General.Recovery.Enabled && config.General.Recovery.CTIndexFile == "" {
 		log.Println("Recovery enabled but no index file specified. Defaulting to ./ct_index.json")
+
 		config.General.Recovery.CTIndexFile = "./ct_index.json"
 	}
 

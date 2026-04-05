@@ -27,6 +27,7 @@ func main() {
 	certIDFlag := flag.Int64("cert", 0, "ID of the certificate to fetch from the CT log")
 	chainFlag := flag.Bool("chain", false, "Include full chain for the certificate")
 	asDERFlag := flag.Bool("asder", false, "Include DER encoding of the certificate")
+
 	flag.Parse()
 
 	ctLog := *ctLogFlag
@@ -35,6 +36,7 @@ func main() {
 	if ctLog == "" {
 		log.Fatalln("CT log URL is required")
 	}
+
 	if !strings.HasPrefix(ctLog, "https://") {
 		ctLog = "https://" + ctLog
 	}
@@ -83,6 +85,7 @@ func main() {
 			if logEntry.X509Cert != nil && matcher.CertificateMatches(logEntry.X509Cert) {
 				entry.Data.UpdateType = "X509LogEntry"
 			}
+
 			if logEntry.Precert != nil && matcher.PrecertificateMatches(logEntry.Precert) {
 				entry.Data.UpdateType = "PrecertLogEntry"
 			}

@@ -86,6 +86,7 @@ func (w *Watcher) Start() {
 	w.updateLogs()
 
 	log.Println("Started CT watcher")
+
 	go certHandler(w.certChan)
 	go w.watchNewLogs()
 
@@ -99,6 +100,7 @@ func (w *Watcher) Start() {
 func (w *Watcher) watchNewLogs() {
 	// Check for new logs once every hour
 	ticker := time.NewTicker(1 * time.Hour)
+
 	for {
 		select {
 		case <-ticker.C:
@@ -141,6 +143,7 @@ func (w *Watcher) updateLogs() {
 			}
 
 			monitoredURLs[normURL] = struct{}{}
+
 			if w.addLogIfNew(operator.Name, desc, url, false) {
 				newCTs++
 			}
@@ -158,6 +161,7 @@ func (w *Watcher) updateLogs() {
 			}
 
 			monitoredURLs[normURL] = struct{}{}
+
 			if w.addLogIfNew(operator.Name, desc, url, true) {
 				newCTs++
 			}
@@ -169,14 +173,17 @@ func (w *Watcher) updateLogs() {
 	// Optionally stop workers for logs not in the monitoredURLs set
 	if *config.AppConfig.General.DropOldLogs {
 		removed := 0
+
 		for _, ctWorker := range w.workers {
 			normURL := normalizeCtlogURL(ctWorker.ctURL)
 			if _, ok := monitoredURLs[normURL]; !ok {
 				log.Printf("Stopping worker. CT URL not found in LogList or retired: '%s'\n", ctWorker.ctURL)
 				ctWorker.stop()
+
 				removed++
 			}
 		}
+
 		log.Printf("Removed ct logs: %d\n", removed)
 	}
 
@@ -209,11 +216,13 @@ func (w *Watcher) addLogIfNew(operatorName, description, url string, isTiled boo
 		isTiled:      isTiled,
 	}
 	w.workers = append(w.workers, &ctWorker)
+
 	metrics.Metrics.Init(operatorName, normURL)
 
 	// Start a goroutine for each worker
 	go func() {
 		defer w.wg.Done()
+
 		ctWorker.startDownloadingCerts(w.context)
 		w.discardWorker(&ctWorker)
 	}()
@@ -290,6 +299,7 @@ func (w *Watcher) CreateIndexFile(filePath string) error {
 
 			metrics.Metrics.SetCTIndex(normalizedURL, sth.TreeSize)
 		}
+
 		for _, transparencyLog := range operator.TiledLogs {
 			if transparencyLog.State.LogStatus() == loglist3.RetiredLogStatus {
 				log.Printf("Skipping retired CT log: %s\n", transparencyLog.MonitoringURL)
@@ -309,6 +319,7 @@ func (w *Watcher) CreateIndexFile(filePath string) error {
 			metrics.Metrics.SetCTIndex(normalizedURL, checkpoint.Size)
 		}
 	}
+
 	w.cancelFunc()
 
 	metrics.Metrics.SaveCertIndexes(filePath)
@@ -727,6 +738,7 @@ logFound:
 		for _, operator := range allLogs.Operators {
 			if operator.Name == additionalLog.Operator {
 				operatorFound = true
+
 				for _, tl := range operator.TiledLogs {
 					if tl.MonitoringURL == additionalLog.URL {
 						// Log already exists, skip it.
