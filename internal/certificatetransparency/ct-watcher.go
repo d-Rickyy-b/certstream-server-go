@@ -78,8 +78,10 @@ func (w *Watcher) Start() {
 
 		// Load saved CT indexes from provided index file
 		metrics.Metrics.LoadCTIndex(ctIndexFilePath)
-		go metrics.Metrics.SaveCertIndexesAtInterval(time.Second*30, ctIndexFilePath) // save indexes every X seconds
+
 		// Start background job to save CTIndexes at regular intervals
+		storageInterval := time.Second * 30
+		go metrics.Metrics.SaveCertIndexesAtInterval(storageInterval, ctIndexFilePath)
 	}
 
 	// initialize the watcher with currently available logs
