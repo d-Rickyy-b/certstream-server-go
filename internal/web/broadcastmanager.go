@@ -35,24 +35,26 @@ func (bm *BroadcastManager) registerClient(c *client) {
 
 // unregisterClient removes a client from the list of clients of the BroadcastManager.
 // The client will no longer receive certificate broadcasts right after unregistering.
-func (bm *BroadcastManager) unregisterClient(c *client) {
+func (bm *BroadcastManager) unregisterClient(targetClient *client) {
 	bm.clientLock.Lock()
 
-	for i, client := range bm.clients {
-		if c == client {
-			// Copy the last element of the slice to the position of the removed element
-			// Then remove the last element by re-slicing
-			bm.clients[i] = bm.clients[len(bm.clients)-1]
-			bm.clients[len(bm.clients)-1] = nil
-			bm.clients = bm.clients[:len(bm.clients)-1]
+	// Close the broadcast channel of the client, otherwise this leads to a memory leak
+	close(targetClient.broadcastChan)
+	metrics.Prometheus.UnregisterClient(targetClient.name)
 
-			// Close the broadcast channel of the client, otherwise this leads to a memory leak
-			close(c.broadcastChan)
-
-			metrics.Prometheus.UnregisterClient(c.name)
-
-			break
+	// Remove client from internal client list
+	for i, c := range bm.clients {
+		if targetClient != c {
+			continue
 		}
+
+		// Copy the last element of the slice to the position of the removed element
+		// Then remove the last element by re-slicing
+		bm.clients[i] = bm.clients[len(bm.clients)-1]
+		bm.clients[len(bm.clients)-1] = nil
+		bm.clients = bm.clients[:len(bm.clients)-1]
+
+		break
 	}
 
 	bm.clientLock.Unlock()
