@@ -655,8 +655,19 @@ type LogListFetcher func() (loglist3.LogList, error)
 
 // googleLogListFetcher fetches the list of all CT logs from Google Chromes CT LogList.
 func googleLogListFetcher() (loglist3.LogList, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	httpClient := newHTTPClient()
+
+	req, reqErr := http.NewRequestWithContext(ctx, http.MethodGet, loglist3.LogListURL, nil)
+	if reqErr != nil {
+		log.Printf("Error creating loglist list request: %v", reqErr)
+		return loglist3.LogList{}, reqErr
+	}
+
 	// Download the list of all logs from ctLogInfo and decode JSON
-	resp, err := http.Get(loglist3.LogListURL)
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return loglist3.LogList{}, err
 	}
