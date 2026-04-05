@@ -116,8 +116,8 @@ func (w *Watcher) watchNewLogs() {
 
 // updateLogs checks the Google log list for new logs once and adds new workers for those to the watcher.
 func (w *Watcher) updateLogs() {
-	// Get a list of urls of all CT logs
-	logList, err := getAllLogs()
+	// Get a list of urls of all CT logs provided by Google
+	logList, err := getAllLogs(googleLogListFetcher)
 	if err != nil {
 		log.Println(err)
 		return
@@ -263,7 +263,7 @@ func (w *Watcher) Stop() {
 
 // CreateIndexFile creates a ct_index.json file based on the current STHs of all available logs.
 func (w *Watcher) CreateIndexFile(filePath string) error {
-	logs, err := getAllLogs()
+	logs, err := getAllLogs(googleLogListFetcher)
 	if err != nil {
 		return err
 	}
@@ -649,8 +649,12 @@ func certHandler(entryChan chan models.Entry) {
 	}
 }
 
-// getGoogleLogList fetches the list of all CT logs from Google Chromes CT LogList.
-func getGoogleLogList() (loglist3.LogList, error) {
+// LogListFetcher defines a function type for fetching a log list. This allows us to inject different
+// implementations (e.g. for testing).
+type LogListFetcher func() (loglist3.LogList, error)
+
+// googleLogListFetcher fetches the list of all CT logs from Google Chromes CT LogList.
+func googleLogListFetcher() (loglist3.LogList, error) {
 	// Download the list of all logs from ctLogInfo and decode JSON
 	resp, err := http.Get(loglist3.LogListURL)
 	if err != nil {
@@ -675,14 +679,16 @@ func getGoogleLogList() (loglist3.LogList, error) {
 	return *allLogs, nil
 }
 
-// getAllLogs returns a list of all CT logs.
-func getAllLogs() (loglist3.LogList, error) {
+// getAllLogs returns a list of all CT logs - those from the Google list, if not disabled -
+// and additional logs provided via the config.
+func getAllLogs(logListFetcher LogListFetcher) (loglist3.LogList, error) {
 	var allLogs loglist3.LogList
-	var err error
 
 	// Ability to disable default logs, if the user only wants to monitor custom logs.
 	if !config.AppConfig.General.DisableDefaultLogs {
-		allLogs, err = getGoogleLogList()
+		var err error
+
+		allLogs, err = logListFetcher()
 		if err != nil {
 			log.Printf("Error fetching log list from Google: %s\n", err)
 			return loglist3.LogList{}, fmt.Errorf("failed to fetch log list from Google: %w", err)
