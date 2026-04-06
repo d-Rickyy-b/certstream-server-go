@@ -94,6 +94,7 @@ func initViper(configPath string) *viper.Viper {
 	v.SetDefault("webserver.lite_url", "/")
 	v.SetDefault("webserver.domains_only_url", "/domains-only")
 	v.SetDefault("webserver.real_ip", false)
+	v.SetDefault("webserver.whitelist", []string{})
 	v.SetDefault("webserver.compression_enabled", false)
 
 	v.SetDefault("prometheus.enabled", false)
@@ -102,6 +103,7 @@ func initViper(configPath string) *viper.Viper {
 	v.SetDefault("prometheus.metrics_url", "/metrics")
 	v.SetDefault("prometheus.expose_system_metrics", false)
 	v.SetDefault("prometheus.real_ip", false)
+	v.SetDefault("prometheus.whitelist", []string{})
 
 	v.SetDefault("general.disable_default_logs", false)
 	v.SetDefault("general.buffer_sizes.websocket", 300)
