@@ -120,5 +120,10 @@ func getEntry(jsonClient *client.LogClient, certID int64) (*ct.GetEntriesRespons
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	return jsonClient.GetRawEntries(ctx, certID, certID)
+	entries, err := jsonClient.GetRawEntries(ctx, certID, certID)
+	if err != nil {
+		return nil, fmt.Errorf("error getting raw entries: %w", err)
+	}
+
+	return entries, nil
 }

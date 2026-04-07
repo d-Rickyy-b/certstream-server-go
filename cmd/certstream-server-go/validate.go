@@ -21,13 +21,13 @@ This command deserializes the config and checks for errors.`,
 		// Check if config file exists
 		configPath, err := cmd.Flags().GetString("config")
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to obtain 'config' flag: %w", err)
 		}
 
 		// Check if path exists and is a file
 		_, statErr := os.Stat(configPath)
 		if os.IsNotExist(statErr) {
-			return fmt.Errorf("config file '%s' does not exist", configPath)
+			return fmt.Errorf("config file '%s' does not exist: %w", configPath, statErr)
 		}
 
 		return nil
@@ -35,7 +35,7 @@ This command deserializes the config and checks for errors.`,
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		configPath, err := cmd.Flags().GetString("config")
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to obtain 'config' flag: %w", err)
 		}
 
 		readConfErr := config.ValidateConfig(configPath)

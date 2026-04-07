@@ -1,6 +1,7 @@
 package web
 
 import (
+	"fmt"
 	"log"
 	"strings"
 	"time"
@@ -99,7 +100,7 @@ func (c *client) listenWebsocket() {
 		// Ping received - reset the deadline
 		err := c.conn.SetReadDeadline(time.Now().Add(readWait))
 		if err != nil {
-			return err
+			return fmt.Errorf("error while setting read deadline: %w", err)
 		}
 
 		return defaultPingHandler(appData)
@@ -108,7 +109,11 @@ func (c *client) listenWebsocket() {
 	c.conn.SetPongHandler(func(string) error {
 		// Pong received - reset the deadline
 		err := c.conn.SetReadDeadline(time.Now().Add(readWait))
-		return err
+		if err != nil {
+			return fmt.Errorf("error while setting read deadline: %w", err)
+		}
+
+		return nil
 	})
 
 	// Handle messages from the client

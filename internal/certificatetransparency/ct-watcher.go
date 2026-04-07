@@ -27,11 +27,7 @@ import (
 	"github.com/google/certificate-transparency-go/scanner"
 )
 
-var (
-	errCreatingClient    = errors.New("failed to create JSON client")
-	errFetchingSTHFailed = errors.New("failed to fetch STH")
-	userAgent            = fmt.Sprintf("Certstream Server v%s (github.com/d-Rickyy-b/certstream-server-go)", config.Version)
-)
+var UserAgent = fmt.Sprintf("Certstream Server v%s (github.com/d-Rickyy-b/certstream-server-go)", config.Version)
 
 // Watcher is a central component within certstream-server-go. It manages the workers for all the monitored ct logs.
 // It keeps track of all the monitored logs and periodically checks for new logs that aren't monitored yet.
@@ -286,7 +282,7 @@ func (w *Watcher) CreateIndexFile(filePath string) error {
 			metrics.Metrics.Init(operator.Name, normalizedURL)
 			log.Println("Fetching STH for", normalizedURL)
 
-			jsonClient, e := client.New(transparencyLog.URL, httpClient, jsonclient.Options{UserAgent: userAgent})
+			jsonClient, e := client.New(transparencyLog.URL, httpClient, jsonclient.Options{UserAgent: UserAgent})
 			if e != nil {
 				log.Printf("Error creating JSON client: %s\n", e)
 				continue
@@ -315,7 +311,7 @@ func (w *Watcher) CreateIndexFile(filePath string) error {
 			checkpoint, fetchErr := FetchCheckpoint(w.context, httpClient, transparencyLog.MonitoringURL)
 			if fetchErr != nil {
 				log.Printf("Could not get checkpoint for '%s': %s\n", transparencyLog.MonitoringURL, fetchErr)
-				return errFetchingSTHFailed
+				return ErrFetchingSTHFailed
 			}
 
 			metrics.Metrics.SetCTIndex(normalizedURL, checkpoint.Size)
@@ -380,10 +376,10 @@ func (w *worker) startDownloadingCerts(ctx context.Context) {
 
 		if workerErr != nil {
 			switch {
-			case errors.Is(workerErr, errFetchingSTHFailed):
+			case errors.Is(workerErr, ErrFetchingSTHFailed):
 				log.Printf("Worker for '%s' failed - could not fetch STH\n", w.ctURL)
 				return
-			case errors.Is(workerErr, errCreatingClient):
+			case errors.Is(workerErr, ErrCreatingClient):
 				log.Printf("Worker for '%s' failed - could not create client\n", w.ctURL)
 				return
 			case strings.Contains(workerErr.Error(), "no such host"):
@@ -419,10 +415,10 @@ func (w *worker) stop() {
 
 // runStandardWorker runs the worker for a single standard CT log. This method is blocking.
 func (w *worker) runStandardWorker(ctx context.Context) error {
-	jsonClient, e := client.New(w.ctURL, newHTTPClient(), jsonclient.Options{UserAgent: userAgent})
+	jsonClient, e := client.New(w.ctURL, newHTTPClient(), jsonclient.Options{UserAgent: UserAgent})
 	if e != nil {
 		log.Printf("Error creating JSON client: %s\n", e)
-		return errCreatingClient
+		return ErrCreatingClient
 	}
 
 	// If recovery is enabled, we start at the saved index. Otherwise, we start at the latest STH.
@@ -432,7 +428,7 @@ func (w *worker) runStandardWorker(ctx context.Context) error {
 		if getSTHerr != nil {
 			// TODO this can happen due to a 429 error. We should retry the request
 			log.Printf("Could not get STH for '%s': %s\n", w.ctURL, getSTHerr)
-			return errFetchingSTHFailed
+			return ErrFetchingSTHFailed
 		}
 		// Start at the latest STH to skip all the past certificates
 		w.ctIndex = sth.TreeSize
@@ -453,8 +449,7 @@ func (w *worker) runStandardWorker(ctx context.Context) error {
 
 	scanErr := certScanner.Scan(ctx, w.foundCertCallback, w.foundPrecertCallback)
 	if scanErr != nil {
-		log.Println("Scan error: ", scanErr)
-		return scanErr
+		return fmt.Errorf("error scanning for certificates: %w", scanErr)
 	}
 
 	log.Printf("Exiting worker %s without error!\n", w.ctURL)
@@ -472,7 +467,7 @@ func (w *worker) runTiledWorker(ctx context.Context) error {
 		checkpoint, err := FetchCheckpoint(ctx, httpClient, w.ctURL)
 		if err != nil {
 			log.Printf("Could not get checkpoint for '%s': %s\n", w.ctURL, err)
-			return errFetchingSTHFailed
+			return ErrFetchingSTHFailed
 		}
 		// Start at the latest checkpoint to skip all the past certificates
 		w.ctIndex = checkpoint.Size
@@ -501,7 +496,12 @@ func (w *worker) runTiledWorker(ctx context.Context) error {
 
 		select {
 		case <-ctx.Done():
-			return ctx.Err()
+			ctxErr := ctx.Err()
+			if ctxErr != nil {
+				return fmt.Errorf("context error: %w", ctxErr)
+			}
+
+			return nil
 		case <-time.After(pollBackoff.Duration()):
 			// Continue to the next iteration
 		}
@@ -660,31 +660,30 @@ func googleLogListFetcher() (loglist3.LogList, error) {
 
 	httpClient := newHTTPClient()
 
-	req, reqErr := http.NewRequestWithContext(ctx, http.MethodGet, loglist3.LogListURL, nil)
-	if reqErr != nil {
-		log.Printf("Error creating loglist list request: %v", reqErr)
-		return loglist3.LogList{}, reqErr
+	req, newReqErr := http.NewRequestWithContext(ctx, http.MethodGet, loglist3.LogListURL, nil)
+	if newReqErr != nil {
+		return loglist3.LogList{}, fmt.Errorf("failed to create loglist request: %w", newReqErr)
 	}
 
 	// Download the list of all logs from ctLogInfo and decode JSON
-	resp, err := httpClient.Do(req)
-	if err != nil {
-		return loglist3.LogList{}, err
+	resp, reqErr := httpClient.Do(req)
+	if reqErr != nil {
+		return loglist3.LogList{}, fmt.Errorf("failed to execute loglist request: %w", reqErr)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return loglist3.LogList{}, errors.New("failed to download loglist")
+		return loglist3.LogList{}, fmt.Errorf("%w: unexpected status code %d", ErrRequestFailed, resp.StatusCode)
 	}
 
 	bodyBytes, readErr := io.ReadAll(resp.Body)
 	if readErr != nil {
-		log.Panic(readErr)
+		return loglist3.LogList{}, fmt.Errorf("failed reading response body: %w", readErr)
 	}
 
 	allLogs, parseErr := loglist3.NewFromJSON(bodyBytes)
 	if parseErr != nil {
-		return loglist3.LogList{}, parseErr
+		return loglist3.LogList{}, fmt.Errorf("failed parsing response body: %w", parseErr)
 	}
 
 	return *allLogs, nil

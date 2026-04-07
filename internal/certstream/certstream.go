@@ -5,6 +5,7 @@ package certstream
 // It also handles signals for graceful shutdown of the server.
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -54,7 +55,7 @@ func NewCertstreamServer(config config.Config) (*Certstream, error) {
 func NewCertstreamFromConfigFile(configPath string) (*Certstream, error) {
 	conf, err := config.ReadConfig(configPath)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error reading config: %w", err)
 	}
 
 	return NewCertstreamServer(conf)
@@ -136,7 +137,12 @@ func (cs *Certstream) CreateIndexFile(outFile string) error {
 		cs.watcher = certificatetransparency.NewWatcher()
 	}
 
-	return cs.watcher.CreateIndexFile(outFile)
+	err := cs.watcher.CreateIndexFile(outFile)
+	if err != nil {
+		return fmt.Errorf("error creating index file: %w", err)
+	}
+
+	return nil
 }
 
 // signalHandler listens for signals in order to gracefully shut down the server.

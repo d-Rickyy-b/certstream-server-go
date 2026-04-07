@@ -2,6 +2,7 @@ package metrics
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"maps"
 	"os"
@@ -222,7 +223,7 @@ func (m *LogMetrics) createCTIndexFile(ctIndexFilePath string) error {
 
 	bytes, marshalErr := json.Marshal(m.index)
 	if marshalErr != nil {
-		return marshalErr
+		return fmt.Errorf("failed to marshal index data: %w", marshalErr)
 	}
 
 	_, writeErr := file.Write(bytes)

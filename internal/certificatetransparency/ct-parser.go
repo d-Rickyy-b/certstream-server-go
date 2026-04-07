@@ -6,7 +6,6 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"hash"
 	"log"
@@ -50,7 +49,7 @@ func parseData(entry *ct.RawLogEntry, operatorName, logName, ctURL, logType stri
 	logEntry, conversionErr := entry.ToLogEntry()
 	if conversionErr != nil {
 		log.Println("Could not convert entry to LogEntry: ", conversionErr)
-		return models.Data{}, conversionErr
+		return models.Data{}, fmt.Errorf("could not convert entry to logentry: %w", conversionErr)
 	}
 
 	var cert *x509.Certificate
@@ -67,7 +66,7 @@ func parseData(entry *ct.RawLogEntry, operatorName, logName, ctURL, logType stri
 		rawData = logEntry.Precert.Submitted.Data
 		isPrecert = true
 	default:
-		return models.Data{}, errors.New("could not parse entry: no certificate found")
+		return models.Data{}, ErrNoCertFound
 	}
 
 	// Calculate certificate hash from the raw DER bytes of the certificate
@@ -109,8 +108,7 @@ func parseCertificateChain(logEntry *ct.LogEntry) ([]models.LeafCert, error) {
 	for i, chainEntry := range logEntry.Chain {
 		myCert, parseErr := x509.ParseCertificate(chainEntry.Data)
 		if parseErr != nil || myCert == nil {
-			log.Println("Error parsing certificate: ", parseErr)
-			return nil, parseErr
+			return nil, fmt.Errorf("could not parse certificate: %w", parseErr)
 		}
 
 		leafCert := leafCertFromX509cert(*myCert)
@@ -426,7 +424,7 @@ func keyUsageToString(k x509.KeyUsage) string {
 // ParseCertstreamEntry creates an Entry from a ct.RawLogEntry.
 func ParseCertstreamEntry(rawEntry *ct.RawLogEntry, operatorName, logname, ctURL, logType string) (models.Entry, error) {
 	if rawEntry == nil {
-		return models.Entry{}, errors.New("certstream entry is nil")
+		return models.Entry{}, ErrEntryNil
 	}
 
 	data, err := parseData(rawEntry, operatorName, logname, ctURL, logType)

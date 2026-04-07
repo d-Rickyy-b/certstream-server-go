@@ -2,6 +2,7 @@ package config
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"net"
 	"regexp"
@@ -13,15 +14,18 @@ import (
 var (
 	AppConfig Config
 	Version   = "1.9.0"
+
+	ErrInvalidConfig = errors.New("invalid configuration")
 )
 
 type ServerConfig struct {
-	ListenAddr  string   `mapstructure:"listen_addr"`
-	ListenPort  int      `mapstructure:"listen_port"`
-	CertPath    string   `mapstructure:"cert_path"`
-	CertKeyPath string   `mapstructure:"cert_key_path"`
-	RealIP      bool     `mapstructure:"real_ip"`
-	Whitelist   []string `mapstructure:"whitelist"`
+	ListenAddr     string   `mapstructure:"listen_addr"`
+	ListenPort     int      `mapstructure:"listen_port"`
+	CertPath       string   `mapstructure:"cert_path"`
+	CertKeyPath    string   `mapstructure:"cert_key_path"`
+	RealIP         bool     `mapstructure:"real_ip"`
+	TrustedProxies []string `mapstructure:"trusted_proxies"`
+	Whitelist      []string `mapstructure:"whitelist"`
 }
 
 type LogConfig struct {
@@ -94,6 +98,7 @@ func initViper(configPath string) *viper.Viper {
 	v.SetDefault("webserver.lite_url", "/")
 	v.SetDefault("webserver.domains_only_url", "/domains-only")
 	v.SetDefault("webserver.real_ip", false)
+	v.SetDefault("webserver.trusted_proxies", []string{})
 	v.SetDefault("webserver.whitelist", []string{})
 	v.SetDefault("webserver.compression_enabled", false)
 
@@ -103,6 +108,7 @@ func initViper(configPath string) *viper.Viper {
 	v.SetDefault("prometheus.metrics_url", "/metrics")
 	v.SetDefault("prometheus.expose_system_metrics", false)
 	v.SetDefault("prometheus.real_ip", false)
+	v.SetDefault("prometheus.trusted_proxies", []string{})
 	v.SetDefault("prometheus.whitelist", []string{})
 
 	v.SetDefault("general.disable_default_logs", false)
@@ -153,11 +159,11 @@ func loadConfigFromViper(v *viper.Viper) (Config, error) {
 	var cfg Config
 
 	if err := v.Unmarshal(&cfg); err != nil {
-		return cfg, err
+		return cfg, fmt.Errorf("failed to unmarshal config: %w", err)
 	}
 
 	if !validateConfig(&cfg) {
-		return cfg, errors.New("invalid configuration")
+		return cfg, ErrInvalidConfig
 	}
 
 	AppConfig = cfg
@@ -208,6 +214,18 @@ func validateConfig(config *Config) bool {
 		config.Webserver.FullURL = "/domains-only"
 	}
 
+	for _, ip := range config.Webserver.TrustedProxies {
+		if net.ParseIP(ip) != nil {
+			continue
+		}
+
+		_, _, err := net.ParseCIDR(ip)
+		if err != nil {
+			log.Fatalln("Invalid IP/CIDR in webserver trusted_proxies: ", ip)
+			return false
+		}
+	}
+
 	//nolint:nestif
 	if config.Prometheus.Enabled {
 		if config.Prometheus.ListenAddr == "" || net.ParseIP(config.Prometheus.ListenAddr) == nil {
@@ -234,6 +252,18 @@ func validateConfig(config *Config) bool {
 			_, _, err := net.ParseCIDR(ip)
 			if err != nil {
 				log.Fatalln("Invalid IP in metrics whitelist: ", ip)
+				return false
+			}
+		}
+
+		for _, ip := range config.Prometheus.TrustedProxies {
+			if net.ParseIP(ip) != nil {
+				continue
+			}
+
+			_, _, err := net.ParseCIDR(ip)
+			if err != nil {
+				log.Fatalln("Invalid IP/CIDR in prometheus trusted_proxies: ", ip)
 				return false
 			}
 		}

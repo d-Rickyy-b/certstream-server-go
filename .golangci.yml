@@ -20,7 +20,7 @@ linters:
     - dupword
     - durationcheck
     - embeddedstructfieldcheck
-    #- err113
+    - err113
     - errcheck
     - errchkjson
     - errname
@@ -87,7 +87,7 @@ linters:
     - varnamelen
     - wastedassign
     - whitespace
-    #- wrapcheck
+    - wrapcheck
     - wsl_v5
   settings:
     lll:
@@ -135,6 +135,7 @@ linters:
           - wsl_v5
           - varnamelen
           - goconst
+          - err113
         path: _test\.go
       - linters:
           - gochecknoinits

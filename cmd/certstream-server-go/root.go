@@ -22,7 +22,7 @@ certificate transparency logs via websocket connections to connected clients.`,
 		// Handle --version flag
 		versionBool, err := cmd.Flags().GetBool("version")
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to obtain 'version' flag: %w", err)
 		}
 
 		if versionBool {
@@ -33,13 +33,13 @@ certificate transparency logs via websocket connections to connected clients.`,
 		// Handle --config flag
 		configPath, err := cmd.Flags().GetString("config")
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to obtain 'config' flag: %w", err)
 		}
 
 		// Check if path exists and is a file
 		_, statErr := os.Stat(configPath)
 		if os.IsNotExist(statErr) {
-			return fmt.Errorf("config file '%s' does not exist", configPath)
+			return fmt.Errorf("config file '%s' does not exist: %w", configPath, statErr)
 		}
 
 		certstreamServer, err := certstream.NewCertstreamFromConfigFile(configPath)

@@ -3,7 +3,6 @@ package certificatetransparency
 import (
 	"bufio"
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -67,21 +66,21 @@ func FetchCheckpoint(ctx context.Context, client *http.Client, baseURL string) (
 	baseURL = strings.TrimRight(baseURL, "/")
 	url := baseURL + "/checkpoint"
 
-	req, parseErr := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-	if parseErr != nil {
-		return nil, fmt.Errorf("creating request: %w", parseErr)
+	req, newReqErr := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if newReqErr != nil {
+		return nil, fmt.Errorf("failed to create checkpoint request: %w", newReqErr)
 	}
 
-	req.Header.Set("User-Agent", userAgent)
+	req.Header.Set("User-Agent", UserAgent)
 
-	resp, parseErr := client.Do(req)
-	if parseErr != nil {
-		return nil, fmt.Errorf("fetching checkpoint: %w", parseErr)
+	resp, reqErr := client.Do(req)
+	if reqErr != nil {
+		return nil, fmt.Errorf("failed to execute checkpoint request: %w", reqErr)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("checkpoint request failed with status: %d", resp.StatusCode)
+		return nil, fmt.Errorf("%w: unexpected status code %d", ErrRequestFailed, resp.StatusCode)
 	}
 
 	lines := make([]string, 0, 3)
@@ -92,16 +91,16 @@ func FetchCheckpoint(ctx context.Context, client *http.Client, baseURL string) (
 	}
 
 	if scanErr := scanner.Err(); scanErr != nil {
-		return nil, fmt.Errorf("reading checkpoint response: %w", scanErr)
+		return nil, fmt.Errorf("failed reading response body: %w", scanErr)
 	}
 
 	if len(lines) < 3 {
-		return nil, fmt.Errorf("invalid checkpoint format: expected at least 3 lines, got %d", len(lines))
+		return nil, fmt.Errorf("%w: invalid checkpoint format: expected at least 3 lines, got %d", ErrCheckpointInvalidFormat, len(lines))
 	}
 
 	size, parseErr := strconv.ParseUint(lines[1], 10, 64)
 	if parseErr != nil {
-		return nil, fmt.Errorf("parsing tree size: %w", parseErr)
+		return nil, fmt.Errorf("failed parsing tree size: %w", parseErr)
 	}
 
 	return &TiledCheckpoint{
@@ -123,21 +122,21 @@ func FetchTile(ctx context.Context, client *http.Client, baseURL string, tileInd
 
 	url := fmt.Sprintf("%s/tile/data/%s", baseURL, tilePath)
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-	if err != nil {
-		return nil, fmt.Errorf("creating request: %w", err)
+	req, newReqErr := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if newReqErr != nil {
+		return nil, fmt.Errorf("failed to create tile request: %w", newReqErr)
 	}
 
-	req.Header.Set("User-Agent", userAgent)
+	req.Header.Set("User-Agent", UserAgent)
 
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("fetching tile %d: %w", tileIndex, err)
+	resp, reqErr := client.Do(req)
+	if reqErr != nil {
+		return nil, fmt.Errorf("fetching tile %d: %w", tileIndex, reqErr)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("tile request failed with status: %d", resp.StatusCode)
+		return nil, fmt.Errorf("%w: unexpected status code %d", ErrRequestFailed, resp.StatusCode)
 	}
 
 	data, err := io.ReadAll(resp.Body)
@@ -157,7 +156,7 @@ func ParseTileData(data []byte) ([]TileLeaf, error) {
 		var leaf TileLeaf
 
 		if !parser.ReadUint64(&leaf.Timestamp) || !parser.ReadUint16(&leaf.EntryType) {
-			return nil, errors.New("invalid data tile header")
+			return nil, fmt.Errorf("header: %w", ErrInvalidDataTile)
 		}
 
 		switch leaf.EntryType {
@@ -168,7 +167,7 @@ func ParseTileData(data []byte) ([]TileLeaf, error) {
 			if !parser.ReadUint24LengthPrefixed(&cert) ||
 				!parser.ReadUint16LengthPrefixed(&extensions) ||
 				!parser.ReadUint16LengthPrefixed(&fingerprints) {
-				return nil, errors.New("invalid data tile x509_entry")
+				return nil, fmt.Errorf("x509_entry: %w", ErrInvalidDataTile)
 			}
 
 			leaf.X509Entry = append([]byte(nil), cert...)
@@ -176,7 +175,7 @@ func ParseTileData(data []byte) ([]TileLeaf, error) {
 			for !fingerprints.Empty() {
 				var fp [32]byte
 				if !fingerprints.CopyBytes(fp[:]) {
-					return nil, errors.New("invalid fingerprints: truncated")
+					return nil, ErrInvalidFingerprint
 				}
 
 				leaf.Chain = append(leaf.Chain, fp[:])
@@ -191,7 +190,7 @@ func ParseTileData(data []byte) ([]TileLeaf, error) {
 				!parser.ReadUint16LengthPrefixed(&extensions) ||
 				!parser.ReadUint24LengthPrefixed(&entry) ||
 				!parser.ReadUint16LengthPrefixed(&fingerprints) {
-				return nil, errors.New("invalid data tile precert_entry")
+				return nil, fmt.Errorf("precert_entry: %w", ErrInvalidDataTile)
 			}
 
 			leaf.PrecertEntry = append([]byte(nil), defangedCrt...)
@@ -200,14 +199,14 @@ func ParseTileData(data []byte) ([]TileLeaf, error) {
 			for !fingerprints.Empty() {
 				var fp [32]byte
 				if !fingerprints.CopyBytes(fp[:]) {
-					return nil, errors.New("invalid fingerprints: truncated")
+					return nil, ErrInvalidFingerprint
 				}
 
 				leaf.Chain = append(leaf.Chain, fp[:])
 			}
 
 		default:
-			return nil, fmt.Errorf("unknown entry type: %d", leaf.EntryType)
+			return nil, fmt.Errorf("%w: %d", ErrUnknownEntryType, leaf.EntryType)
 		}
 
 		leaves = append(leaves, leaf)

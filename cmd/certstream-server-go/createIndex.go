@@ -22,30 +22,30 @@ create-index will create and pre fill the ct-index.json file with the current va
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		configPath, err := cmd.Flags().GetString("config")
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to obtain 'config' flag: %w", err)
 		}
 
 		conf, readConfErr := config.ReadConfig(configPath)
 		if readConfErr != nil {
-			return readConfErr
+			return fmt.Errorf("failed to read config file: %w", readConfErr)
 		}
 
 		certstreamServer := certstream.NewRawCertstream(conf)
 
 		force, err := cmd.Flags().GetBool("force")
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to obtain 'force' flag: %w", err)
 		}
 
 		outFilePath, err := cmd.Flags().GetString("out")
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to obtain 'out' flag: %w", err)
 		}
 
 		// Check if outfile already exists
 		outFileAbsPath, err := filepath.Abs(outFilePath)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to obtain absolute path: %w", err)
 		}
 
 		if _, statErr := os.Stat(outFileAbsPath); statErr == nil {
