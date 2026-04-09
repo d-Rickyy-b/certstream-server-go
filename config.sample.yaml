@@ -3,8 +3,19 @@ webserver:
   listen_addr: "0.0.0.0"
   listen_port: 8080
   # If you want to use a reverse proxy in front of the server, set this to true
-  # It will use the X-Forwarded-For header to get the real IP of the client
+  # It will use the X-Forwarded-For / X-Real-IP headers to get the real IP of the client
   real_ip: false
+  # List of trusted proxy IPs or CIDR ranges whose X-Forwarded-For / X-Real-IP headers
+  # are honored when real_ip is true. When left empty every connecting IP is trusted.
+  # Restricting this to your actual proxy IPs prevents clients from spoofing their address
+  # by injecting a forged forwarded header. Note: X-Forwarded-For can contain a chain of
+  # IPs (e.g. "client, proxy1, proxy2"); only the first (leftmost) entry is used as the real client IP.
+  trusted_proxies:
+    - "172.16.0.0/12"
+  # If you want to restrict access to the server to specific IPs or CIDR ranges, you can add them to the whitelist.
+  # If the whitelist is empty, all IPs are allowed to access the server.
+  whitelist:
+    - "127.0.0.1/8"
   full_url: "/full-stream"
   lite_url: "/"
   domains_only_url: "/domains-only"
@@ -20,6 +31,9 @@ prometheus:
   metrics_url: "/metrics"
   expose_system_metrics: false
   real_ip: false
+  # List of trusted proxy IPs or CIDR ranges (see webserver.trusted_proxies for details).
+  #trusted_proxies:
+  #  - "127.0.0.1"
   whitelist:
     - "127.0.0.1/8"
 
