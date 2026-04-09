@@ -385,6 +385,9 @@ func (w *worker) startDownloadingCerts(ctx context.Context) {
 			case strings.Contains(workerErr.Error(), "no such host"):
 				log.Printf("Worker for '%s' failed to resolve host: %s\n", w.ctURL, workerErr)
 				return
+			case errors.Is(workerErr, context.Canceled):
+				log.Printf("Worker for '%s' canceled\n", w.ctURL)
+				return
 			}
 
 			log.Printf("Worker for '%s' failed with unexpected error: %s\n", w.ctURL, workerErr)
