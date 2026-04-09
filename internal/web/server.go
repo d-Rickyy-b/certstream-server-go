@@ -324,5 +324,10 @@ func (ws *Server) shutdown() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
-	return ws.server.Shutdown(ctx)
+	err := ws.server.Shutdown(ctx)
+	if err != nil {
+		return fmt.Errorf("error during server shutdown: %w", err)
+	}
+
+	return nil
 }

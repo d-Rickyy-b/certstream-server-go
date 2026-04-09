@@ -125,11 +125,16 @@ func (c *client) listenWebsocket() {
 				log.Printf("Unexpected websocket close error: %v\n", readErr)
 			}
 
+			// If client fails to send ping messages
 			if strings.Contains(strings.ToLower(readErr.Error()), "i/o timeout") {
 				log.Printf("No ping received from client: %v\n", c.conn.RemoteAddr())
 
 				closeMessage := websocket.FormatCloseMessage(websocket.CloseNoStatusReceived, "No ping received!")
-				c.conn.WriteControl(websocket.CloseMessage, closeMessage, time.Now().Add(5*time.Second)) //nolint:errcheck
+
+				writeErr := c.conn.WriteControl(websocket.CloseMessage, closeMessage, time.Now().Add(5*time.Second))
+				if writeErr != nil {
+					log.Printf("Error while sending close message: %v\n", writeErr)
+				}
 			} else if strings.Contains(strings.ToLower(readErr.Error()), "an existing connection was forcibly closed by the remote host") {
 				log.Printf("Connection to client lost: %v\n", c.conn.RemoteAddr())
 			}
