@@ -4,11 +4,16 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"maps"
+	"slices"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/VictoriaMetrics/metrics"
 )
+
+var illegalCharacters = []string{"{", "}", "\n", `"`}
 
 var Prometheus = NewPrometheusExporter()
 
@@ -59,15 +64,39 @@ func (pm *PrometheusExporter) RegisterGaugeMetricInt(label string, callback func
 }
 
 // RegisterClient registers a new gauge metric for the client with the given name.
-func (pm *PrometheusExporter) RegisterClient(name string, callback func() float64) {
-	label := fmt.Sprintf("certstreamservergo_skipped_certs{client=\"%s\"}", name)
-	metrics.GetOrCreateGauge(label, callback)
+func (pm *PrometheusExporter) RegisterClient(id, connIP, connPort, realIP, useragent string, skippedCertsCallback func() float64) {
+	argMap := make(map[string]string)
+	argMap["id"] = id
+	argMap["conn_ip"] = connIP
+	argMap["conn_port"] = connPort
+	argMap["real_ip"] = realIP
+	argMap["useragent"] = useragent
+
+	label := createMetric("certstreamservergo_skipped_certs", argMap)
+
+	// label := fmt.Sprintf("certstreamservergo_skipped_certs{id=\"%s\",conn_ip=\"%s\",conn_port=\"%s\",real_ip=\"%s\",useragent=\"%s\"}",
+	//		id, connIP, connPort, realIP, useragent)
+	metrics.GetOrCreateGauge(label, skippedCertsCallback)
 }
 
 // UnregisterClient unregisters the metric for the client with the given name.
-func (pm *PrometheusExporter) UnregisterClient(name string) {
-	label := fmt.Sprintf("certstreamservergo_skipped_certs{client=\"%s\"}", name)
-	metrics.UnregisterMetric(label)
+func (pm *PrometheusExporter) UnregisterClient(id, connIP, connPort, realIP, useragent string) {
+	argMap := make(map[string]string)
+	argMap["id"] = id
+	argMap["conn_ip"] = connIP
+	argMap["conn_port"] = connPort
+	argMap["real_ip"] = realIP
+	argMap["useragent"] = useragent
+
+	label := createMetric("certstreamservergo_skipped_certs", argMap)
+
+	// label := fmt.Sprintf("certstreamservergo_skipped_certs{id=\"%s\",conn_ip=\"%s\",conn_port=\"%s\",real_ip=\"%s\",useragent=\"%s\"}",
+	// 	id, connIP, connPort, realIP, useragent)
+
+	ok := metrics.UnregisterMetric(label)
+	if !ok {
+		log.Printf("failed to unregister metric '%s'", label)
+	}
 }
 
 // RegisterLog registers a new gauge metric for the given CT log.
@@ -110,4 +139,27 @@ func (pm *PrometheusExporter) getCertCountForLog(operatorName, logname string) i
 	}
 
 	return count
+}
+
+func createMetric(metricName string, argMap map[string]string) string {
+	argString := ""
+
+	for _, key := range slices.Sorted(maps.Keys(argMap)) {
+		key = sanitizeMetricValue(key)
+		key = strings.ReplaceAll(key, " ", "_")
+		value := sanitizeMetricValue(argMap[key])
+		argString += fmt.Sprintf(`%s="%s",`, key, value) //nolint:perfsprint
+	}
+
+	argString = strings.TrimRight(argString, ",")
+
+	return fmt.Sprintf("%s{%s}", metricName, argString)
+}
+
+func sanitizeMetricValue(value string) string {
+	for _, char := range illegalCharacters {
+		value = strings.ReplaceAll(value, char, "_")
+	}
+
+	return value
 }
