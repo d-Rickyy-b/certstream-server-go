@@ -147,30 +147,10 @@ func realIPMiddleware(realIP bool, trustedProxies []string) func(next http.Handl
 }
 
 // IPWhitelist returns a middleware that checks if the IP of the client is in the whitelist.
+// It always checks against the original TCP connection IP (stored in context by
+// newRealIPMiddleware), so the whitelist cannot be bypassed via forwarded headers.
 func IPWhitelist(whitelist []string) func(next http.Handler) http.Handler {
-	// build a list of whitelisted IPs and CIDRs
-	log.Println("Building IP whitelist...")
-
-	var ipList []net.IP
-	var cidrList []net.IPNet
-
-	for _, element := range whitelist {
-		_, ipNet, err := net.ParseCIDR(element)
-		if err != nil {
-			var ip net.IP
-			if ip = net.ParseIP(element); ip == nil {
-				log.Println("Invalid IP in metrics whitelist: ", element)
-
-				continue
-			}
-
-			ipList = append(ipList, ip)
-
-			continue
-		}
-
-		cidrList = append(cidrList, *ipNet)
-	}
+	ipList, cidrList := generateIPList(whitelist)
 
 	log.Println("IP whitelist: ", ipList)
 	log.Println("CIDR whitelist: ", cidrList)
