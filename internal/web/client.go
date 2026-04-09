@@ -129,7 +129,7 @@ func (c *client) listenWebsocket() {
 			if strings.Contains(strings.ToLower(readErr.Error()), "i/o timeout") {
 				log.Printf("No ping received from client: %v\n", c.conn.RemoteAddr())
 
-				closeMessage := websocket.FormatCloseMessage(websocket.CloseNoStatusReceived, "No ping received!")
+				closeMessage := websocket.FormatCloseMessage(websocket.ClosePolicyViolation, "No ping received!")
 
 				writeErr := c.conn.WriteControl(websocket.CloseMessage, closeMessage, time.Now().Add(5*time.Second))
 				if writeErr != nil {
