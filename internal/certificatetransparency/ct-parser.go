@@ -308,6 +308,8 @@ func calculateHash(data []byte, certHasher hash.Hash) string {
 	certHash = strings.ToUpper(certHash)
 
 	var result bytes.Buffer
+
+	//nolint:intrange
 	for i := 0; i < len(certHash); i++ {
 		if i%2 == 0 && i > 0 {
 			result.WriteByte(':')
