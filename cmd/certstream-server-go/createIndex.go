@@ -42,10 +42,15 @@ create-index will create and pre fill the ct-index.json file with the current va
 			return fmt.Errorf("failed to obtain 'out' flag: %w", err)
 		}
 
+		// Obtain ct_index file path from config
+		if outFilePath == "" && conf.General.Recovery.CTIndexFile != "" {
+			outFilePath = config.AppConfig.General.Recovery.CTIndexFile
+		}
+
 		// Check if outfile already exists
-		outFileAbsPath, err := filepath.Abs(outFilePath)
-		if err != nil {
-			return fmt.Errorf("failed to obtain absolute path: %w", err)
+		outFileAbsPath, absErr := filepath.Abs(outFilePath)
+		if absErr != nil {
+			return fmt.Errorf("failed to obtain absolute path: %w", absErr)
 		}
 
 		if _, statErr := os.Stat(outFileAbsPath); statErr == nil {
@@ -67,6 +72,6 @@ create-index will create and pre fill the ct-index.json file with the current va
 func init() {
 	rootCmd.AddCommand(createIndexCmd)
 
-	createIndexCmd.Flags().StringP("out", "o", "ct_index.json", "Path to the index file to create")
+	createIndexCmd.Flags().StringP("out", "o", "", "Path to the index file to create. Overrides the path in the config.")
 	createIndexCmd.Flags().BoolP("force", "f", false, "Whether to override the index file if it already exists")
 }
