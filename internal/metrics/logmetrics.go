@@ -244,12 +244,14 @@ func (m *LogMetrics) SaveCertIndexesAtInterval(interval time.Duration, ctIndexFi
 	defer ticker.Stop()
 
 	for range ticker.C {
-		m.SaveCertIndexes(ctIndexFilePath)
+		if err := m.SaveCertIndexes(ctIndexFilePath); err != nil {
+			log.Printf("Error saving CT indexes at '%s': %s\n", ctIndexFilePath, err)
+		}
 	}
 }
 
 // SaveCertIndexes saves the index of CTLogs to a file.
-func (m *LogMetrics) SaveCertIndexes(ctIndexFilePath string) {
+func (m *LogMetrics) SaveCertIndexes(ctIndexFilePath string) error {
 	tempFilePath := ctIndexFilePath + ".tmp"
 
 	// Get the index data
@@ -260,39 +262,47 @@ func (m *LogMetrics) SaveCertIndexes(ctIndexFilePath string) {
 		log.Panic(cerr)
 	}
 
-	// Save data to a temporary file first
-	file, openErr := os.OpenFile(tempFilePath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o644)
-	if openErr != nil {
-		log.Println("Could not save CT index to temporary file: ", openErr)
-		return
-	}
-	defer file.Close()
-
-	truncateErr := file.Truncate(0)
-	if truncateErr != nil {
-		log.Println("Error truncating CT index temp file: ", truncateErr)
-		return
-	}
-
-	// TODO: check for short writes
-	_, writeErr := file.Write(bytes)
-	if writeErr != nil {
-		log.Println("Error writing to CT index temp file: ", writeErr)
-		return
-	}
-
-	syncErr := file.Sync()
-	if syncErr != nil {
-		log.Println("Error syncing CT index temp file: ", syncErr)
-		return
+	// Store index data in a temp file
+	err := storeTempFile(tempFilePath, bytes)
+	if err != nil {
+		return err
 	}
 
 	// Atomically move the temp file to the permanent file
 	renameErr := os.Rename(tempFilePath, ctIndexFilePath)
 	if renameErr != nil {
-		log.Println("Error renaming CT index temp file: ", renameErr)
-		return
+		return fmt.Errorf("could not rename CT index temp file: %w", renameErr)
 	}
+
+	return nil
+}
+
+// storeTempFile stores the passed data in the tempFilePath.
+func storeTempFile(tempFilePath string, bytes []byte) error {
+	// Save data to a temporary file first
+	file, openErr := os.OpenFile(tempFilePath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o644)
+	if openErr != nil {
+		return fmt.Errorf("could not save CT index to temporary file: %w", openErr)
+	}
+	defer file.Close()
+
+	truncateErr := file.Truncate(0)
+	if truncateErr != nil {
+		return fmt.Errorf("could not save CT index to temporary file: %w", truncateErr)
+	}
+
+	// TODO: check for short writes
+	_, writeErr := file.Write(bytes)
+	if writeErr != nil {
+		return fmt.Errorf("could not save CT index to temporary file: %w", writeErr)
+	}
+
+	syncErr := file.Sync()
+	if syncErr != nil {
+		return fmt.Errorf("could not save CT index to temporary file: %w", syncErr)
+	}
+
+	return nil
 }
 
 // GetProcessedCerts returns the total number of processed certificates.

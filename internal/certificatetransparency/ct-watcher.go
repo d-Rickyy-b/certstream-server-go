@@ -251,7 +251,10 @@ func (w *Watcher) Stop() {
 	if config.AppConfig.General.Recovery.Enabled {
 		// Store current CT Indexes before shutting down
 		filePath := config.AppConfig.General.Recovery.CTIndexFile
-		metrics.Metrics.SaveCertIndexes(filePath)
+		err := metrics.Metrics.SaveCertIndexes(filePath)
+		if err != nil {
+			log.Printf("Failed to save CT index file: %v\n", err)
+		}
 	}
 
 	w.cancelFunc()
@@ -320,7 +323,11 @@ func (w *Watcher) CreateIndexFile(filePath string) error {
 
 	w.cancelFunc()
 
-	metrics.Metrics.SaveCertIndexes(filePath)
+	saveErr := metrics.Metrics.SaveCertIndexes(filePath)
+	if saveErr != nil {
+		return saveErr
+	}
+
 	log.Println("Index file saved to", filePath)
 
 	return nil
