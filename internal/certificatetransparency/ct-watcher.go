@@ -251,6 +251,7 @@ func (w *Watcher) Stop() {
 	if config.AppConfig.General.Recovery.Enabled {
 		// Store current CT Indexes before shutting down
 		filePath := config.AppConfig.General.Recovery.CTIndexFile
+
 		err := metrics.Metrics.SaveCertIndexes(filePath)
 		if err != nil {
 			log.Printf("Failed to save CT index file: %v\n", err)
@@ -281,7 +282,6 @@ func (w *Watcher) CreateIndexFile(filePath string) error {
 			}
 
 			normalizedURL := normalizeCtlogURL(transparencyLog.URL)
-			// Check if the log is already being watched
 			metrics.Metrics.Init(operator.Name, normalizedURL)
 			log.Println("Fetching STH for", normalizedURL)
 
@@ -306,7 +306,7 @@ func (w *Watcher) CreateIndexFile(filePath string) error {
 				log.Printf("Skipping retired CT log: %s\n", transparencyLog.MonitoringURL)
 				continue
 			}
-			// Check if the log is already being watched
+
 			normalizedURL := normalizeCtlogURL(transparencyLog.MonitoringURL)
 			metrics.Metrics.Init(operator.Name, normalizedURL)
 			log.Println("Fetching checkpoint for", normalizedURL)

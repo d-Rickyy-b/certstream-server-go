@@ -119,8 +119,6 @@ func initViper(configPath string) *viper.Viper {
 	v.SetDefault("general.recovery.enabled", false)
 	v.SetDefault("general.recovery.ct_index_file", "./ct_index.json")
 
-	// TODO check for missing file?!
-	// Config file
 	if configPath != "" {
 		v.SetConfigFile(configPath)
 	} else {
