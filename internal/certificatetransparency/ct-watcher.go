@@ -533,7 +533,7 @@ func (w *worker) processTiledLogUpdates(ctx context.Context, httpClient *http.Cl
 	}
 
 	// Process entries from current index to new tree size
-	startTile := w.ctIndex / TileSize
+	startTile := (w.ctIndex + 1) / TileSize
 	endTile := currentTreeSize / TileSize
 
 	// Process complete tiles
