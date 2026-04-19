@@ -13,8 +13,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/google/trillian/client/backoff"
-
 	"github.com/d-Rickyy-b/certstream-server-go/internal/config"
 	"github.com/d-Rickyy-b/certstream-server-go/internal/metrics"
 	"github.com/d-Rickyy-b/certstream-server-go/internal/models"
@@ -483,112 +481,10 @@ func (w *worker) runTiledWorker(ctx context.Context) error {
 		w.ctIndex = checkpoint.Size
 	}
 
-	// Initialize backoff for polling
-	pollBackoff := &backoff.Backoff{
-		Min:    1 * time.Second,
-		Max:    30 * time.Second,
-		Factor: 2,
-		Jitter: true,
-	}
-
-	// Continuous monitoring loop
-	for {
-		hadNewEntries, err := w.processTiledLogUpdates(ctx, httpClient)
-		if err != nil {
-			log.Printf("Error processing tiled log updates for '%s': %s\n", w.ctURL, err)
-			return err
-		}
-
-		// Reset backoff if we found new entries
-		if hadNewEntries {
-			pollBackoff.Reset()
-		}
-
-		select {
-		case <-ctx.Done():
-			ctxErr := ctx.Err()
-			if ctxErr != nil {
-				return fmt.Errorf("context error: %w", ctxErr)
-			}
-
-			return nil
-		case <-time.After(pollBackoff.Duration()):
-			// Continue to the next iteration
-		}
-	}
-}
-
-// processTiledLogUpdates checks for new entries in the tiled log and processes them.
-func (w *worker) processTiledLogUpdates(ctx context.Context, httpClient *http.Client) (bool, error) {
-	// Fetch current checkpoint
-	checkpoint, fetchErr := FetchCheckpoint(ctx, httpClient, w.ctURL)
-	if fetchErr != nil {
-		return false, fmt.Errorf("fetching checkpoint: %w", fetchErr)
-	}
-
-	currentTreeSize := checkpoint.Size
-	if currentTreeSize <= w.ctIndex {
-		// No new entries
-		return false, nil
-	}
-
-	// Process entries from current index to new tree size
-	startTile := (w.ctIndex + 1) / TileSize
-	endTile := currentTreeSize / TileSize
-
-	// Process complete tiles
-	for tileIndex := startTile; tileIndex < endTile; tileIndex++ {
-		if err := w.processTile(ctx, httpClient, tileIndex, 0); err != nil {
-			return false, fmt.Errorf("processing tile %d: %w", tileIndex, err)
-		}
-	}
-
-	// Process partial tile if exists
-	partialSize := currentTreeSize % TileSize
-	if partialSize > 0 {
-		if err := w.processTile(ctx, httpClient, endTile, partialSize); err != nil {
-			log.Printf("Warning: error processing partial tile %d: %s\n", endTile, err)
-			// Don't return error for partial tiles as they might be incomplete
-		}
-	}
-
-	return true, nil
-}
-
-// processTile processes a single tile from the tiled log.
-// partialWidth of 0 means full tile, otherwise fetch partial tile with that width.
-func (w *worker) processTile(ctx context.Context, hc *http.Client, tileIndex, partialWidth uint64) error {
-	leaves, err := FetchTile(ctx, hc, w.ctURL, tileIndex, partialWidth)
+	staticCTClient := NewStaticCTClient(w.ctURL, httpClient, UserAgent, w.ctIndex)
+	err := staticCTClient.Monitor(ctx, w.foundCertCallback, w.foundPrecertCallback)
 	if err != nil {
-		return fmt.Errorf("fetching tile: %w", err)
-	}
-
-	// Calculate the starting index for entries in this tile
-	baseIndex := tileIndex * TileSize
-
-	for i, leaf := range leaves {
-		entryIndex := baseIndex + uint64(i)
-
-		// Skip entries we've already processed
-		if entryIndex <= w.ctIndex {
-			continue
-		}
-
-		// Convert TileLeaf to RawLogEntry for compatibility with existing parsing
-		rawEntry := ConvertTileLeafToRawLogEntry(leaf, entryIndex)
-
-		// Process the entry using existing callbacks
-		switch leaf.EntryType {
-		case 0:
-			w.foundCertCallback(rawEntry)
-		case 1:
-			w.foundPrecertCallback(rawEntry)
-		default:
-			log.Printf("Unknown entry type %d in tile %d, skipping entry at index %d\n", leaf.EntryType, tileIndex, entryIndex)
-		}
-
-		// Update the index
-		w.ctIndex = entryIndex
+		return fmt.Errorf("error scanning for certificates: %w", err)
 	}
 
 	return nil

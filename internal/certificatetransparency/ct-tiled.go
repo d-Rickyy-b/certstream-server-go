@@ -5,11 +5,14 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	ct "github.com/google/certificate-transparency-go"
+	"github.com/google/trillian/client/backoff"
 	"golang.org/x/crypto/cryptobyte"
 )
 
@@ -32,8 +35,13 @@ type TileLeaf struct {
 	IssuerKeyHash [32]byte
 }
 
-// EncodeTilePath encodes a tile index into the proper path format.
-func EncodeTilePath(index uint64) string {
+var (
+	EntryTypeCert    uint16 = 0
+	EntryTypePrecert uint16 = 1
+)
+
+// encodeTilePath encodes a tile index into the proper path format.
+func encodeTilePath(index uint64) string {
 	if index == 0 {
 		return "000"
 	}
@@ -114,7 +122,7 @@ func FetchCheckpoint(ctx context.Context, client *http.Client, baseURL string) (
 // If partialWidth > 0, fetches a partial tile with that width (1-255).
 func FetchTile(ctx context.Context, client *http.Client, baseURL string, tileIndex, partialWidth uint64) ([]TileLeaf, error) {
 	baseURL = strings.TrimRight(baseURL, "/")
-	tilePath := EncodeTilePath(tileIndex)
+	tilePath := encodeTilePath(tileIndex)
 
 	if partialWidth > 0 {
 		tilePath = fmt.Sprintf("%s.p/%d", tilePath, partialWidth)
@@ -252,4 +260,215 @@ func ConvertTileLeafToRawLogEntry(leaf TileLeaf, index uint64) *ct.RawLogEntry {
 	}
 
 	return rawEntry
+}
+type StaticCTClient struct {
+	url        string
+	httpClient *http.Client
+	backoff    backoff.Backoff
+	userAgent  string
+	ctIndex    uint64
+}
+
+func NewStaticCTClient(url string, httpClient *http.Client, userAgent string, startIndex uint64) *StaticCTClient {
+	return &StaticCTClient{
+		url:        strings.TrimRight(url, "/"),
+		httpClient: httpClient,
+		backoff: backoff.Backoff{
+			Min:    2 * time.Second,
+			Max:    15 * time.Second,
+			Factor: 1.3,
+			Jitter: true,
+		},
+		userAgent:      userAgent,
+		ctIndex:        startIndex,
+	}
+}
+
+// Monitor continuously monitors the tiled CT log for new entries, starting from the current ctIndex.
+func (s *StaticCTClient) Monitor(ctx context.Context, foundCert func(*ct.RawLogEntry), foundPrecert func(*ct.RawLogEntry)) error {
+	for {
+		hadNewEntries, err := s.fetchAndProcessTiles(ctx, foundCert, foundPrecert)
+		if err != nil {
+			log.Printf("Error processing tiled log updates for '%s': %s\n", s.url, err)
+			return err
+		}
+
+		// Reset backoff if we found new entries
+		if hadNewEntries {
+			s.backoff.Reset()
+		}
+
+		select {
+		case <-ctx.Done():
+			ctxErr := ctx.Err()
+			if ctxErr != nil {
+				return fmt.Errorf("context error: %w", ctxErr)
+			}
+
+			return nil
+		case <-time.After(s.backoff.Duration()):
+			// Continue to the next iteration
+		}
+	}
+}
+
+// fetchAndProcessTiles checks for new entries in the tiled log and processes them.
+// It returns true if at least one full tile was fetched.
+func (s *StaticCTClient) fetchAndProcessTiles(ctx context.Context, foundCert func(*ct.RawLogEntry), foundPrecert func(*ct.RawLogEntry)) (bool, error) {
+	// Fetch current checkpoint
+	checkpoint, fetchErr := s.fetchCheckpoint(ctx)
+	if fetchErr != nil {
+		return false, fmt.Errorf("fetching checkpoint: %w", fetchErr)
+	}
+
+	currentTreeSize := checkpoint.Size
+	if currentTreeSize <= s.ctIndex {
+		// No new entries
+		return false, nil
+	}
+
+	// Process entries from current index to new tree size
+	startTile := (s.ctIndex + 1) / TileSize
+	endTile := currentTreeSize / TileSize
+
+	// Process full tiles
+	for tileIndex := startTile; tileIndex < endTile; tileIndex++ {
+		if err := s.processTile(ctx, tileIndex, 0, foundCert, foundPrecert); err != nil {
+			return false, fmt.Errorf("processing tile %d: %w", tileIndex, err)
+		}
+	}
+
+	// Process partial tile if exists
+	partialSize := currentTreeSize % TileSize
+	if partialSize > 0 {
+		if err := s.processTile(ctx, endTile, partialSize, foundCert, foundPrecert); err != nil {
+			log.Printf("Warning: error processing partial tile %d: %s\n", endTile, err)
+			// Don't return error for partial tiles as they might be incomplete
+		}
+	}
+
+	return true, nil
+}
+
+// processTile processes a single tile from the tiled log.
+// partialWidth of 0 means full tile, otherwise fetch partial tile with that width.
+func (s *StaticCTClient) processTile(ctx context.Context, tileIndex, partialWidth uint64, foundCert func(*ct.RawLogEntry), foundPrecert func(*ct.RawLogEntry)) error {
+	leaves, err := s.fetchTile(ctx, tileIndex, partialWidth)
+	if err != nil {
+		return fmt.Errorf("fetching tile: %w", err)
+	}
+
+	// Calculate the starting index for entries in this tile
+	baseIndex := tileIndex * TileSize
+
+	for i, leaf := range leaves {
+		entryIndex := baseIndex + uint64(i)
+
+		// Skip entries we've already processed
+		if entryIndex <= s.ctIndex {
+			continue
+		}
+
+		// Convert TileLeaf to RawLogEntry for compatibility with existing parsing
+		rawEntry := ConvertTileLeafToRawLogEntry(leaf, entryIndex)
+
+		// Process the entry using existing callbacks
+		switch leaf.EntryType {
+		case EntryTypeCert:
+			foundCert(rawEntry)
+		case EntryTypePrecert:
+			foundPrecert(rawEntry)
+		default:
+			log.Printf("Unknown entry type %d in tile %d, skipping entry at index %d\n", leaf.EntryType, tileIndex, entryIndex)
+		}
+
+		// Update the index
+		s.ctIndex = entryIndex
+	}
+
+	return nil
+}
+
+// fetchTile fetches a tile from the tiled CT log using the provided client.
+// If partialWidth > 0, fetches a partial tile with that width (1-255).
+func (s *StaticCTClient) fetchTile(ctx context.Context, tileIndex, partialWidth uint64) ([]TileLeaf, error) {
+	tilePath := encodeTilePath(tileIndex)
+
+	if partialWidth > 0 {
+		tilePath = fmt.Sprintf("%s.p/%d", tilePath, partialWidth)
+	}
+
+	url := fmt.Sprintf("%s/tile/data/%s", s.url, tilePath)
+
+	req, newReqErr := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if newReqErr != nil {
+		return nil, fmt.Errorf("failed to create tile request: %w", newReqErr)
+	}
+
+	req.Header.Set("User-Agent", UserAgent)
+
+	resp, reqErr := s.httpClient.Do(req)
+	if reqErr != nil {
+		return nil, fmt.Errorf("fetching tile %d: %w", tileIndex, reqErr)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("%w: unexpected status code %d", ErrRequestFailed, resp.StatusCode)
+	}
+
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("reading tile data: %w", err)
+	}
+
+	return ParseTileData(data)
+}
+
+// fetchCheckpoint fetches the checkpoint from a tiled CT log using the provided client.
+func (s *StaticCTClient) fetchCheckpoint(ctx context.Context) (*TiledCheckpoint, error) {
+	url := s.url + "/checkpoint"
+
+	req, newReqErr := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if newReqErr != nil {
+		return nil, fmt.Errorf("failed to create checkpoint request: %w", newReqErr)
+	}
+
+	req.Header.Set("User-Agent", UserAgent)
+
+	resp, reqErr := s.httpClient.Do(req)
+	if reqErr != nil {
+		return nil, fmt.Errorf("failed to execute checkpoint request: %w", reqErr)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("%w: unexpected status code %d", ErrRequestFailed, resp.StatusCode)
+	}
+
+	lines := make([]string, 0, 3)
+
+	scanner := bufio.NewScanner(resp.Body)
+	for scanner.Scan() {
+		lines = append(lines, scanner.Text())
+	}
+
+	if scanErr := scanner.Err(); scanErr != nil {
+		return nil, fmt.Errorf("failed reading response body: %w", scanErr)
+	}
+
+	if len(lines) < 3 {
+		return nil, fmt.Errorf("%w: invalid checkpoint format: expected at least 3 lines, got %d", ErrCheckpointInvalidFormat, len(lines))
+	}
+
+	size, parseErr := strconv.ParseUint(lines[1], 10, 64)
+	if parseErr != nil {
+		return nil, fmt.Errorf("failed parsing tree size: %w", parseErr)
+	}
+
+	return &TiledCheckpoint{
+		Origin: lines[0],
+		Size:   size,
+		Hash:   lines[2],
+	}, nil
 }
