@@ -261,12 +261,25 @@ func ConvertTileLeafToRawLogEntry(leaf TileLeaf, index uint64) *ct.RawLogEntry {
 
 	return rawEntry
 }
+
+// DefaultMaxPartialWait is the default maximum time to wait before forcefully
+// fetching a partial tile that has not yet grown into a full tile.
+const DefaultMaxPartialWait = 1 * time.Minute
+
 type StaticCTClient struct {
 	url        string
 	httpClient *http.Client
 	backoff    backoff.Backoff
 	userAgent  string
 	ctIndex    uint64
+
+	// Deferred partial-tile state.
+	// partialTileIndex holds the tile index of the currently tracked partial tile.
+	// partialTileFirstSeen is when that partial tile was first observed; zero means
+	// no partial tile is being tracked.
+	partialTileIndex     uint64
+	partialTileFirstSeen time.Time
+	maxPartialWait       time.Duration
 }
 
 func NewStaticCTClient(url string, httpClient *http.Client, userAgent string, startIndex uint64) *StaticCTClient {
@@ -281,6 +294,7 @@ func NewStaticCTClient(url string, httpClient *http.Client, userAgent string, st
 		},
 		userAgent:      userAgent,
 		ctIndex:        startIndex,
+		maxPartialWait: DefaultMaxPartialWait,
 	}
 }
 
@@ -332,22 +346,54 @@ func (s *StaticCTClient) fetchAndProcessTiles(ctx context.Context, foundCert fun
 	endTile := currentTreeSize / TileSize
 
 	// Process full tiles
+	fetchedFullTiles := false
 	for tileIndex := startTile; tileIndex < endTile; tileIndex++ {
 		if err := s.processTile(ctx, tileIndex, 0, foundCert, foundPrecert); err != nil {
 			return false, fmt.Errorf("processing tile %d: %w", tileIndex, err)
 		}
+
+		fetchedFullTiles = true
 	}
 
-	// Process partial tile if exists
+	// When the current end tile has advanced past the tracked partial tile, that tile
+	// has since become a full tile and been processed; reset tracking so we start
+	// fresh for the new partial tile (if any).
+	if endTile > s.partialTileIndex {
+		s.partialTileFirstSeen = time.Time{}
+	}
+
+	// Process partial tiles.
 	partialSize := currentTreeSize % TileSize
 	if partialSize > 0 {
-		if err := s.processTile(ctx, endTile, partialSize, foundCert, foundPrecert); err != nil {
-			log.Printf("Warning: error processing partial tile %d: %s\n", endTile, err)
-			// Don't return error for partial tiles as they might be incomplete
+		switch {
+		case s.partialTileFirstSeen.IsZero() || s.partialTileIndex != endTile:
+			// First time we see this partial tile – start the deferral clock.
+			s.partialTileIndex = endTile
+			s.partialTileFirstSeen = time.Now()
+			log.Println("Deferring fetch of partial tile", endTile, "with size", partialSize)
+
+		case time.Since(s.partialTileFirstSeen) >= s.maxPartialWait:
+			// The partial tile has been pending too long – fetch it now to prevent
+			// extreme processing delays on slow-growing logs.
+			log.Println("Forcefully fetching partial tile", endTile, "with size", partialSize)
+
+			if err := s.processTile(ctx, endTile, partialSize, foundCert, foundPrecert); err != nil {
+				log.Printf("Warning: error processing partial tile %d: %s\n", endTile, err)
+			}
+
+			// Reset tracking; the tile will be re-observed on the next poll if it
+			// still hasn't grown into a full tile.
+			s.partialTileFirstSeen = time.Time{}
+
+		default:
+			// Still within the deferral window – skip.
 		}
+	} else {
+		// currentTreeSize is an exact multiple of TileSize; no partial tile exists.
+		s.partialTileFirstSeen = time.Time{}
 	}
 
-	return true, nil
+	return fetchedFullTiles, nil
 }
 
 // processTile processes a single tile from the tiled log.
