@@ -118,43 +118,6 @@ func FetchCheckpoint(ctx context.Context, client *http.Client, baseURL string) (
 	}, nil
 }
 
-// FetchTile fetches a tile from the tiled CT log using the provided client.
-// If partialWidth > 0, fetches a partial tile with that width (1-255).
-func FetchTile(ctx context.Context, client *http.Client, baseURL string, tileIndex, partialWidth uint64) ([]TileLeaf, error) {
-	baseURL = strings.TrimRight(baseURL, "/")
-	tilePath := encodeTilePath(tileIndex)
-
-	if partialWidth > 0 {
-		tilePath = fmt.Sprintf("%s.p/%d", tilePath, partialWidth)
-	}
-
-	url := fmt.Sprintf("%s/tile/data/%s", baseURL, tilePath)
-
-	req, newReqErr := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-	if newReqErr != nil {
-		return nil, fmt.Errorf("failed to create tile request: %w", newReqErr)
-	}
-
-	req.Header.Set("User-Agent", UserAgent)
-
-	resp, reqErr := client.Do(req)
-	if reqErr != nil {
-		return nil, fmt.Errorf("fetching tile %d: %w", tileIndex, reqErr)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("%w: unexpected status code %d", ErrRequestFailed, resp.StatusCode)
-	}
-
-	data, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("reading tile data: %w", err)
-	}
-
-	return ParseTileData(data)
-}
-
 // ParseTileData parses the binary tile data into TileLeaf entries using cryptobyte.
 func ParseTileData(data []byte) ([]TileLeaf, error) {
 	var leaves []TileLeaf
@@ -316,7 +279,7 @@ func (s *StaticCTClient) Monitor(ctx context.Context, foundCert func(*ct.RawLogE
 // It returns true if at least one full tile was fetched.
 func (s *StaticCTClient) fetchAndProcessTiles(ctx context.Context, foundCert func(*ct.RawLogEntry), foundPrecert func(*ct.RawLogEntry)) (bool, error) {
 	// Fetch current checkpoint
-	checkpoint, fetchErr := s.fetchCheckpoint(ctx)
+	checkpoint, fetchErr := s.FetchCheckpoint(ctx)
 	if fetchErr != nil {
 		return false, fmt.Errorf("fetching checkpoint: %w", fetchErr)
 	}
@@ -425,8 +388,8 @@ func (s *StaticCTClient) fetchTile(ctx context.Context, tileIndex, partialWidth 
 	return ParseTileData(data)
 }
 
-// fetchCheckpoint fetches the checkpoint from a tiled CT log using the provided client.
-func (s *StaticCTClient) fetchCheckpoint(ctx context.Context) (*TiledCheckpoint, error) {
+// FetchCheckpoint fetches the checkpoint from a tiled CT log using the provided client.
+func (s *StaticCTClient) FetchCheckpoint(ctx context.Context) (*TiledCheckpoint, error) {
 	url := s.url + "/checkpoint"
 
 	req, newReqErr := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
