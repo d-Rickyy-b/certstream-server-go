@@ -75,7 +75,7 @@ func (w *Watcher) Start() {
 
 		// Start background job to save CTIndexes at regular intervals
 		storageInterval := time.Second * 30
-		go metrics.Metrics.SaveCertIndexesAtInterval(storageInterval, ctIndexFilePath)
+		go metrics.Metrics.SaveCertIndexesAtInterval(w.context, storageInterval, ctIndexFilePath)
 	}
 
 	// initialize the watcher with currently available logs
