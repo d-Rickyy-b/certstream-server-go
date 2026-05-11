@@ -215,8 +215,7 @@ func (m *LogMetrics) LoadCTIndex(ctIndexFilePath string) {
 }
 
 func (m *LogMetrics) createCTIndexFile(ctIndexFilePath string) error {
-	log.Printf("Specified CT index file does not exist: '%s'\n", ctIndexFilePath)
-	log.Println("Creating CT index file now!")
+	log.Printf("Specified CT index file does not exist, creating now: '%s'\n", ctIndexFilePath)
 
 	file, createErr := os.Create(ctIndexFilePath)
 	if createErr != nil {
