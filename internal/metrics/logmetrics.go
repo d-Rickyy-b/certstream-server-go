@@ -198,6 +198,13 @@ func (m *LogMetrics) LoadCTIndex(ctIndexFilePath string) {
 		}
 	}
 
+	m.index = make(CTCertIndex)
+
+	if len(bytes) == 0 || string(bytes) == "" {
+		log.Panicln("CT index file is empty!")
+		return
+	}
+
 	jerr := json.Unmarshal(bytes, &m.index)
 	if jerr != nil {
 		log.Printf("Error unmarshalling CT index file: '%s'\n", ctIndexFilePath)
