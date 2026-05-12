@@ -37,7 +37,7 @@ func (bm *BroadcastManager) registerClient(c *client) {
 // The client will no longer receive certificate broadcasts right after unregistering.
 func (bm *BroadcastManager) unregisterClient(c *client) {
 	bm.clientLock.Lock()
-	log.Println("Unregistering client:", targetClient.conn.RemoteAddr())
+	log.Println("Unregistering client:", c.conn.RemoteAddr())
 
 	// Close the broadcast channel of the client, otherwise this leads to a memory leak
 	close(c.broadcastChan)
