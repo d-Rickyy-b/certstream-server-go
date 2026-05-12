@@ -88,7 +88,10 @@ func TestCreateCTIndexFile_ReturnsErrorForInvalidPath(t *testing.T) {
 func TestLoadCTIndex_DoesNotDeadlockWhenFileMissing(t *testing.T) {
 	metrics := LogMetrics{metrics: make(CTMetrics), index: make(CTCertIndex)}
 	ctIndexPath := filepath.Join(t.TempDir(), "ct_index.json")
-	os.WriteFile(ctIndexPath, []byte("{}"), 0644)
+	writeErr := os.WriteFile(ctIndexPath, []byte("{}"), 0644)
+	if writeErr != nil {
+		t.Fatalf("failed to write test file: %v", writeErr)
+	}
 
 	done := make(chan struct{})
 	go func() {
@@ -127,7 +130,10 @@ func TestLoadCTIndex_LoadsValidFile(t *testing.T) {
 		"https://ct.example.com/log": 42,
 		"https://ct.other.com/log":   999,
 	}
-	data, _ := json.Marshal(want)
+	data, marshalErr := json.Marshal(want)
+	if marshalErr != nil {
+		t.Fatalf("failed to marshal test data: %v", marshalErr)
+	}
 	if err := os.WriteFile(path, data, 0o644); err != nil {
 		t.Fatalf("failed to write test file: %v", err)
 	}
@@ -182,7 +188,11 @@ func TestLoadCTIndex_OverwritesPreexistingIndex(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "ct_index.json")
 
 	want := CTCertIndex{"https://new.example.com/log": 77}
-	data, _ := json.Marshal(want)
+	data, marshalErr := json.Marshal(want)
+	if marshalErr != nil {
+		t.Fatalf("failed to marshal test data: %v", marshalErr)
+	}
+
 	if err := os.WriteFile(path, data, 0o644); err != nil {
 		t.Fatalf("failed to write test file: %v", err)
 	}
