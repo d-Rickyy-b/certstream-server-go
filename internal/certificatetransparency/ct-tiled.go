@@ -224,6 +224,7 @@ func ConvertTileLeafToRawLogEntry(leaf TileLeaf, index uint64) *ct.RawLogEntry {
 
 	return rawEntry
 }
+
 type StaticCTClient struct {
 	url        string
 	httpClient *http.Client
@@ -242,8 +243,8 @@ func NewStaticCTClient(url string, httpClient *http.Client, userAgent string, st
 			Factor: 1.3,
 			Jitter: true,
 		},
-		userAgent:      userAgent,
-		ctIndex:        startIndex,
+		userAgent: userAgent,
+		ctIndex:   startIndex,
 	}
 }
 
