@@ -59,7 +59,7 @@ jobs:
         if: github.ref == 'refs/heads/dev'
         uses: goreleaser/goreleaser-action@v7
         with:
-          version: dev
+          version: latest
           args: release --snapshot --clean --config .github/goreleaser.yml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
