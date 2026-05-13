@@ -47,9 +47,19 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run GoReleaser
+        if: startsWith(github.ref, 'refs/tags/')
         uses: goreleaser/goreleaser-action@v7
         with:
           version: latest
           args: release --clean --config .github/goreleaser.yml
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run GoReleaser (dev snapshot)
+        if: github.ref == 'refs/heads/dev'
+        uses: goreleaser/goreleaser-action@v7
+        with:
+          version: dev
+          args: release --snapshot --clean --config .github/goreleaser.yml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
