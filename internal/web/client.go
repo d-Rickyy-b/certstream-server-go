@@ -146,29 +146,31 @@ func (c *client) listenWebsocket() {
 	for {
 		// ignore any message sent from clients - we only handle errors (aka. disconnects)
 		_, _, readErr := c.conn.ReadMessage()
-		if readErr != nil {
-			if websocket.IsUnexpectedCloseError(readErr, websocket.CloseGoingAway, websocket.CloseNormalClosure) {
-				log.Printf("Unexpected websocket close error: %v\n", readErr)
-			}
-
-			// If client fails to send ping messages
-			if strings.Contains(strings.ToLower(readErr.Error()), "i/o timeout") {
-				log.Printf("No ping received from client: %s\n", c.Name()) //nolint:gosec
-
-				closeMessage := websocket.FormatCloseMessage(websocket.ClosePolicyViolation, "No ping received!")
-
-				writeErr := c.conn.WriteControl(websocket.CloseMessage, closeMessage, time.Now().Add(5*time.Second))
-				if writeErr != nil {
-					log.Printf("Error while sending close message: %v\n", writeErr)
-				}
-			} else if strings.Contains(strings.ToLower(readErr.Error()), "an existing connection was forcibly closed by the remote host") {
-				log.Printf("Connection to client lost: %s\n", c.Name()) //nolint:gosec
-			}
-
-			log.Printf("Disconnecting client %s!\n", c.Name()) //nolint:gosec
-
-			break
+		if readErr == nil {
+			continue
 		}
+
+		if websocket.IsUnexpectedCloseError(readErr, websocket.CloseGoingAway, websocket.CloseNormalClosure) {
+			log.Printf("Unexpected websocket close error: %v\n", readErr)
+		}
+
+		// If client fails to send ping messages
+		if strings.Contains(strings.ToLower(readErr.Error()), "i/o timeout") {
+			log.Printf("No ping received from client: %s\n", c.Name()) //nolint:gosec
+
+			closeMessage := websocket.FormatCloseMessage(websocket.ClosePolicyViolation, "No ping received!")
+
+			writeErr := c.conn.WriteControl(websocket.CloseMessage, closeMessage, time.Now().Add(5*time.Second))
+			if writeErr != nil {
+				log.Printf("Error while sending close message: %v\n", writeErr)
+			}
+		} else if strings.Contains(strings.ToLower(readErr.Error()), "an existing connection was forcibly closed by the remote host") {
+			log.Printf("Connection to client lost: %s\n", c.Name()) //nolint:gosec
+		}
+
+		log.Printf("Disconnecting client %s!\n", c.Name()) //nolint:gosec
+
+		break
 	}
 }
 
