@@ -326,7 +326,7 @@ func (w *Watcher) CreateIndexFile(filePath string) error {
 
 	saveErr := metrics.Metrics.SaveCertIndexes(filePath)
 	if saveErr != nil {
-		return saveErr
+		return fmt.Errorf("failed to save cert index: %w", saveErr)
 	}
 
 	log.Println("Index file saved to", filePath)
