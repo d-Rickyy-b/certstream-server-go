@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math"
 	"net/http"
 	"slices"
 	"strconv"
@@ -189,6 +190,11 @@ func ParseTileData(data []byte) ([]TileLeaf, error) {
 
 // ConvertTileLeafToRawLogEntry converts a TileLeaf to ct.RawLogEntry for compatibility.
 func ConvertTileLeafToRawLogEntry(leaf TileLeaf, index uint64) *ct.RawLogEntry {
+	if index > math.MaxInt64 {
+		log.Printf("index (%d) exceeds math.MaxInt64, skipping\n", index)
+		return nil
+	}
+
 	rawEntry := &ct.RawLogEntry{
 		Index: int64(index),
 		Leaf: ct.MerkleTreeLeaf{
@@ -334,6 +340,7 @@ func (s *StaticCTClient) fetchAndProcessTiles(ctx context.Context, foundCert fun
 			// First time we see this partial tile – start the deferral clock.
 			s.partialTileIndex = endTile
 			s.partialTileFirstSeen = time.Now()
+
 			log.Println("Deferring fetch of partial tile", endTile, "with size", partialSize)
 
 		case time.Since(s.partialTileFirstSeen) >= s.maxPartialWait:

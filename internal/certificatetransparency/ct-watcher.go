@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math"
 	"net/http"
 	"path/filepath"
 	"strings"
@@ -310,6 +311,7 @@ func (w *Watcher) CreateIndexFile(filePath string) error {
 			log.Println("Fetching checkpoint for", normalizedURL)
 
 			staticCTClient := NewStaticCTClient(transparencyLog.MonitoringURL, httpClient, UserAgent, 0)
+
 			checkpoint, fetchErr := staticCTClient.FetchCheckpoint(w.context)
 			if fetchErr != nil {
 				log.Printf("Could not get checkpoint for '%s': %s\n", transparencyLog.MonitoringURL, fetchErr)
@@ -441,6 +443,12 @@ func (w *worker) runStandardWorker(ctx context.Context) error {
 		}
 		// Start at the latest STH to skip all the past certificates
 		w.ctIndex = sth.TreeSize
+	}
+
+	// Handle gosec G115 warning
+	if w.ctIndex > math.MaxInt64 {
+		log.Printf("index (%d) exceeds math.MaxInt64, skipping\n", w.ctIndex)
+		return nil
 	}
 
 	certScanner := scanner.NewScanner(jsonClient, scanner.ScannerOptions{

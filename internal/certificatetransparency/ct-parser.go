@@ -29,6 +29,11 @@ func parseData(entry *ct.RawLogEntry, operatorName, logName, ctURL, logType stri
 		certLink = fmt.Sprintf("%s/ct/v1/get-entries?start=%d&end=%d", ctURL, entry.Index, entry.Index)
 	}
 
+	// Handle gosec G115 warning
+	if entry.Index < 0 {
+		return models.Data{}, fmt.Errorf("invalid cert index: %d", entry.Index)
+	}
+
 	// Create main data structure
 	data := models.Data{
 		CertIndex: uint64(entry.Index),
