@@ -88,7 +88,7 @@ func TestCreateCTIndexFile_ReturnsErrorForInvalidPath(t *testing.T) {
 func TestLoadCTIndex_DoesNotDeadlockWhenFileMissing(t *testing.T) {
 	metrics := LogMetrics{metrics: make(CTMetrics), index: make(CTCertIndex)}
 	ctIndexPath := filepath.Join(t.TempDir(), "ct_index.json")
-	writeErr := os.WriteFile(ctIndexPath, []byte("{}"), 0644)
+	writeErr := os.WriteFile(ctIndexPath, []byte("{}"), 0o644)
 	if writeErr != nil {
 		t.Fatalf("failed to write test file: %v", writeErr)
 	}
