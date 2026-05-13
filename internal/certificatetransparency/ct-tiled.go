@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -36,7 +37,7 @@ type TileLeaf struct {
 }
 
 var (
-	EntryTypeCert    uint16 = 0
+	EntryTypeCert    uint16
 	EntryTypePrecert uint16 = 1
 )
 
@@ -54,7 +55,7 @@ func encodeTilePath(index uint64) string {
 
 	// Build path from groups in reverse
 	var builder strings.Builder
-	for i := len(groups) - 1; i >= 0; i-- {
+	for i, v := range slices.Backward(groups) {
 		if i < len(groups)-1 {
 			builder.WriteByte('/')
 		}
@@ -63,7 +64,7 @@ func encodeTilePath(index uint64) string {
 			builder.WriteByte('x')
 		}
 
-		fmt.Fprintf(&builder, "%03d", groups[i])
+		fmt.Fprintf(&builder, "%03d", v)
 	}
 
 	return builder.String()
