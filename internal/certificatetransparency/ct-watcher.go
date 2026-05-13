@@ -75,7 +75,7 @@ func (w *Watcher) Start() {
 
 		// Start background job to save CTIndexes at regular intervals
 		storageInterval := time.Second * 30
-		go metrics.Metrics.SaveCertIndexesAtInterval(storageInterval, ctIndexFilePath)
+		go metrics.Metrics.SaveCertIndexesAtInterval(w.context, storageInterval, ctIndexFilePath)
 	}
 
 	// initialize the watcher with currently available logs
@@ -309,7 +309,8 @@ func (w *Watcher) CreateIndexFile(filePath string) error {
 			metrics.Metrics.Init(operator.Name, normalizedURL)
 			log.Println("Fetching checkpoint for", normalizedURL)
 
-			checkpoint, fetchErr := FetchCheckpoint(w.context, httpClient, transparencyLog.MonitoringURL)
+			staticCTClient := NewStaticCTClient(transparencyLog.MonitoringURL, httpClient, UserAgent, 0)
+			checkpoint, fetchErr := staticCTClient.FetchCheckpoint(w.context)
 			if fetchErr != nil {
 				log.Printf("Could not get checkpoint for '%s': %s\n", transparencyLog.MonitoringURL, fetchErr)
 				return ErrFetchingSTHFailed
@@ -444,7 +445,7 @@ func (w *worker) runStandardWorker(ctx context.Context) error {
 
 	certScanner := scanner.NewScanner(jsonClient, scanner.ScannerOptions{
 		FetcherOptions: scanner.FetcherOptions{
-			BatchSize:     100,
+			BatchSize:     256,
 			ParallelFetch: 1,
 			StartIndex:    int64(w.ctIndex),
 			Continuous:    true,
@@ -469,19 +470,20 @@ func (w *worker) runStandardWorker(ctx context.Context) error {
 func (w *worker) runTiledWorker(ctx context.Context) error {
 	httpClient := newHTTPClient()
 
+	staticCTClient := NewStaticCTClient(w.ctURL, httpClient, UserAgent, w.ctIndex)
+
 	// If recovery is enabled and the CT index is set, we start at the saved index. Otherwise, we start at the latest checkpoint.
 	validSavedCTIndexExists := config.AppConfig.General.Recovery.Enabled
 	if !validSavedCTIndexExists {
-		checkpoint, err := FetchCheckpoint(ctx, httpClient, w.ctURL)
+		checkpoint, err := staticCTClient.FetchCheckpoint(ctx)
 		if err != nil {
 			log.Printf("Could not get checkpoint for '%s': %s\n", w.ctURL, err)
 			return ErrFetchingSTHFailed
 		}
 		// Start at the latest checkpoint to skip all the past certificates
-		w.ctIndex = checkpoint.Size
+		staticCTClient.ctIndex = checkpoint.Size
 	}
 
-	staticCTClient := NewStaticCTClient(w.ctURL, httpClient, UserAgent, w.ctIndex)
 	err := staticCTClient.Monitor(ctx, w.foundCertCallback, w.foundPrecertCallback)
 	if err != nil {
 		return fmt.Errorf("error scanning for certificates: %w", err)

@@ -3,11 +3,15 @@ package web
 import (
 	"fmt"
 	"log"
+	"math/rand"
+	"net"
 	"strings"
 	"time"
 
 	"github.com/gorilla/websocket"
 )
+
+const idChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
 const (
 	SubTypeFull SubscriptionType = iota
@@ -19,20 +23,42 @@ type SubscriptionType int
 
 // client represents a single client's connection to the server.
 type client struct {
+	clientData
+
+	id            string
 	conn          *websocket.Conn
 	broadcastChan chan []byte
-	name          string
 	subType       SubscriptionType
 	skippedCerts  uint64
 }
 
-func newClient(conn *websocket.Conn, subType SubscriptionType, name string, certBufferSize int) *client {
+type clientData struct {
+	userAgent        string
+	connectionIP     string
+	connectionPort   string
+	realIPFromHeader string
+}
+
+// newClient creates a new client struct that holds information about a connected client.
+func newClient(conn *websocket.Conn, subType SubscriptionType, data clientData, certBufferSize int) *client {
 	return &client{
+		clientData:    data,
+		id:            generateClientID(),
 		conn:          conn,
 		broadcastChan: make(chan []byte, certBufferSize),
-		name:          name,
 		subType:       subType,
 	}
+}
+
+// generateClientID generates a random 8-char identifier for the client.
+func generateClientID() string {
+	clientID := make([]byte, 8)
+	for i := range clientID {
+		//nolint:gosec
+		clientID[i] = idChars[rand.Intn(len(idChars))]
+	}
+
+	return string(clientID)
 }
 
 // Each client has a broadcastHandler that runs in the background and sends out the broadcast messages to the client.
@@ -41,7 +67,7 @@ func (c *client) broadcastHandler() {
 	pingTicker := time.NewTicker(30 * time.Second)
 
 	defer func() {
-		log.Println("Closing broadcast handler for client:", c.conn.RemoteAddr())
+		log.Println("Closing broadcast handler for client:", c.Name()) //nolint:gosec
 
 		pingTicker.Stop()
 
@@ -127,7 +153,7 @@ func (c *client) listenWebsocket() {
 
 			// If client fails to send ping messages
 			if strings.Contains(strings.ToLower(readErr.Error()), "i/o timeout") {
-				log.Printf("No ping received from client: %v\n", c.conn.RemoteAddr())
+				log.Printf("No ping received from client: %s\n", c.Name()) //nolint:gosec
 
 				closeMessage := websocket.FormatCloseMessage(websocket.ClosePolicyViolation, "No ping received!")
 
@@ -136,12 +162,48 @@ func (c *client) listenWebsocket() {
 					log.Printf("Error while sending close message: %v\n", writeErr)
 				}
 			} else if strings.Contains(strings.ToLower(readErr.Error()), "an existing connection was forcibly closed by the remote host") {
-				log.Printf("Connection to client lost: %v\n", c.conn.RemoteAddr())
+				log.Printf("Connection to client lost: %s\n", c.Name()) //nolint:gosec
 			}
 
-			log.Printf("Disconnecting client %v!\n", c.conn.RemoteAddr())
+			log.Printf("Disconnecting client %s!\n", c.Name()) //nolint:gosec
 
 			break
 		}
 	}
+}
+
+// sanitizeInput removes newline and carriage-return characters from a
+// string to prevent log-injection attacks (gosec G706).
+func sanitizeInput(s string) string {
+	s = strings.ReplaceAll(s, "\n", "\\n")
+	s = strings.ReplaceAll(s, "\r", "\\r")
+
+	return s
+}
+
+// Name returns the name/identifier for this client.
+func (c *client) Name() string {
+	var clientName string
+
+	clientName = fmt.Sprintf("[%s] - ", c.id)
+
+	connIP := sanitizeInput(c.connectionIP)
+	connPort := sanitizeInput(c.connectionPort)
+	realIP := sanitizeInput(c.realIPFromHeader)
+
+	socket := net.JoinHostPort(connIP, connPort)
+
+	// If the realIP is set and if it differs from the connection IP, return both the connection IP and the real IP.
+	if realIP != "" && realIP != connIP {
+		clientName += fmt.Sprintf("%s (via %s)", socket, realIP)
+	} else {
+		clientName += socket
+	}
+
+	if c.userAgent != "" {
+		ua := sanitizeInput(c.userAgent)
+		clientName += fmt.Sprintf(" - '%s'", ua)
+	}
+
+	return clientName
 }

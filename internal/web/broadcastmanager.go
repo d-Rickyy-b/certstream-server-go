@@ -29,22 +29,23 @@ func (bm *BroadcastManager) registerClient(c *client) {
 	bm.clientLock.Lock()
 	bm.clients = append(bm.clients, c)
 	log.Printf("Clients: %d, Capacity: %d\n", len(bm.clients), cap(bm.clients))
-	metrics.Prometheus.RegisterClient(c.name, func() float64 { return float64(c.skippedCerts) })
+	metrics.Prometheus.RegisterClient(c.id, c.connectionIP, c.connectionPort, c.realIPFromHeader, c.userAgent, func() float64 { return float64(c.skippedCerts) })
 	bm.clientLock.Unlock()
 }
 
 // unregisterClient removes a client from the list of clients of the BroadcastManager.
 // The client will no longer receive certificate broadcasts right after unregistering.
-func (bm *BroadcastManager) unregisterClient(targetClient *client) {
+func (bm *BroadcastManager) unregisterClient(c *client) {
 	bm.clientLock.Lock()
+	log.Println("Unregistering client:", c.conn.RemoteAddr())
 
 	// Close the broadcast channel of the client, otherwise this leads to a memory leak
-	close(targetClient.broadcastChan)
-	metrics.Prometheus.UnregisterClient(targetClient.name)
+	close(c.broadcastChan)
+	metrics.Prometheus.UnregisterClient(c.id, c.connectionIP, c.connectionPort, c.realIPFromHeader, c.userAgent)
 
 	// Remove client from internal client list
-	for i, c := range bm.clients {
-		if targetClient != c {
+	for i, storedClient := range bm.clients {
+		if c != storedClient {
 			continue
 		}
 
@@ -90,18 +91,6 @@ func (bm *BroadcastManager) clientCountByType(subType SubscriptionType) (count i
 	return count
 }
 
-func (bm *BroadcastManager) GetSkippedCerts() map[string]uint64 {
-	bm.clientLock.RLock()
-	defer bm.clientLock.RUnlock()
-
-	skippedCerts := make(map[string]uint64, len(bm.clients))
-	for _, c := range bm.clients {
-		skippedCerts[c.name] = c.skippedCerts
-	}
-
-	return skippedCerts
-}
-
 // broadcaster is run in a goroutine and handles the dispatching of entries to clients.
 func (bm *BroadcastManager) broadcaster() {
 	for {
@@ -124,7 +113,7 @@ func (bm *BroadcastManager) broadcaster() {
 			case SubTypeDomain:
 				data = dataDomain
 			default:
-				log.Printf("Unknown subscription type '%d' for client '%s'. Skipping this client!\n", c.subType, c.name)
+				log.Printf("Unknown subscription type '%d'. Skipping client %s\n", c.subType, c.Name())
 				continue
 			}
 
@@ -134,7 +123,7 @@ func (bm *BroadcastManager) broadcaster() {
 				// Default case is executed if the client's broadcast channel is full.
 				c.skippedCerts++
 				if c.skippedCerts%1000 == 1 {
-					log.Printf("Not providing client '%s' with cert because client's buffer is full. The client can't keep up. Skipped certs: %d\n", c.name, c.skippedCerts)
+					log.Printf("Client can't keep up. Skipped certs: %d | Client: %s\n", c.skippedCerts, c.Name())
 				}
 			}
 		}

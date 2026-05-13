@@ -15,13 +15,13 @@ builds:
       - darwin
       - windows
     goarch:
-      - 386
+      - "386"
       - amd64
       - arm
       - arm64
     ignore:
       - goos: darwin
-        goarch: 386
+        goarch: "386"
       - goos: darwin
         goarch: arm
       - goos: windows
@@ -29,9 +29,9 @@ builds:
       - goos: windows
         goarch: arm64
       - goos: windows
-        goarch: 386
+        goarch: "386"
 checksum:
-  name_template: '{{.ProjectName}}_{{.Version}}_checksums.txt'
+  name_template: "{{.ProjectName}}_{{.Version}}_checksums.txt"
 changelog:
   disable: true
 
@@ -41,8 +41,8 @@ dockers_v2:
       - "ghcr.io/d-rickyy-b/{{.ProjectName}}"
     dockerfile: docker/Dockerfile.goreleaser
     tags:
-        - "{{.Tag}}"
-        - "{{ if not .Prerelease }}latest{{ end }}"
+      - "{{.Tag}}"
+      - "{{ if not .Prerelease }}latest{{ end }}"
     platforms:
       - linux/amd64
       - linux/arm64
@@ -58,7 +58,7 @@ dockers_v2:
       "org.opencontainers.image.source": "https://github.com/d-Rickyy-b/certstream-server-go"
 
 archives:
-  - formats: [ "binary" ]
+  - formats: ["binary"]
     name_template: >-
       {{- .ProjectName }}_
       {{- .Version}}_

@@ -1,6 +1,7 @@
 package metrics
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -197,6 +198,13 @@ func (m *LogMetrics) LoadCTIndex(ctIndexFilePath string) {
 		}
 	}
 
+	m.index = make(CTCertIndex)
+
+	if len(bytes) == 0 || string(bytes) == "" {
+		log.Panicln("CT index file is empty!")
+		return
+	}
+
 	jerr := json.Unmarshal(bytes, &m.index)
 	if jerr != nil {
 		log.Printf("Error unmarshalling CT index file: '%s'\n", ctIndexFilePath)
@@ -207,8 +215,7 @@ func (m *LogMetrics) LoadCTIndex(ctIndexFilePath string) {
 }
 
 func (m *LogMetrics) createCTIndexFile(ctIndexFilePath string) error {
-	log.Printf("Specified CT index file does not exist: '%s'\n", ctIndexFilePath)
-	log.Println("Creating CT index file now!")
+	log.Printf("Specified CT index file does not exist, creating now: '%s'\n", ctIndexFilePath)
 
 	file, createErr := os.Create(ctIndexFilePath)
 	if createErr != nil {
@@ -239,13 +246,18 @@ func (m *LogMetrics) createCTIndexFile(ctIndexFilePath string) error {
 // We first create a temp file and write the index data to it. Only then do we move the temp file to the actual
 // permanent index file. This prevents the last good index file from being clobbered if the program was shutdown/killed
 // in-between the write operation.
-func (m *LogMetrics) SaveCertIndexesAtInterval(interval time.Duration, ctIndexFilePath string) {
+func (m *LogMetrics) SaveCertIndexesAtInterval(ctx context.Context, interval time.Duration, ctIndexFilePath string) {
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 
-	for range ticker.C {
-		if err := m.SaveCertIndexes(ctIndexFilePath); err != nil {
-			log.Printf("Error saving CT indexes at '%s': %s\n", ctIndexFilePath, err)
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			if err := m.SaveCertIndexes(ctIndexFilePath); err != nil {
+				log.Printf("Error saving CT indexes at '%s': %s\n", ctIndexFilePath, err)
+			}
 		}
 	}
 }
