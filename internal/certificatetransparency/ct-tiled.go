@@ -341,12 +341,12 @@ func (s *StaticCTClient) fetchAndProcessTiles(ctx context.Context, foundCert fun
 			s.partialTileIndex = endTile
 			s.partialTileFirstSeen = time.Now()
 
-			log.Println("Deferring fetch of partial tile", endTile, "with size", partialSize)
+			// log.Println("Deferring fetch of partial tile", endTile, "with size", partialSize)
 
 		case time.Since(s.partialTileFirstSeen) >= s.maxPartialWait:
 			// The partial tile has been pending too long – fetch it now to prevent
 			// extreme processing delays on slow-growing logs.
-			log.Println("Forcefully fetching partial tile", endTile, "with size", partialSize)
+			// log.Println("Forcefully fetching partial tile", endTile, "with size", partialSize)
 
 			if err := s.processTile(ctx, endTile, partialSize, foundCert, foundPrecert); err != nil {
 				log.Printf("Warning: error processing partial tile %d: %s\n", endTile, err)
