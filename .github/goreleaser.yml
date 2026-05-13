@@ -41,8 +41,8 @@ dockers_v2:
       - "ghcr.io/d-rickyy-b/{{.ProjectName}}"
     dockerfile: docker/Dockerfile.goreleaser
     tags:
-      - "{{.Tag}}"
-      - "{{ if not .Prerelease }}latest{{ end }}"
+      - '{{ if eq .Branch "dev" }}dev{{ else }}{{ .Tag }}{{ end }}'
+      - '{{ if and (ne .Branch "dev") (not .Prerelease) }}latest{{ end }}'
     platforms:
       - linux/amd64
       - linux/arm64
