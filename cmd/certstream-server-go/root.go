@@ -2,13 +2,13 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"os"
 
 	"github.com/spf13/cobra"
 
 	"github.com/d-Rickyy-b/certstream-server-go/internal/certstream"
 	"github.com/d-Rickyy-b/certstream-server-go/internal/config"
+	"github.com/d-Rickyy-b/certstream-server-go/internal/logger"
 )
 
 // rootCmd represents the base command when called without any subcommands.
@@ -44,7 +44,7 @@ certificate transparency logs via websocket connections to connected clients.`,
 
 		certstreamServer, err := certstream.NewCertstreamFromConfigFile(configPath)
 		if err != nil {
-			log.Fatalf("Error while creating certstream server: %v", err)
+			logger.Fatal("Error while creating certstream server", "error", err)
 		}
 
 		certstreamServer.Start()

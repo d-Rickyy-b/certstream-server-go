@@ -1,7 +1,7 @@
 package web
 
 import (
-	"log"
+	"log/slog"
 	"sync"
 
 	"github.com/d-Rickyy-b/certstream-server-go/internal/metrics"
@@ -28,7 +28,7 @@ func NewBroadcastManager() *BroadcastManager {
 func (bm *BroadcastManager) registerClient(c *client) {
 	bm.clientLock.Lock()
 	bm.clients = append(bm.clients, c)
-	log.Printf("Clients: %d, Capacity: %d\n", len(bm.clients), cap(bm.clients))
+	slog.Info("Client registered", "clients", len(bm.clients), "capacity", cap(bm.clients))
 	metrics.Prometheus.RegisterClient(c.name, func() float64 { return float64(c.skippedCerts) })
 	bm.clientLock.Unlock()
 }
@@ -124,7 +124,7 @@ func (bm *BroadcastManager) broadcaster() {
 			case SubTypeDomain:
 				data = dataDomain
 			default:
-				log.Printf("Unknown subscription type '%d' for client '%s'. Skipping this client!\n", c.subType, c.name)
+				slog.Warn("Unknown subscription type, skipping client", "sub_type", c.subType, "client", c.name)
 				continue
 			}
 
@@ -134,7 +134,7 @@ func (bm *BroadcastManager) broadcaster() {
 				// Default case is executed if the client's broadcast channel is full.
 				c.skippedCerts++
 				if c.skippedCerts%1000 == 1 {
-					log.Printf("Not providing client '%s' with cert because client's buffer is full. The client can't keep up. Skipped certs: %d\n", c.name, c.skippedCerts)
+					slog.Warn("Client buffer full, skipping certificate", "client", c.name, "skipped_certs", c.skippedCerts)
 				}
 			}
 		}

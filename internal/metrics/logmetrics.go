@@ -3,7 +3,7 @@ package metrics
 import (
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"maps"
 	"os"
 	"sync"
@@ -169,13 +169,13 @@ func (m *LogMetrics) SetCTIndex(url string, index uint64) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
-	log.Printf("Setting CT index for %s to %d\n", url, index)
+	slog.Info("Setting CT index", "url", url, "index", index)
 	m.index[url] = index
 }
 
 // LoadCTIndex loads the last cert index processed for each CT url if it exists.
 func (m *LogMetrics) LoadCTIndex(ctIndexFilePath string) {
-	log.Println("Loading CT indexes from file: ", ctIndexFilePath)
+	slog.Info("Loading CT indexes from file", "path", ctIndexFilePath)
 
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
@@ -186,34 +186,33 @@ func (m *LogMetrics) LoadCTIndex(ctIndexFilePath string) {
 		if os.IsNotExist(readErr) {
 			err := m.createCTIndexFile(ctIndexFilePath)
 			if err != nil {
-				log.Printf("Error creating CT index file: '%s'\n", ctIndexFilePath)
-				log.Panicln(err)
+				slog.Error("Error creating CT index file", "path", ctIndexFilePath, "error", err)
+				panic(err)
 			}
 
 			bytes = []byte("{}")
 		} else {
-			// If the file exists, but we can't read it, log the error and panic
-			log.Panicln(readErr)
+			slog.Error("Error reading CT index file", "path", ctIndexFilePath, "error", readErr)
+			panic(readErr)
 		}
 	}
 
 	jerr := json.Unmarshal(bytes, &m.index)
 	if jerr != nil {
-		log.Printf("Error unmarshalling CT index file: '%s'\n", ctIndexFilePath)
-		log.Panicln(jerr)
+		slog.Error("Error unmarshalling CT index file", "path", ctIndexFilePath, "error", jerr)
+		panic(jerr)
 	}
 
-	log.Println("Successfully loaded saved CT indexes")
+	slog.Info("Successfully loaded saved CT indexes")
 }
 
 func (m *LogMetrics) createCTIndexFile(ctIndexFilePath string) error {
-	log.Printf("Specified CT index file does not exist: '%s'\n", ctIndexFilePath)
-	log.Println("Creating CT index file now!")
+	slog.Info("CT index file does not exist, creating it", "path", ctIndexFilePath)
 
 	file, createErr := os.Create(ctIndexFilePath)
 	if createErr != nil {
-		log.Printf("Error creating CT index file: '%s'\n", ctIndexFilePath)
-		log.Panicln(createErr)
+		slog.Error("Error creating CT index file", "path", ctIndexFilePath, "error", createErr)
+		panic(createErr)
 	}
 	defer file.Close()
 
@@ -228,8 +227,8 @@ func (m *LogMetrics) createCTIndexFile(ctIndexFilePath string) error {
 
 	_, writeErr := file.Write(bytes)
 	if writeErr != nil {
-		log.Printf("Error writing to CT index file: '%s'\n", ctIndexFilePath)
-		log.Panicln(writeErr)
+		slog.Error("Error writing to CT index file", "path", ctIndexFilePath, "error", writeErr)
+		panic(writeErr)
 	}
 
 	return nil
@@ -245,7 +244,7 @@ func (m *LogMetrics) SaveCertIndexesAtInterval(interval time.Duration, ctIndexFi
 
 	for range ticker.C {
 		if err := m.SaveCertIndexes(ctIndexFilePath); err != nil {
-			log.Printf("Error saving CT indexes at '%s': %s\n", ctIndexFilePath, err)
+			slog.Error("Error saving CT indexes", "path", ctIndexFilePath, "error", err)
 		}
 	}
 }
@@ -259,7 +258,8 @@ func (m *LogMetrics) SaveCertIndexes(ctIndexFilePath string) error {
 
 	bytes, cerr := json.MarshalIndent(ctIndex, "", " ")
 	if cerr != nil {
-		log.Panic(cerr)
+		slog.Error("Error marshalling CT indexes", "error", cerr)
+		panic(cerr)
 	}
 
 	// Store index data in a temp file

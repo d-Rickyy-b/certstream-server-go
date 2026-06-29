@@ -5,13 +5,14 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/d-Rickyy-b/certstream-server-go/internal/certificatetransparency"
 	"github.com/d-Rickyy-b/certstream-server-go/internal/config"
+	"github.com/d-Rickyy-b/certstream-server-go/internal/logger"
 	"github.com/d-Rickyy-b/certstream-server-go/internal/models"
 
 	ct "github.com/google/certificate-transparency-go"
@@ -23,6 +24,8 @@ import (
 var userAgent = fmt.Sprintf("Certstream v%s (github.com/d-Rickyy-b/certstream-server-go)", config.Version)
 
 func main() {
+	logger.Init()
+
 	ctLogFlag := flag.String("log", "", "URL of the CT log - e.g. ct.googleapis.com/logs/eu1/xenon2025h2")
 	certIDFlag := flag.Int64("cert", 0, "ID of the certificate to fetch from the CT log")
 	chainFlag := flag.Bool("chain", false, "Include full chain for the certificate")
@@ -34,7 +37,7 @@ func main() {
 	certID := *certIDFlag
 
 	if ctLog == "" {
-		log.Fatalln("CT log URL is required")
+		logger.Fatal("CT log URL is required")
 	}
 
 	if !strings.HasPrefix(ctLog, "https://") {
@@ -57,29 +60,29 @@ func main() {
 
 	jsonClient, e := client.New(ctLog, &httpClient, jsonclient.Options{UserAgent: userAgent})
 	if e != nil {
-		log.Fatalln("Error creating JSON client:", e)
+		logger.Fatal("Error creating JSON client", "error", e)
 	}
 
 	entries, getEntryErr := getEntry(jsonClient, certID)
 	if getEntryErr != nil {
-		log.Fatalln("Error getting entry from CT log: ", getEntryErr)
+		logger.Fatal("Error getting entry from CT log", "error", getEntryErr)
 	}
 
 	// Loop over entries and pars each one.
 	for _, leafEntry := range entries.Entries {
 		rawLogEntry, err := ct.RawLogEntryFromLeaf(certID, &leafEntry)
 		if err != nil {
-			log.Fatalln("Error creating raw log entry: ", err)
+			logger.Fatal("Error creating raw log entry", "error", err)
 		}
 
 		entry, parseErr := certificatetransparency.ParseCertstreamEntry(rawLogEntry, "N/A", "N/A", ctLog, models.SourceIsRFC6962)
 		if parseErr != nil {
-			log.Fatalln("Error parsing certstream entry: ", parseErr)
+			logger.Fatal("Error parsing certstream entry", "error", parseErr)
 		}
 
 		// Check if the entry is a certificate or precertificate
 		if logEntry, toLogEntryErr := rawLogEntry.ToLogEntry(); toLogEntryErr != nil {
-			log.Println("Error converting rawLogEntry to logEntry: ", toLogEntryErr)
+			slog.Error("Error converting rawLogEntry to logEntry", "error", toLogEntryErr)
 		} else {
 			matcher := scanner.MatchAll{}
 			if logEntry.X509Cert != nil && matcher.CertificateMatches(logEntry.X509Cert) {

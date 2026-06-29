@@ -8,7 +8,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"hash"
-	"log"
+	"log/slog"
 	"math/big"
 	"slices"
 	"strings"
@@ -48,7 +48,7 @@ func parseData(entry *ct.RawLogEntry, operatorName, logName, ctURL, logType stri
 	// Convert RawLogEntry to ct.LogEntry
 	logEntry, conversionErr := entry.ToLogEntry()
 	if conversionErr != nil {
-		log.Println("Could not convert entry to LogEntry: ", conversionErr)
+		slog.Error("Could not convert entry to LogEntry", "error", conversionErr)
 		return models.Data{}, fmt.Errorf("could not convert entry to logentry: %w", conversionErr)
 	}
 
@@ -92,7 +92,7 @@ func parseData(entry *ct.RawLogEntry, operatorName, logName, ctURL, logType stri
 
 	chain, parseErr := parseCertificateChain(logEntry)
 	if parseErr != nil {
-		log.Println("Could not parse certificate chain: ", parseErr)
+		slog.Error("Could not parse certificate chain", "error", parseErr)
 		return models.Data{}, parseErr
 	}
 
@@ -300,7 +300,7 @@ func parseName(input []string) *string {
 func calculateHash(data []byte, certHasher hash.Hash) string {
 	_, e := certHasher.Write(data)
 	if e != nil {
-		log.Printf("Error while hashing cert: %s\n", e)
+		slog.Error("Error while hashing cert", "error", e)
 		return ""
 	}
 

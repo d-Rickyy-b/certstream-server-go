@@ -1,11 +1,11 @@
 package main
 
 import (
-	"log"
+	"github.com/d-Rickyy-b/certstream-server-go/internal/logger"
 )
 
 // main is the entry point for the application.
 func main() {
-	log.SetFlags(log.LstdFlags | log.Lshortfile)
+	logger.Init()
 	Execute()
 }

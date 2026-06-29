@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
+	"log/slog"
 	"net/http"
 	"path/filepath"
 	"strings"
@@ -66,7 +66,7 @@ func (w *Watcher) Start() {
 	if config.AppConfig.General.Recovery.Enabled {
 		ctIndexFilePath, err := filepath.Abs(config.AppConfig.General.Recovery.CTIndexFile)
 		if err != nil {
-			log.Printf("Error getting absolute path for CT index file: '%s', %s\n", config.AppConfig.General.Recovery.CTIndexFile, err)
+			slog.Error("Error getting absolute path for CT index file", "path", config.AppConfig.General.Recovery.CTIndexFile, "error", err)
 			return
 		}
 
@@ -81,7 +81,7 @@ func (w *Watcher) Start() {
 	// initialize the watcher with currently available logs
 	w.updateLogs()
 
-	log.Println("Started CT watcher")
+	slog.Info("Started CT watcher")
 
 	go certHandler(w.certChan)
 	go w.watchNewLogs()
@@ -113,11 +113,11 @@ func (w *Watcher) updateLogs() {
 	// Get a list of urls of all CT logs provided by Google
 	logList, err := getAllLogs(googleLogListFetcher)
 	if err != nil {
-		log.Println(err)
+		slog.Error("Failed to get log list", "error", err)
 		return
 	}
 
-	log.Println("Checking for new ct logs...")
+	slog.Info("Checking for new CT logs")
 
 	// Track all URLs that should be monitored after reconciliation
 	monitoredURLs := make(map[string]struct{})
@@ -134,7 +134,7 @@ func (w *Watcher) updateLogs() {
 			normURL := normalizeCtlogURL(url)
 
 			if transparencyLog.State.LogStatus() == loglist3.RetiredLogStatus {
-				log.Printf("Skipping retired CT log: %s\n", normURL)
+				slog.Info("Skipping retired CT log", "url", normURL)
 				continue
 			}
 
@@ -152,7 +152,7 @@ func (w *Watcher) updateLogs() {
 			normURL := normalizeCtlogURL(url)
 
 			if transparencyLog.State.LogStatus() == loglist3.RetiredLogStatus {
-				log.Printf("Skipping retired CT log: %s\n", normURL)
+				slog.Info("Skipping retired CT log", "url", normURL)
 				continue
 			}
 
@@ -164,7 +164,7 @@ func (w *Watcher) updateLogs() {
 		}
 	}
 
-	log.Printf("New ct logs found: %d\n", newCTs)
+	slog.Info("New CT logs found", "count", newCTs)
 
 	// Optionally stop workers for logs not in the monitoredURLs set
 	if *config.AppConfig.General.DropOldLogs {
@@ -173,17 +173,17 @@ func (w *Watcher) updateLogs() {
 		for _, ctWorker := range w.workers {
 			normURL := normalizeCtlogURL(ctWorker.ctURL)
 			if _, ok := monitoredURLs[normURL]; !ok {
-				log.Printf("Stopping worker. CT URL not found in LogList or retired: '%s'\n", ctWorker.ctURL)
+				slog.Info("Stopping worker, CT URL not found in log list or retired", "url", ctWorker.ctURL)
 				ctWorker.stop()
 
 				removed++
 			}
 		}
 
-		log.Printf("Removed ct logs: %d\n", removed)
+		slog.Info("Removed CT logs", "count", removed)
 	}
 
-	log.Printf("Currently monitored ct logs: %d\n", len(w.workers))
+	slog.Info("Currently monitored CT logs", "count", len(w.workers))
 }
 
 // addLogIfNew checks if a log is already being watched and adds it if not.
@@ -229,7 +229,7 @@ func (w *Watcher) addLogIfNew(operatorName, description, url string, isTiled boo
 // discardWorker removes a worker from the watcher's list of workers.
 // This needs to be done when a worker stops.
 func (w *Watcher) discardWorker(worker *worker) {
-	log.Println("Removing worker for CT log:", worker.ctURL)
+	slog.Info("Removing worker for CT log", "url", worker.ctURL)
 
 	w.workersMu.Lock()
 	defer w.workersMu.Unlock()
@@ -244,7 +244,7 @@ func (w *Watcher) discardWorker(worker *worker) {
 
 // Stop stops the watcher.
 func (w *Watcher) Stop() {
-	log.Printf("Stopping watcher\n")
+	slog.Info("Stopping watcher")
 
 	if config.AppConfig.General.Recovery.Enabled {
 		// Store current CT Indexes before shutting down
@@ -252,7 +252,7 @@ func (w *Watcher) Stop() {
 
 		err := metrics.Metrics.SaveCertIndexes(filePath)
 		if err != nil {
-			log.Printf("Failed to save CT index file: %v\n", err)
+			slog.Error("Failed to save CT index file", "error", err)
 		}
 	}
 
@@ -269,30 +269,30 @@ func (w *Watcher) CreateIndexFile(filePath string) error {
 	httpClient := newHTTPClient()
 	w.context, w.cancelFunc = context.WithCancel(context.Background())
 
-	log.Println("Fetching current STH for all logs...")
+	slog.Info("Fetching current STH for all logs")
 
 	for _, operator := range logs.Operators {
 		// Iterate over each log of the operator
 		for _, transparencyLog := range operator.Logs {
 			if transparencyLog.State.LogStatus() == loglist3.RetiredLogStatus {
-				log.Printf("Skipping retired CT log: %s\n", transparencyLog.URL)
+				slog.Info("Skipping retired CT log", "url", transparencyLog.URL)
 				continue
 			}
 
 			normalizedURL := normalizeCtlogURL(transparencyLog.URL)
 			metrics.Metrics.Init(operator.Name, normalizedURL)
-			log.Println("Fetching STH for", normalizedURL)
+			slog.Info("Fetching STH", "url", normalizedURL)
 
 			jsonClient, e := client.New(transparencyLog.URL, httpClient, jsonclient.Options{UserAgent: UserAgent})
 			if e != nil {
-				log.Printf("Error creating JSON client: %s\n", e)
+				slog.Error("Error creating JSON client", "error", e)
 				continue
 			}
 
 			sth, getSTHerr := jsonClient.GetSTH(w.context)
 			if getSTHerr != nil {
 				// TODO this can happen due to a 429 error. We should retry the request
-				log.Printf("Could not get STH for '%s': %s\n", transparencyLog.URL, getSTHerr)
+				slog.Error("Could not get STH", "url", transparencyLog.URL, "error", getSTHerr)
 				continue
 			}
 
@@ -301,18 +301,18 @@ func (w *Watcher) CreateIndexFile(filePath string) error {
 
 		for _, transparencyLog := range operator.TiledLogs {
 			if transparencyLog.State.LogStatus() == loglist3.RetiredLogStatus {
-				log.Printf("Skipping retired CT log: %s\n", transparencyLog.MonitoringURL)
+				slog.Info("Skipping retired CT log", "url", transparencyLog.MonitoringURL)
 				continue
 			}
 
 			normalizedURL := normalizeCtlogURL(transparencyLog.MonitoringURL)
 			metrics.Metrics.Init(operator.Name, normalizedURL)
-			log.Println("Fetching checkpoint for", normalizedURL)
+			slog.Info("Fetching checkpoint", "url", normalizedURL)
 
 			staticCTClient := NewStaticCTClient(transparencyLog.MonitoringURL, httpClient, UserAgent, 0)
 			checkpoint, fetchErr := staticCTClient.FetchCheckpoint(w.context)
 			if fetchErr != nil {
-				log.Printf("Could not get checkpoint for '%s': %s\n", transparencyLog.MonitoringURL, fetchErr)
+				slog.Error("Could not get checkpoint", "url", transparencyLog.MonitoringURL, "error", fetchErr)
 				return ErrFetchingSTHFailed
 			}
 
@@ -327,7 +327,7 @@ func (w *Watcher) CreateIndexFile(filePath string) error {
 		return saveErr
 	}
 
-	log.Println("Index file saved to", filePath)
+	slog.Info("Index file saved", "path", filePath)
 
 	return nil
 }
@@ -355,12 +355,12 @@ func (w *worker) startDownloadingCerts(ctx context.Context) {
 		w.ctURL = "https://" + w.ctURL
 	}
 
-	log.Printf("Initializing worker for CT log: %s\n", w.ctURL)
-	defer log.Printf("Stopping worker for CT log: %s\n", w.ctURL)
+	slog.Info("Initializing worker for CT log", "url", w.ctURL)
+	defer slog.Info("Stopping worker for CT log", "url", w.ctURL)
 
 	w.mu.Lock()
 	if w.running {
-		log.Printf("Worker for '%s' already running\n", w.ctURL)
+		slog.Warn("Worker already running", "url", w.ctURL)
 		w.mu.Unlock()
 
 		return
@@ -371,7 +371,7 @@ func (w *worker) startDownloadingCerts(ctx context.Context) {
 	w.mu.Unlock()
 
 	for {
-		log.Printf("Starting worker for CT log: %s\n", w.ctURL)
+		slog.Info("Starting worker for CT log", "url", w.ctURL)
 
 		var workerErr error
 		if w.isTiled {
@@ -383,32 +383,32 @@ func (w *worker) startDownloadingCerts(ctx context.Context) {
 		if workerErr != nil {
 			switch {
 			case errors.Is(workerErr, ErrFetchingSTHFailed):
-				log.Printf("Worker for '%s' failed - could not fetch STH\n", w.ctURL)
+				slog.Error("Worker failed, could not fetch STH", "url", w.ctURL)
 				return
 			case errors.Is(workerErr, ErrCreatingClient):
-				log.Printf("Worker for '%s' failed - could not create client\n", w.ctURL)
+				slog.Error("Worker failed, could not create client", "url", w.ctURL)
 				return
 			case strings.Contains(workerErr.Error(), "no such host"):
-				log.Printf("Worker for '%s' failed to resolve host: %s\n", w.ctURL, workerErr)
+				slog.Error("Worker failed to resolve host", "url", w.ctURL, "error", workerErr)
 				return
 			case errors.Is(workerErr, context.Canceled):
-				log.Printf("Worker for '%s' canceled\n", w.ctURL)
+				slog.Info("Worker canceled", "url", w.ctURL)
 				return
 			}
 
-			log.Printf("Worker for '%s' failed with unexpected error: %s\n", w.ctURL, workerErr)
+			slog.Error("Worker failed with unexpected error", "url", w.ctURL, "error", workerErr)
 		}
 
 		// Check if the context was canceled
 		select {
 		case <-ctx.Done():
-			log.Printf("Context was cancelled; Stopping worker for '%s'\n", w.ctURL)
+			slog.Info("Context canceled, stopping worker", "url", w.ctURL)
 
 			return
 		default:
-			log.Printf("Worker for '%s' sleeping for 5 seconds due to error\n", w.ctURL)
+			slog.Warn("Worker sleeping due to error, will restart", "url", w.ctURL)
 			time.Sleep(5 * time.Second)
-			log.Printf("Restarting worker for '%s'\n", w.ctURL)
+			slog.Info("Restarting worker", "url", w.ctURL)
 
 			continue
 		}
@@ -426,7 +426,7 @@ func (w *worker) stop() {
 func (w *worker) runStandardWorker(ctx context.Context) error {
 	jsonClient, e := client.New(w.ctURL, newHTTPClient(), jsonclient.Options{UserAgent: UserAgent})
 	if e != nil {
-		log.Printf("Error creating JSON client: %s\n", e)
+		slog.Error("Error creating JSON client", "error", e)
 		return ErrCreatingClient
 	}
 
@@ -436,7 +436,7 @@ func (w *worker) runStandardWorker(ctx context.Context) error {
 		sth, getSTHerr := jsonClient.GetSTH(ctx)
 		if getSTHerr != nil {
 			// TODO this can happen due to a 429 error. We should retry the request
-			log.Printf("Could not get STH for '%s': %s\n", w.ctURL, getSTHerr)
+			slog.Error("Could not get STH", "url", w.ctURL, "error", getSTHerr)
 			return ErrFetchingSTHFailed
 		}
 		// Start at the latest STH to skip all the past certificates
@@ -461,7 +461,7 @@ func (w *worker) runStandardWorker(ctx context.Context) error {
 		return fmt.Errorf("error scanning for certificates: %w", scanErr)
 	}
 
-	log.Printf("Exiting worker %s without error!\n", w.ctURL)
+	slog.Info("Exiting worker without error", "url", w.ctURL)
 
 	return nil
 }
@@ -477,7 +477,7 @@ func (w *worker) runTiledWorker(ctx context.Context) error {
 	if !validSavedCTIndexExists {
 		checkpoint, err := staticCTClient.FetchCheckpoint(ctx)
 		if err != nil {
-			log.Printf("Could not get checkpoint for '%s': %s\n", w.ctURL, err)
+			slog.Error("Could not get checkpoint", "url", w.ctURL, "error", err)
 			return ErrFetchingSTHFailed
 		}
 		// Start at the latest checkpoint to skip all the past certificates
@@ -501,7 +501,7 @@ func (w *worker) foundCertCallback(rawEntry *ct.RawLogEntry) {
 
 	entry, parseErr := ParseCertstreamEntry(rawEntry, w.operatorName, w.name, w.ctURL, logType)
 	if parseErr != nil {
-		log.Println("Error parsing certstream entry: ", parseErr)
+		slog.Error("Error parsing certstream entry", "error", parseErr)
 		return
 	}
 
@@ -520,7 +520,7 @@ func (w *worker) foundPrecertCallback(rawEntry *ct.RawLogEntry) {
 
 	entry, parseErr := ParseCertstreamEntry(rawEntry, w.operatorName, w.name, w.ctURL, logType)
 	if parseErr != nil {
-		log.Println("Error parsing certstream entry: ", parseErr)
+		slog.Error("Error parsing certstream entry", "error", parseErr)
 		return
 	}
 
@@ -540,7 +540,7 @@ func certHandler(entryChan chan models.Entry) {
 		processed++
 
 		if processed%1000 == 0 {
-			log.Printf("Processed %d entries | Queue length: %d\n", processed, len(entryChan))
+			slog.Info("Processed entries", "processed", processed, "queue_length", len(entryChan))
 			// Every thousandth entry, we store one certificate as example
 			web.SetExampleCert(entry)
 		}
@@ -608,7 +608,7 @@ func getAllLogs(logListFetcher LogListFetcher) (loglist3.LogList, error) {
 
 		allLogs, err = logListFetcher()
 		if err != nil {
-			log.Printf("Error fetching log list from Google: %s\n", err)
+			slog.Error("Error fetching log list from Google", "error", err)
 			return loglist3.LogList{}, fmt.Errorf("failed to fetch log list from Google: %w", err)
 		}
 	}

@@ -2,7 +2,7 @@ package web
 
 import (
 	"fmt"
-	"log"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -41,7 +41,7 @@ func (c *client) broadcastHandler() {
 	pingTicker := time.NewTicker(30 * time.Second)
 
 	defer func() {
-		log.Println("Closing broadcast handler for client:", c.conn.RemoteAddr())
+		slog.Info("Closing broadcast handler for client", "remote_addr", c.conn.RemoteAddr())
 
 		pingTicker.Stop()
 
@@ -63,17 +63,17 @@ func (c *client) broadcastHandler() {
 
 			w, err := c.conn.NextWriter(websocket.TextMessage)
 			if err != nil {
-				log.Printf("Error while getting next writer: %v\n", err)
+				slog.Error("Error while getting next writer", "error", err)
 				return
 			}
 
 			_, writeErr := w.Write(message)
 			if writeErr != nil {
-				log.Printf("Error while writing: %v\n", writeErr)
+				slog.Error("Error while writing", "error", writeErr)
 			}
 
 			if closeErr := w.Close(); closeErr != nil {
-				log.Printf("Error while closing: %v\n", closeErr)
+				slog.Error("Error while closing writer", "error", closeErr)
 				return
 			}
 		}
@@ -122,24 +122,24 @@ func (c *client) listenWebsocket() {
 		_, _, readErr := c.conn.ReadMessage()
 		if readErr != nil {
 			if websocket.IsUnexpectedCloseError(readErr, websocket.CloseGoingAway, websocket.CloseNormalClosure) {
-				log.Printf("Unexpected websocket close error: %v\n", readErr)
+				slog.Warn("Unexpected websocket close error", "error", readErr)
 			}
 
 			// If client fails to send ping messages
 			if strings.Contains(strings.ToLower(readErr.Error()), "i/o timeout") {
-				log.Printf("No ping received from client: %v\n", c.conn.RemoteAddr())
+				slog.Warn("No ping received from client", "remote_addr", c.conn.RemoteAddr())
 
 				closeMessage := websocket.FormatCloseMessage(websocket.ClosePolicyViolation, "No ping received!")
 
 				writeErr := c.conn.WriteControl(websocket.CloseMessage, closeMessage, time.Now().Add(5*time.Second))
 				if writeErr != nil {
-					log.Printf("Error while sending close message: %v\n", writeErr)
+					slog.Error("Error while sending close message", "error", writeErr)
 				}
 			} else if strings.Contains(strings.ToLower(readErr.Error()), "an existing connection was forcibly closed by the remote host") {
-				log.Printf("Connection to client lost: %v\n", c.conn.RemoteAddr())
+				slog.Info("Connection to client lost", "remote_addr", c.conn.RemoteAddr())
 			}
 
-			log.Printf("Disconnecting client %v!\n", c.conn.RemoteAddr())
+			slog.Info("Disconnecting client", "remote_addr", c.conn.RemoteAddr())
 
 			break
 		}

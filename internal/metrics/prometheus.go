@@ -3,7 +3,7 @@ package metrics
 import (
 	"fmt"
 	"io"
-	"log"
+	"log/slog"
 	"sync"
 	"time"
 
@@ -99,13 +99,13 @@ func (pm *PrometheusExporter) getCertCountForLog(operatorName, logname string) i
 
 	operatorMetrics, ok := pm.tempCertMetrics[operatorName]
 	if !ok {
-		log.Printf("No metrics for operator \"%s\"", operatorName)
+		slog.Warn("No metrics for operator", "operator", operatorName)
 		return 0
 	}
 
 	count, ok := operatorMetrics[logname]
 	if !ok {
-		log.Printf("No metrics for log \"%s\" of operator \"%s\"", logname, operatorName)
+		slog.Warn("No metrics for log", "log", logname, "operator", operatorName)
 		return 0
 	}
 

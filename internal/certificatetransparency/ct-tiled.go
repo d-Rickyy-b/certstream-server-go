@@ -5,7 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"log"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
@@ -252,7 +252,7 @@ func (s *StaticCTClient) Monitor(ctx context.Context, foundCert func(*ct.RawLogE
 	for {
 		hadNewEntries, err := s.fetchAndProcessTiles(ctx, foundCert, foundPrecert)
 		if err != nil {
-			log.Printf("Error processing tiled log updates for '%s': %s\n", s.url, err)
+			slog.Error("Error processing tiled log updates", "url", s.url, "error", err)
 			return err
 		}
 
@@ -305,7 +305,7 @@ func (s *StaticCTClient) fetchAndProcessTiles(ctx context.Context, foundCert fun
 	partialSize := currentTreeSize % TileSize
 	if partialSize > 0 {
 		if err := s.processTile(ctx, endTile, partialSize, foundCert, foundPrecert); err != nil {
-			log.Printf("Warning: error processing partial tile %d: %s\n", endTile, err)
+			slog.Warn("Error processing partial tile", "tile", endTile, "error", err)
 			// Don't return error for partial tiles as they might be incomplete
 		}
 	}
@@ -342,7 +342,7 @@ func (s *StaticCTClient) processTile(ctx context.Context, tileIndex, partialWidt
 		case EntryTypePrecert:
 			foundPrecert(rawEntry)
 		default:
-			log.Printf("Unknown entry type %d in tile %d, skipping entry at index %d\n", leaf.EntryType, tileIndex, entryIndex)
+			slog.Warn("Unknown entry type in tile, skipping entry", "entry_type", leaf.EntryType, "tile", tileIndex, "index", entryIndex)
 		}
 
 		// Update the index

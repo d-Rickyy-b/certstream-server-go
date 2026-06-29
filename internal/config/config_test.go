@@ -520,7 +520,7 @@ webserver:
 `
 	configPath := writeConfigFile(t, yaml)
 
-	// validateConfig calls log.Fatalln on invalid entries, which calls os.Exit.
+	// validateConfig calls logger.Fatal on invalid entries, which calls os.Exit.
 	// We verify indirectly by ensuring ReadConfig succeeds when all entries are valid
 	// and that invalid CIDR/IP combinations are rejected during normal validation.
 	// A direct fatal-exit test would require subprocess execution; skip that here
