@@ -3,11 +3,12 @@ package config
 import (
 	"errors"
 	"fmt"
-	"log"
+	"log/slog"
 	"net"
 	"regexp"
 	"strings"
 
+	"github.com/d-Rickyy-b/certstream-server-go/internal/logger"
 	"github.com/spf13/viper"
 )
 
@@ -132,12 +133,12 @@ func initViper(configPath string) *viper.Viper {
 	if err := v.ReadInConfig(); err != nil {
 		var notFound viper.ConfigFileNotFoundError
 		if errors.As(err, &notFound) {
-			log.Println("No config file found, using defaults and environment variables only")
+			slog.Info("No config file found, using defaults and environment variables only")
 		} else {
-			log.Fatalf("Error reading config file: %v", err)
+			logger.Fatal("Error reading config file", "error", err)
 		}
 	} else {
-		log.Printf("Using config file: %s\n", v.ConfigFileUsed())
+		slog.Info("Using config file", "path", v.ConfigFileUsed())
 	}
 
 	// Environment variables
@@ -177,35 +178,35 @@ func validateConfig(config *Config) bool {
 
 	// Check webserver config
 	if config.Webserver.ListenAddr == "" || net.ParseIP(config.Webserver.ListenAddr) == nil {
-		log.Fatalln("Webhook listen IP is not a valid IP: ", config.Webserver.ListenAddr)
+		logger.Fatal("Webhook listen IP is not a valid IP", "addr", config.Webserver.ListenAddr)
 		return false
 	}
 
 	if config.Webserver.ListenPort == 0 {
-		log.Fatalln("Webhook listen port is not set")
+		logger.Fatal("Webhook listen port is not set")
 		return false
 	}
 
 	if config.Webserver.FullURL == "" || !URLPathRegex.MatchString(config.Webserver.FullURL) {
-		log.Println("Webhook full URL is not set or does not match pattern '/...'")
+		slog.Warn("Webhook full URL is not set or does not match pattern '/...', using default", "url", config.Webserver.FullURL)
 
 		config.Webserver.FullURL = "/full-stream"
 	}
 
 	if config.Webserver.LiteURL == "" || !URLPathRegex.MatchString(config.Webserver.FullURL) {
-		log.Println("Webhook lite URL is not set or does not match pattern '/...'")
+		slog.Warn("Webhook lite URL is not set or does not match pattern '/...', using default", "url", config.Webserver.LiteURL)
 
 		config.Webserver.LiteURL = "/"
 	}
 
 	if config.Webserver.DomainsOnlyURL == "" || !URLPathRegex.MatchString(config.Webserver.DomainsOnlyURL) {
-		log.Println("Webhook domains only URL is not set or does not match pattern '/...'")
+		slog.Warn("Webhook domains only URL is not set or does not match pattern '/...', using default", "url", config.Webserver.DomainsOnlyURL)
 
 		config.Webserver.FullURL = "/domains-only"
 	}
 
 	if config.Webserver.FullURL == config.Webserver.LiteURL {
-		log.Fatalln("Webhook full URL is the same as lite URL - please fix the config!")
+		logger.Fatal("Webhook full URL is the same as lite URL - please fix the config")
 	}
 
 	if config.Webserver.DomainsOnlyURL == "" {
@@ -219,7 +220,7 @@ func validateConfig(config *Config) bool {
 
 		_, _, err := net.ParseCIDR(ip)
 		if err != nil {
-			log.Fatalln("Invalid IP/CIDR in webserver trusted_proxies: ", ip)
+			logger.Fatal("Invalid IP/CIDR in webserver trusted_proxies", "ip", ip)
 			return false
 		}
 	}
@@ -227,12 +228,12 @@ func validateConfig(config *Config) bool {
 	//nolint:nestif
 	if config.Prometheus.Enabled {
 		if config.Prometheus.ListenAddr == "" || net.ParseIP(config.Prometheus.ListenAddr) == nil {
-			log.Fatalln("Metrics export IP is not a valid IP")
+			logger.Fatal("Metrics export IP is not a valid IP")
 			return false
 		}
 
 		if config.Prometheus.ListenPort == 0 {
-			log.Fatalln("Metrics export port is not set")
+			logger.Fatal("Metrics export port is not set")
 			return false
 		}
 
@@ -249,7 +250,7 @@ func validateConfig(config *Config) bool {
 			// Provided entry is not an IP, check if it's a CIDR range
 			_, _, err := net.ParseCIDR(ip)
 			if err != nil {
-				log.Fatalln("Invalid IP in metrics whitelist: ", ip)
+				logger.Fatal("Invalid IP in metrics whitelist", "ip", ip)
 				return false
 			}
 		}
@@ -261,7 +262,7 @@ func validateConfig(config *Config) bool {
 
 			_, _, err := net.ParseCIDR(ip)
 			if err != nil {
-				log.Fatalln("Invalid IP/CIDR in prometheus trusted_proxies: ", ip)
+				logger.Fatal("Invalid IP/CIDR in prometheus trusted_proxies", "ip", ip)
 				return false
 			}
 		}
@@ -272,7 +273,7 @@ func validateConfig(config *Config) bool {
 	if len(config.General.AdditionalLogs) > 0 {
 		for _, ctLog := range config.General.AdditionalLogs {
 			if !URLRegex.MatchString(ctLog.URL) {
-				log.Println("Ignoring invalid additional log URL: ", ctLog.URL)
+				slog.Warn("Ignoring invalid additional log URL", "url", ctLog.URL)
 				continue
 			}
 
@@ -283,7 +284,7 @@ func validateConfig(config *Config) bool {
 	if len(config.General.AdditionalTiledLogs) > 0 {
 		for _, ctLog := range config.General.AdditionalTiledLogs {
 			if !URLRegex.MatchString(ctLog.URL) {
-				log.Println("Ignoring invalid additional log URL: ", ctLog.URL)
+				slog.Warn("Ignoring invalid additional log URL", "url", ctLog.URL)
 				continue
 			}
 
@@ -295,7 +296,7 @@ func validateConfig(config *Config) bool {
 	config.General.AdditionalTiledLogs = validTiledLogs
 
 	if len(config.General.AdditionalLogs) == 0 && len(config.General.AdditionalTiledLogs) == 0 && config.General.DisableDefaultLogs {
-		log.Fatalln("Default logs are disabled, but no additional logs are configured. Please add at least one log to the config or enable default logs.")
+		logger.Fatal("Default logs are disabled, but no additional logs are configured. Please add at least one log to the config or enable default logs.")
 	}
 
 	if config.General.BufferSizes.Websocket <= 0 {
@@ -312,14 +313,14 @@ func validateConfig(config *Config) bool {
 
 	// If the cleanup flag is not set, default to true
 	if config.General.DropOldLogs == nil {
-		log.Println("drop_old_logs is not set, defaulting to true")
+		slog.Info("drop_old_logs is not set, defaulting to true")
 
 		defaultCleanup := true
 		config.General.DropOldLogs = &defaultCleanup
 	}
 
 	if config.General.Recovery.Enabled && config.General.Recovery.CTIndexFile == "" {
-		log.Println("Recovery enabled but no index file specified. Defaulting to ./ct_index.json")
+		slog.Info("Recovery enabled but no index file specified, defaulting to ./ct_index.json")
 
 		config.General.Recovery.CTIndexFile = "./ct_index.json"
 	}

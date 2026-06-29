@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 
@@ -10,6 +9,7 @@ import (
 
 	"github.com/d-Rickyy-b/certstream-server-go/internal/certstream"
 	"github.com/d-Rickyy-b/certstream-server-go/internal/config"
+	"github.com/d-Rickyy-b/certstream-server-go/internal/logger"
 )
 
 // createIndexCmd represents the createIndex command.
@@ -62,7 +62,7 @@ create-index will create and pre fill the ct-index.json file with the current va
 
 		createErr := certstreamServer.CreateIndexFile(outFilePath)
 		if createErr != nil {
-			log.Fatalf("Error while creating index file: %v", createErr)
+			logger.Fatal("Error while creating index file", "error", createErr)
 		}
 
 		return nil

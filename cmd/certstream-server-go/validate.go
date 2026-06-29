@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -40,10 +40,10 @@ This command deserializes the config and checks for errors.`,
 
 		readConfErr := config.ValidateConfig(configPath)
 		if readConfErr != nil {
-			log.Fatalln(readConfErr)
+			return readConfErr
 		}
 
-		log.Println("Config file is valid!")
+		slog.Info("Config file is valid")
 
 		return nil
 	},

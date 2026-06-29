@@ -3,7 +3,7 @@ package models
 import (
 	"bytes"
 	"encoding/json"
-	"log"
+	"log/slog"
 )
 
 type Entry struct {
@@ -68,7 +68,7 @@ func (e *Entry) JSONDomains() []byte {
 
 	domainsEntryBytes, err := json.Marshal(domainsEntry)
 	if err != nil {
-		log.Println(err)
+		slog.Error("Error marshalling domains entry", "error", err)
 	}
 
 	return domainsEntryBytes
@@ -82,7 +82,7 @@ func (e *Entry) entryToJSONBytes() []byte {
 
 	err := enc.Encode(e)
 	if err != nil {
-		log.Println(err)
+		slog.Error("Error marshalling entry", "error", err)
 	}
 
 	return buf.Bytes()

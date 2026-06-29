@@ -6,13 +6,14 @@ package certstream
 
 import (
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
 
 	"github.com/d-Rickyy-b/certstream-server-go/internal/certificatetransparency"
 	"github.com/d-Rickyy-b/certstream-server-go/internal/config"
+	"github.com/d-Rickyy-b/certstream-server-go/internal/logger"
 	"github.com/d-Rickyy-b/certstream-server-go/internal/metrics"
 	"github.com/d-Rickyy-b/certstream-server-go/internal/web"
 )
@@ -67,10 +68,10 @@ func (cs *Certstream) setupMetrics(webserver *web.Server) {
 		// If prometheus is enabled, and interface is either unconfigured or same as webserver config, use existing webserver
 		if (cs.config.Prometheus.ListenAddr == "" || cs.config.Prometheus.ListenAddr == cs.config.Webserver.ListenAddr) &&
 			(cs.config.Prometheus.ListenPort == 0 || cs.config.Prometheus.ListenPort == cs.config.Webserver.ListenPort) {
-			log.Println("Starting prometheus server on same interface as webserver")
+			slog.Info("Starting prometheus server on same interface as webserver")
 			webserver.RegisterPrometheus(cs.config.Prometheus.MetricsURL, metrics.Prometheus.Write)
 		} else {
-			log.Println("Starting prometheus server on new interface")
+			slog.Info("Starting prometheus server on new interface")
 
 			cs.metricsServer = web.NewMetricsServer(
 				cs.config.Prometheus.ListenAddr,
@@ -86,7 +87,7 @@ func (cs *Certstream) setupMetrics(webserver *web.Server) {
 // Start starts the webserver and the watcher.
 // This is a blocking function that will run until the server is stopped.
 func (cs *Certstream) Start() {
-	log.Printf("Starting certstream-server-go v%s\n", config.Version)
+	slog.Info("Starting certstream-server-go", "version", config.Version)
 
 	// handle signals in a separate goroutine
 	signals := make(chan os.Signal, 1)
@@ -101,7 +102,7 @@ func (cs *Certstream) Start() {
 
 	// Start webserver and metrics server
 	if cs.webserver == nil {
-		log.Fatalln("Webserver not initialized! Exiting...")
+		logger.Fatal("Webserver not initialized, exiting")
 	}
 
 	go cs.webserver.Start()
@@ -148,10 +149,10 @@ func (cs *Certstream) CreateIndexFile(outFile string) error {
 // signalHandler listens for signals in order to gracefully shut down the server.
 // Executes the callback function when a signal is received.
 func signalHandler(signals chan os.Signal, callback func()) {
-	log.Println("Listening for signals...")
+	slog.Info("Listening for signals...")
 
 	sig := <-signals
-	log.Printf("Received signal %v. Shutting down...\n", sig)
+	slog.Info("Received signal, shutting down", "signal", sig)
 	callback()
 	os.Exit(0)
 }

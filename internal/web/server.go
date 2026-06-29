@@ -5,7 +5,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"io"
-	"log"
+	"log/slog"
 	"net"
 	"net/http"
 	"strconv"
@@ -15,6 +15,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 
 	"github.com/d-Rickyy-b/certstream-server-go/internal/config"
+	"github.com/d-Rickyy-b/certstream-server-go/internal/logger"
 	"github.com/d-Rickyy-b/certstream-server-go/internal/models"
 
 	"github.com/gorilla/websocket"
@@ -48,7 +49,7 @@ func (ws *Server) RegisterPrometheus(url string, callback func(w io.Writer, expo
 // IPWhitelist returns a middleware that checks if the IP of the client is in the whitelist.
 func IPWhitelist(whitelist []string) func(next http.Handler) http.Handler {
 	// build a list of whitelisted IPs and CIDRs
-	log.Println("Building IP whitelist...")
+	slog.Info("Building IP whitelist...")
 
 	var ipList []net.IP
 	var cidrList []net.IPNet
@@ -58,7 +59,7 @@ func IPWhitelist(whitelist []string) func(next http.Handler) http.Handler {
 		if err != nil {
 			var ip net.IP
 			if ip = net.ParseIP(element); ip == nil {
-				log.Println("Invalid IP in metrics whitelist: ", element)
+				slog.Warn("Invalid IP in metrics whitelist", "ip", element)
 
 				continue
 			}
@@ -71,8 +72,7 @@ func IPWhitelist(whitelist []string) func(next http.Handler) http.Handler {
 		cidrList = append(cidrList, *ipNet)
 	}
 
-	log.Println("IP whitelist: ", ipList)
-	log.Println("CIDR whitelist: ", cidrList)
+	slog.Info("IP whitelist built", "ips", ipList, "cidrs", cidrList)
 
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -104,7 +104,7 @@ func IPWhitelist(whitelist []string) func(next http.Handler) http.Handler {
 				}
 			}
 
-			log.Printf("IP %s not in whitelist, rejecting request\n", r.RemoteAddr)
+			slog.Warn("IP not in whitelist, rejecting request", "remote_addr", r.RemoteAddr)
 			http.Error(w, "Forbidden", http.StatusForbidden)
 		})
 	}
@@ -115,7 +115,7 @@ func IPWhitelist(whitelist []string) func(next http.Handler) http.Handler {
 func initFullWebsocket(w http.ResponseWriter, r *http.Request) {
 	connection, err := upgradeConnection(w, r)
 	if err != nil {
-		log.Println("Error while trying to upgrade connection:", err)
+		slog.Error("Error while trying to upgrade connection", "error", err)
 		return
 	}
 
@@ -127,7 +127,7 @@ func initFullWebsocket(w http.ResponseWriter, r *http.Request) {
 func initLiteWebsocket(w http.ResponseWriter, r *http.Request) {
 	connection, err := upgradeConnection(w, r)
 	if err != nil {
-		log.Println("Error while trying to upgrade connection:", err)
+		slog.Error("Error while trying to upgrade connection", "error", err)
 		return
 	}
 
@@ -139,7 +139,7 @@ func initLiteWebsocket(w http.ResponseWriter, r *http.Request) {
 func initDomainWebsocket(w http.ResponseWriter, r *http.Request) {
 	connection, err := upgradeConnection(w, r)
 	if err != nil {
-		log.Println("Error while trying to upgrade connection:", err)
+		slog.Error("Error while trying to upgrade connection", "error", err)
 		return
 	}
 
@@ -157,7 +157,7 @@ func upgradeConnection(w http.ResponseWriter, r *http.Request) (*websocket.Conn,
 		remoteAddr = fmt.Sprintf("'%s'", r.RemoteAddr)
 	}
 
-	log.Printf("Starting new websocket for %s - %s\n", remoteAddr, r.URL)
+	slog.Info("Starting new websocket", "remote_addr", remoteAddr, "url", r.URL)
 
 	connection, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -166,7 +166,7 @@ func upgradeConnection(w http.ResponseWriter, r *http.Request) (*websocket.Conn,
 
 	defaultCloseHandler := connection.CloseHandler()
 	connection.SetCloseHandler(func(code int, text string) error {
-		log.Printf("Stopping websocket for %s - %s\n", remoteAddr, r.URL)
+		slog.Info("Stopping websocket", "remote_addr", remoteAddr, "url", r.URL)
 		return defaultCloseHandler(code, text)
 	})
 
@@ -294,7 +294,7 @@ func NewWebsocketServer(networkIf string, port int, certPath, keyPath string) *S
 
 // Start initializes the webserver and starts listening for connections.
 func (ws *Server) Start() {
-	log.Printf("Starting webserver on %s\n", ws.server.Addr)
+	slog.Info("Starting webserver", "addr", ws.server.Addr)
 
 	var err error
 	if ws.keyPath != "" && ws.certPath != "" {
@@ -304,16 +304,16 @@ func (ws *Server) Start() {
 	}
 
 	if err != nil {
-		log.Fatal("Error while serving webserver: ", err)
+		logger.Fatal("Error while serving webserver", "error", err)
 	}
 }
 
 // Stop tries to stop the webserver gracefully. If it doesn't stop within 15 seconds, it is forcefully closed.
 func (ws *Server) Stop() {
-	log.Println("Stopping webserver...")
+	slog.Info("Stopping webserver...")
 
 	if err := ws.shutdown(); err != nil {
-		log.Fatal("Error while stopping webserver: ", err)
+		logger.Fatal("Error while stopping webserver", "error", err)
 	}
 }
 
