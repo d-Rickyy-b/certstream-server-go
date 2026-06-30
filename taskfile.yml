@@ -1,6 +1,6 @@
 # yaml-language-server: $schema=https://taskfile.dev/schema.json
 
-version: '3'
+version: "3"
 
 tasks:
   docker:
@@ -19,6 +19,14 @@ tasks:
     desc: Build the server binary for your current OS and architecture.
     cmds:
       - go build ./cmd/certstream-server-go
+
+  build-arm:
+    desc: Build the server binary for ARM architecture.
+    cmds:
+      - go build ./cmd/certstream-server-go
+    env:
+      GOARCH: arm64
+      GOOS: linux
 
   lint:
     desc: Run linters.
