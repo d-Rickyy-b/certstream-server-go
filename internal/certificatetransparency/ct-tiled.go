@@ -269,7 +269,7 @@ func NewStaticCTClient(url string, httpClient *http.Client, userAgent string, st
 }
 
 // Monitor continuously monitors the tiled CT log for new entries, starting from the current ctIndex.
-func (s *StaticCTClient) Monitor(ctx context.Context, foundCert func(*ct.RawLogEntry), foundPrecert func(*ct.RawLogEntry)) error {
+func (s *StaticCTClient) Monitor(ctx context.Context, foundCert, foundPrecert func(*ct.RawLogEntry)) error {
 	for {
 		hadNewEntries, err := s.fetchAndProcessTiles(ctx, foundCert, foundPrecert)
 		if err != nil {
@@ -298,7 +298,7 @@ func (s *StaticCTClient) Monitor(ctx context.Context, foundCert func(*ct.RawLogE
 
 // fetchAndProcessTiles checks for new entries in the tiled log and processes them.
 // It returns true if at least one full tile was fetched.
-func (s *StaticCTClient) fetchAndProcessTiles(ctx context.Context, foundCert func(*ct.RawLogEntry), foundPrecert func(*ct.RawLogEntry)) (bool, error) {
+func (s *StaticCTClient) fetchAndProcessTiles(ctx context.Context, foundCert, foundPrecert func(*ct.RawLogEntry)) (bool, error) {
 	// Fetch current checkpoint
 	checkpoint, fetchErr := s.FetchCheckpoint(ctx)
 	if fetchErr != nil {
@@ -346,8 +346,6 @@ func (s *StaticCTClient) fetchAndProcessTiles(ctx context.Context, foundCert fun
 		case time.Since(s.partialTileFirstSeen) >= s.maxPartialWait:
 			// The partial tile has been pending too long – fetch it now to prevent
 			// extreme processing delays on slow-growing logs.
-			// log.Println("Forcefully fetching partial tile", endTile, "with size", partialSize)
-
 			if err := s.processTile(ctx, endTile, partialSize, foundCert, foundPrecert); err != nil {
 				log.Printf("Warning: error processing partial tile %d: %s\n", endTile, err)
 			}
@@ -369,7 +367,7 @@ func (s *StaticCTClient) fetchAndProcessTiles(ctx context.Context, foundCert fun
 
 // processTile processes a single tile from the tiled log.
 // partialWidth of 0 means full tile, otherwise fetch partial tile with that width.
-func (s *StaticCTClient) processTile(ctx context.Context, tileIndex, partialWidth uint64, foundCert func(*ct.RawLogEntry), foundPrecert func(*ct.RawLogEntry)) error {
+func (s *StaticCTClient) processTile(ctx context.Context, tileIndex, partialWidth uint64, foundCert, foundPrecert func(*ct.RawLogEntry)) error {
 	leaves, err := s.fetchTile(ctx, tileIndex, partialWidth)
 	if err != nil {
 		return fmt.Errorf("fetching tile: %w", err)
