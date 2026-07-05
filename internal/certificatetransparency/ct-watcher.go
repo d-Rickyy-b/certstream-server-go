@@ -120,7 +120,7 @@ func (w *Watcher) updateLogs() {
 
 	log.Println("Checking for new ct logs...")
 
-	// Track all URLs that should be monitored after reconciliation
+	// Track all URLs that should be monitored after reconciliation.
 	monitoredURLs := make(map[string]struct{})
 	newCTs := 0
 
@@ -621,8 +621,7 @@ func getAllLogs(logListFetcher LogListFetcher) (loglist3.LogList, error) {
 		}
 	}
 
-logFound:
-	//
+	// Add additional logs provided via the config, if any.
 	for _, additionalLog := range config.AppConfig.General.AdditionalLogs {
 		customLog := loglist3.Log{
 			URL:         additionalLog.URL,
@@ -638,17 +637,21 @@ logFound:
 			}
 
 			operatorFound = true
+			logFound := false
 
 			// Check if user provided log is already in our loglist
 			for _, ctlog := range operator.Logs {
 				if ctlog.URL == additionalLog.URL {
 					// Log already exists, skip it.
-					break logFound
+					logFound = true
+					break
 				}
 			}
 
-			// This works, since allLogs.Operators is a slice of pointers.
-			operator.Logs = append(operator.Logs, &customLog)
+			if !logFound {
+				// This works, since allLogs.Operators is a slice of pointers.
+				operator.Logs = append(operator.Logs, &customLog)
+			}
 
 			break
 		}
@@ -670,20 +673,23 @@ logFound:
 
 		operatorFound := false
 
-	tiledLogFound:
 		for _, operator := range allLogs.Operators {
 			if operator.Name == additionalLog.Operator {
 				operatorFound = true
+				logFound := false
 
 				for _, tl := range operator.TiledLogs {
 					if tl.MonitoringURL == additionalLog.URL {
 						// Log already exists, skip it.
-						break tiledLogFound
+						logFound = true
+						break
 					}
 				}
 
-				// This works, since allLogs.Operators is a slice of pointers.
-				operator.TiledLogs = append(operator.TiledLogs, &customLog)
+				if !logFound {
+					// This works, since allLogs.Operators is a slice of pointers.
+					operator.TiledLogs = append(operator.TiledLogs, &customLog)
+				}
 
 				break
 			}

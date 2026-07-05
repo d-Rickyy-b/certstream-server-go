@@ -190,9 +190,9 @@ func TestGetAllLogs_FetcherError(t *testing.T) {
 
 // --- Tests for additional classic logs ---
 
-// TestGetAllLogs_AdditionalLog_NewOperator verifies that an additional log whose operator
+// TestGetAllLogs_AdditionalLogs_NewOperator verifies that an additional log whose operator
 // does not yet exist in the list creates a new operator entry.
-func TestGetAllLogs_AdditionalLog_NewOperator(t *testing.T) {
+func TestGetAllLogs_AdditionalLogs_NewOperator(t *testing.T) {
 	t.Cleanup(func() {
 		config.AppConfig = config.Config{}
 	})
@@ -221,9 +221,9 @@ func TestGetAllLogs_AdditionalLog_NewOperator(t *testing.T) {
 	}
 }
 
-// TestGetAllLogs_AdditionalLog_ExistingOperator verifies that an additional log is appended
+// TestGetAllLogs_AdditionalLogs_ExistingOperator verifies that an additional log is appended
 // to an already-existing operator.
-func TestGetAllLogs_AdditionalLog_ExistingOperator(t *testing.T) {
+func TestGetAllLogs_AdditionalLogs_ExistingOperator(t *testing.T) {
 	t.Cleanup(func() {
 		config.AppConfig = config.Config{}
 	})
@@ -260,45 +260,9 @@ func TestGetAllLogs_AdditionalLog_ExistingOperator(t *testing.T) {
 	}
 }
 
-// TestGetAllLogs_AdditionalLog_NoDuplicate verifies that adding a log that already exists
-// (same URL) does not create a duplicate entry.
-func TestGetAllLogs_AdditionalLog_NoDuplicate(t *testing.T) {
-	t.Cleanup(func() {
-		config.AppConfig = config.Config{}
-	})
-
-	existingURL := "ct.googleapis.com/logs/xenon2024/"
-	mockList := buildLogList([]struct {
-		name      string
-		logs      []string
-		tiledLogs []string
-	}{
-		{"Google", []string{existingURL}, nil},
-	})
-
-	config.AppConfig.General.DisableDefaultLogs = false
-	config.AppConfig.General.AdditionalLogs = []config.LogConfig{
-		{Operator: "Google", URL: existingURL, Description: "Duplicate"},
-	}
-
-	result, err := getAllLogs(newMockListFetcher(t, mockList, nil))
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-
-	op := findOperator(result, "Google")
-	if op == nil {
-		t.Fatal("expected operator 'Google' to be present")
-	}
-
-	if len(op.Logs) != 1 {
-		t.Errorf("expected 1 log (no duplicate), got %d", len(op.Logs))
-	}
-}
-
-// TestGetAllLogs_MultipleAdditionalLogs verifies that multiple additional logs across
+// TestGetAllLogs_AdditionalLogs_Multiple verifies that multiple additional logs across
 // different operators are all added correctly.
-func TestGetAllLogs_MultipleAdditionalLogs(t *testing.T) {
+func TestGetAllLogs_AdditionalLogs_Multiple(t *testing.T) {
 	t.Cleanup(func() {
 		config.AppConfig = config.Config{}
 	})
@@ -330,11 +294,47 @@ func TestGetAllLogs_MultipleAdditionalLogs(t *testing.T) {
 	}
 }
 
+// TestGetAllLogs_AdditionalLogs_Duplicates verifies that multiple additional logs across
+// different operators are all added correctly, even if there are duplicates.
+func TestGetAllLogs_AdditionalLogs_Duplicates(t *testing.T) {
+	t.Cleanup(func() {
+		config.AppConfig = config.Config{}
+	})
+
+	config.AppConfig.General.DisableDefaultLogs = true
+	config.AppConfig.General.AdditionalLogs = []config.LogConfig{
+		{Operator: "OperatorA", URL: "loga.example.com/log1/", Description: "Log A1"},
+		{Operator: "OperatorA", URL: "loga.example.com/log2/", Description: "Log A2"},
+		{Operator: "OperatorA", URL: "loga.example.com/log2/", Description: "Log A2"},
+		{Operator: "OperatorB", URL: "logb.example.com/log1/", Description: "Log B1"},
+		{Operator: "OperatorB", URL: "logb.example.com/log1/", Description: "Log B1"},
+	}
+
+	result, err := getAllLogs(newMockListFetcher(t, emptyLogList, nil))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if countLogs(result) != 3 {
+		t.Errorf("expected 3 logs total, got %d", countLogs(result))
+	}
+
+	opA := findOperator(result, "OperatorA")
+	if opA == nil || len(opA.Logs) != 2 {
+		t.Errorf("expected 2 logs for 'OperatorA', got %v", opA)
+	}
+
+	opB := findOperator(result, "OperatorB")
+	if opB == nil || len(opB.Logs) != 1 {
+		t.Errorf("expected 1 log for 'OperatorB', got %v", opB)
+	}
+}
+
 // --- Tests for additional tiled logs ---
 
-// TestGetAllLogs_AdditionalTiledLog_NewOperator verifies that an additional tiled log
+// TestGetAllLogs_AdditionalTiledLogs_NewOperator verifies that an additional tiled log
 // whose operator does not yet exist creates a new operator entry.
-func TestGetAllLogs_AdditionalTiledLog_NewOperator(t *testing.T) {
+func TestGetAllLogs_AdditionalTiledLogs_NewOperator(t *testing.T) {
 	t.Cleanup(func() {
 		config.AppConfig = config.Config{}
 	})
@@ -363,9 +363,9 @@ func TestGetAllLogs_AdditionalTiledLog_NewOperator(t *testing.T) {
 	}
 }
 
-// TestGetAllLogs_AdditionalTiledLog_ExistingOperator verifies that an additional tiled log
+// TestGetAllLogs_AdditionalTiledLogs_ExistingOperator verifies that an additional tiled log
 // is appended to an already-existing operator.
-func TestGetAllLogs_AdditionalTiledLog_ExistingOperator(t *testing.T) {
+func TestGetAllLogs_AdditionalTiledLogs_ExistingOperator(t *testing.T) {
 	t.Cleanup(func() {
 		config.AppConfig = config.Config{}
 	})
@@ -402,39 +402,39 @@ func TestGetAllLogs_AdditionalTiledLog_ExistingOperator(t *testing.T) {
 	}
 }
 
-// TestGetAllLogs_AdditionalTiledLog_NoDuplicate verifies that adding a tiled log that
-// already exists does not create a duplicate entry.
-func TestGetAllLogs_AdditionalTiledLog_NoDuplicate(t *testing.T) {
+// TestGetAllLogs_AdditionalLogs_Duplicates verifies that multiple additional logs across
+// different operators are all added correctly, even if there are duplicates.
+func TestGetAllLogs_AdditionalTiledLogs_Duplicates(t *testing.T) {
 	t.Cleanup(func() {
 		config.AppConfig = config.Config{}
 	})
 
-	existingURL := "tiled.googleapis.com/logs/existing/"
-	mockList := buildLogList([]struct {
-		name      string
-		logs      []string
-		tiledLogs []string
-	}{
-		{"Google", nil, []string{existingURL}},
-	})
-
-	config.AppConfig.General.DisableDefaultLogs = false
+	config.AppConfig.General.DisableDefaultLogs = true
 	config.AppConfig.General.AdditionalTiledLogs = []config.LogConfig{
-		{Operator: "Google", URL: existingURL, Description: "Duplicate Tiled"},
+		{Operator: "OperatorA", URL: "loga.example.com/log1/", Description: "Log A1"},
+		{Operator: "OperatorA", URL: "loga.example.com/log2/", Description: "Log A2"},
+		{Operator: "OperatorA", URL: "loga.example.com/log2/", Description: "Log A2"},
+		{Operator: "OperatorB", URL: "logb.example.com/log1/", Description: "Log B1"},
+		{Operator: "OperatorB", URL: "logb.example.com/log1/", Description: "Log B1"},
 	}
 
-	result, err := getAllLogs(newMockListFetcher(t, mockList, nil))
+	result, err := getAllLogs(newMockListFetcher(t, emptyLogList, nil))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	op := findOperator(result, "Google")
-	if op == nil {
-		t.Fatal("expected operator 'Google' to be present")
+	if countTiledLogs(result) != 3 {
+		t.Errorf("expected 3 logs total, got %d", countTiledLogs(result))
 	}
 
-	if len(op.TiledLogs) != 1 {
-		t.Errorf("expected 1 tiled log (no duplicate), got %d", len(op.TiledLogs))
+	opA := findOperator(result, "OperatorA")
+	if opA == nil || len(opA.TiledLogs) != 2 {
+		t.Errorf("expected 2 logs for 'OperatorA', got %v", opA)
+	}
+
+	opB := findOperator(result, "OperatorB")
+	if opB == nil || len(opB.TiledLogs) != 1 {
+		t.Errorf("expected 1 log for 'OperatorB', got %v", opB)
 	}
 }
 
