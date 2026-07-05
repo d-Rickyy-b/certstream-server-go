@@ -138,6 +138,7 @@ linters:
           - goconst
           - err113
           - gosec
+          - dupl
         path: _test\.go
       - linters:
           - gochecknoinits

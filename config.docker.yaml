@@ -26,6 +26,13 @@ general:
   # DisableDefaultLogs indicates whether the default logs used in Google Chrome and provided by Google should be disabled.
   disable_default_logs: false
 
+  # Exclude logs from being monitored.
+  # You can either exclude by operator (all logs of that operator)
+  # or by a specific log URL.
+  #excluded_logs:
+  #  - operator: "Google"
+  #  - url: "https://ct.googleapis.com/logs/us1/argon2024/"
+
   # Google regularly updates the log list. If this option is set to true, the server will remove all logs no longer listed in the Google log list.
   # This option defaults to true. See https://github.com/d-Rickyy-b/certstream-server-go/issues/51
   drop_old_logs: true

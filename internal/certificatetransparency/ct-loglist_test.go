@@ -482,3 +482,110 @@ func TestGetAllLogs_MixedAdditionalLogs(t *testing.T) {
 		t.Errorf("MixedOp: expected 1 classic + 1 tiled, got %d classic, %d tiled", len(op.Logs), len(op.TiledLogs))
 	}
 }
+
+func TestGetAllLogs_ExcludedOperator(t *testing.T) {
+	t.Cleanup(func() {
+		config.AppConfig = config.Config{}
+	})
+
+	mockList := buildLogList([]struct {
+		name      string
+		logs      []string
+		tiledLogs []string
+	}{
+		{"Google", []string{"ct.googleapis.com/logs/xenon2024/"}, []string{"tiled.googleapis.com/logs/xenon2024/"}},
+		{"Cloudflare", []string{"ct.cloudflare.com/logs/nimbus2024/"}, nil},
+	})
+
+	config.AppConfig.General.DisableDefaultLogs = false
+	config.AppConfig.General.ExcludedLogs = []config.LogConfig{{Operator: "Google"}}
+
+	result, err := getAllLogs(newMockListFetcher(t, mockList, nil))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if findOperator(result, "Google") != nil {
+		t.Fatal("expected operator 'Google' to be excluded")
+	}
+
+	if countLogs(result) != 1 {
+		t.Errorf("expected 1 classic log after exclusion, got %d", countLogs(result))
+	}
+}
+
+func TestGetAllLogs_ExcludedLogByURLWithNormalization(t *testing.T) {
+	t.Cleanup(func() {
+		config.AppConfig = config.Config{}
+	})
+
+	mockList := buildLogList([]struct {
+		name      string
+		logs      []string
+		tiledLogs []string
+	}{
+		{"Google", []string{"https://ct.googleapis.com/logs/xenon2024/"}, nil},
+	})
+
+	config.AppConfig.General.DisableDefaultLogs = false
+	config.AppConfig.General.ExcludedLogs = []config.LogConfig{{URL: "ct.googleapis.com/logs/xenon2024"}}
+
+	result, err := getAllLogs(newMockListFetcher(t, mockList, nil))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if countLogs(result) != 0 {
+		t.Errorf("expected 0 classic logs after URL exclusion, got %d", countLogs(result))
+	}
+}
+
+func TestGetAllLogs_ExcludedTiledLogByURL(t *testing.T) {
+	t.Cleanup(func() {
+		config.AppConfig = config.Config{}
+	})
+
+	mockList := buildLogList([]struct {
+		name      string
+		logs      []string
+		tiledLogs []string
+	}{
+		{"Cloudflare", nil, []string{"https://ct.cloudflare.com/logs/raio2025h2b/"}},
+	})
+
+	config.AppConfig.General.DisableDefaultLogs = false
+	config.AppConfig.General.ExcludedLogs = []config.LogConfig{{URL: "https://ct.cloudflare.com/logs/raio2025h2b"}}
+
+	result, err := getAllLogs(newMockListFetcher(t, mockList, nil))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if countTiledLogs(result) != 0 {
+		t.Errorf("expected 0 tiled logs after URL exclusion, got %d", countTiledLogs(result))
+	}
+}
+
+func TestGetAllLogs_ExcludedRulesApplyToAdditionalLogs(t *testing.T) {
+	t.Cleanup(func() {
+		config.AppConfig = config.Config{}
+	})
+
+	config.AppConfig.General.DisableDefaultLogs = true
+	config.AppConfig.General.AdditionalLogs = []config.LogConfig{
+		{Operator: "Custom", URL: "https://custom.example.com/classic", Description: "Classic"},
+	}
+	config.AppConfig.General.AdditionalTiledLogs = []config.LogConfig{
+		{Operator: "Custom", URL: "https://custom.example.com/tiled", Description: "Tiled"},
+	}
+	config.AppConfig.General.ExcludedLogs = []config.LogConfig{{Operator: "Custom"}}
+
+	result, err := getAllLogs(newMockListFetcher(t, emptyLogList, nil))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(result.Operators) != 0 {
+		t.Fatalf("expected no operators after exclusions, got %d", len(result.Operators))
+	}
+}

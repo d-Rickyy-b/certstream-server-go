@@ -62,6 +62,7 @@ type Config struct {
 		// AdditionalLogs contains additional logs provided by the user that can be used in addition to the default logs.
 		AdditionalLogs      []LogConfig `mapstructure:"additional_logs"`
 		AdditionalTiledLogs []LogConfig `mapstructure:"additional_tiled_logs"`
+		ExcludedLogs        []LogConfig `mapstructure:"excluded_logs"`
 		BufferSizes         BufferSizes `mapstructure:"buffer_sizes"`
 		DropOldLogs         *bool       `mapstructure:"drop_old_logs"`
 		Recovery            struct {
@@ -267,7 +268,7 @@ func validateConfig(config *Config) bool {
 		}
 	}
 
-	var validLogs, validTiledLogs []LogConfig
+	var validLogs, validTiledLogs, validExcludedLogs []LogConfig
 
 	if len(config.General.AdditionalLogs) > 0 {
 		for _, ctLog := range config.General.AdditionalLogs {
@@ -291,8 +292,28 @@ func validateConfig(config *Config) bool {
 		}
 	}
 
+	if len(config.General.ExcludedLogs) > 0 {
+		for _, excludedLog := range config.General.ExcludedLogs {
+			excludedLog.Operator = strings.TrimSpace(excludedLog.Operator)
+			excludedLog.URL = strings.TrimSpace(excludedLog.URL)
+
+			if excludedLog.Operator == "" && excludedLog.URL == "" {
+				log.Println("Ignoring empty excluded_logs entry. Set operator and/or url.")
+				continue
+			}
+
+			if excludedLog.URL != "" && !URLRegex.MatchString(excludedLog.URL) {
+				log.Println("Ignoring invalid excluded log URL: ", excludedLog.URL)
+				continue
+			}
+
+			validExcludedLogs = append(validExcludedLogs, excludedLog)
+		}
+	}
+
 	config.General.AdditionalLogs = validLogs
 	config.General.AdditionalTiledLogs = validTiledLogs
+	config.General.ExcludedLogs = validExcludedLogs
 
 	if len(config.General.AdditionalLogs) == 0 && len(config.General.AdditionalTiledLogs) == 0 && config.General.DisableDefaultLogs {
 		log.Fatalln("Default logs are disabled, but no additional logs are configured. Please add at least one log to the config or enable default logs.")

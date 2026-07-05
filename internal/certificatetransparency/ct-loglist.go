@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"slices"
 	"strings"
 	"time"
 
@@ -67,6 +68,19 @@ func (f *HTTPLogListFetcher) Fetch() (loglist3.LogList, error) {
 // and additional logs provided via the config.
 func getAllLogs(logListFetcher LogListFetcher) (loglist3.LogList, error) {
 	var allLogs loglist3.LogList
+	excludedOperators := []string{}
+	excludedLogs := []string{}
+
+	// Extract excluded logs from the config.
+	for _, excludedLog := range config.AppConfig.General.ExcludedLogs {
+		if excludedLog.URL == "" {
+			// Exclude whole operator
+			excludedOperators = append(excludedOperators, excludedLog.Operator)
+		} else {
+			// Exclude only this specific URL (normalize for comparison)
+			excludedLogs = append(excludedLogs, normalizeCtlogURL(excludedLog.URL))
+		}
+	}
 
 	// Ability to disable default logs, if the user only wants to monitor custom logs.
 	if !config.AppConfig.General.DisableDefaultLogs {
@@ -132,25 +146,27 @@ func getAllLogs(logListFetcher LogListFetcher) (loglist3.LogList, error) {
 		operatorFound := false
 
 		for _, operator := range allLogs.Operators {
-			if operator.Name == additionalLog.Operator {
-				operatorFound = true
-				logFound := false
-
-				for _, tl := range operator.TiledLogs {
-					if tl.MonitoringURL == additionalLog.URL {
-						// Log already exists, skip it.
-						logFound = true
-						break
-					}
-				}
-
-				if !logFound {
-					// This works, since allLogs.Operators is a slice of pointers.
-					operator.TiledLogs = append(operator.TiledLogs, &customLog)
-				}
-
-				break
+			if operator.Name != additionalLog.Operator {
+				continue
 			}
+
+			operatorFound = true
+			logFound := false
+
+			for _, tl := range operator.TiledLogs {
+				if tl.MonitoringURL == additionalLog.URL {
+					// Log already exists, skip it.
+					logFound = true
+					break
+				}
+			}
+
+			if !logFound {
+				// This works, since allLogs.Operators is a slice of pointers.
+				operator.TiledLogs = append(operator.TiledLogs, &customLog)
+			}
+
+			break
 		}
 
 		if !operatorFound {
@@ -160,6 +176,54 @@ func getAllLogs(logListFetcher LogListFetcher) (loglist3.LogList, error) {
 			}
 			allLogs.Operators = append(allLogs.Operators, &newOperator)
 		}
+	}
+
+	// Remove excluded operators and logs after we've added custom logs.
+	if len(excludedOperators) > 0 || len(excludedLogs) > 0 {
+		filteredOperators := []*loglist3.Operator{}
+
+		for _, operator := range allLogs.Operators {
+			// Skip whole operator if it's excluded
+			if slices.Contains(excludedOperators, operator.Name) {
+				continue
+			}
+
+			// Filter normal logs
+			if len(operator.Logs) > 0 {
+				keepLogs := []*loglist3.Log{}
+				for _, l := range operator.Logs {
+					if slices.Contains(excludedLogs, normalizeCtlogURL(l.URL)) {
+						// excluded, skip
+						log.Println("Excluding log based on the config: ", operator.Name, normalizeCtlogURL(l.URL))
+						continue
+					}
+
+					keepLogs = append(keepLogs, l)
+				}
+
+				operator.Logs = keepLogs
+			}
+
+			// Filter tiled logs
+			if len(operator.TiledLogs) > 0 {
+				keepTiled := []*loglist3.TiledLog{}
+				for _, tl := range operator.TiledLogs {
+					if slices.Contains(excludedLogs, normalizeCtlogURL(tl.MonitoringURL)) {
+						// excluded, skip
+						log.Println("Excluding tiled log based on the config: ", operator.Name, normalizeCtlogURL(tl.MonitoringURL))
+						continue
+					}
+
+					keepTiled = append(keepTiled, tl)
+				}
+
+				operator.TiledLogs = keepTiled
+			}
+
+			filteredOperators = append(filteredOperators, operator)
+		}
+
+		allLogs.Operators = filteredOperators
 	}
 
 	return allLogs, nil

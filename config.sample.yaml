@@ -52,6 +52,13 @@ general:
   #    operator: "Cloudflare"
   #    description: "Cloudflare 'Raio2025h2b'"
 
+  # Exclude logs from being monitored.
+  # You can either exclude by operator (all logs of that operator)
+  # or by a specific log URL.
+  #excluded_logs:
+  #  - operator: "Google"
+  #  - url: "https://ct.googleapis.com/logs/us1/argon2024/"
+
   # To optimize the performance of the server, you can overwrite the size of different buffers
   # For low CPU, low memory machines, you should reduce the buffer sizes to save memory in case the CPU is maxed.
   buffer_sizes:

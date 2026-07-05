@@ -435,6 +435,57 @@ general:
 	}
 }
 
+func TestReadConfigViper_ExcludedLogs(t *testing.T) {
+	yaml := minimalValidYAML + `
+general:
+  excluded_logs:
+    - operator: "Google"
+    - url: "https://ct.example.com/log"
+`
+	configPath := writeConfigFile(t, yaml)
+
+	cfg, err := ReadConfig(configPath)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(cfg.General.ExcludedLogs) != 2 {
+		t.Fatalf("ExcludedLogs: want 2 entries, got %d", len(cfg.General.ExcludedLogs))
+	}
+
+	if cfg.General.ExcludedLogs[0].Operator != "Google" {
+		t.Errorf("ExcludedLogs[0].Operator: want 'Google', got %q", cfg.General.ExcludedLogs[0].Operator)
+	}
+
+	if cfg.General.ExcludedLogs[1].URL != "https://ct.example.com/log" {
+		t.Errorf("ExcludedLogs[1].URL: want 'https://ct.example.com/log', got %q", cfg.General.ExcludedLogs[1].URL)
+	}
+}
+
+func TestReadConfigViper_InvalidExcludedLogURLIgnored(t *testing.T) {
+	yaml := minimalValidYAML + `
+general:
+  excluded_logs:
+    - operator: "Google"
+      url: "not-a-valid-url"
+    - operator: "Cloudflare"
+`
+	configPath := writeConfigFile(t, yaml)
+
+	cfg, err := ReadConfig(configPath)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(cfg.General.ExcludedLogs) != 1 {
+		t.Fatalf("ExcludedLogs: want 1 valid entry, got %d", len(cfg.General.ExcludedLogs))
+	}
+
+	if cfg.General.ExcludedLogs[0].Operator != "Cloudflare" {
+		t.Errorf("ExcludedLogs[0].Operator: want 'Cloudflare', got %q", cfg.General.ExcludedLogs[0].Operator)
+	}
+}
+
 func TestReadConfigViper_RecoveryConfig(t *testing.T) {
 	yaml := minimalValidYAML + `
 general:
