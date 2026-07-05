@@ -1,7 +1,6 @@
 package certificatetransparency
 
 import (
-	"fmt"
 	"testing"
 )
 
@@ -61,7 +60,6 @@ func Test_encodeTilePath(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := encodeTilePath(tt.index)
-			fmt.Println(got, tt.want)
 			if got != tt.want {
 				t.Errorf("encodeTilePath() = %v, want %v", got, tt.want)
 			}
