@@ -7,18 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Added
+- Option to configure trusted_proxies for which the X-Forwarded-For and X-Real-IP headers are used as client IP (b062edca)
 - Added multiple unit tests for ensuring correct functionality
+
 ### Changed
 - Updated weak cipher suites to stronger ones (939517cd)
 - Updated http client settings to prevent timeouts and other connectivity issues
 - Updated http server settings to allow for higher delays
 - Minor code improvements and refactoring, mostly style related
-- Updated batch size from 100 to 256
+- Updated batch size from 100 to 256 (#97)
+
 ### Removed
+
 ### Fixed
 - Calculate correct starting tile index for static ct logs
 - Use proper websocket close code (1008) instead of 1005, which wasn't sent to the client
 - Respect ct_index path in config file for the `create-index` command
+
 ### Docs
 
 ## [1.9.0] - 2026-04-03
