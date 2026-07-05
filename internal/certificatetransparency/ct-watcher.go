@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"log"
 	"math"
 	"net/http"
@@ -565,46 +564,6 @@ func certHandler(entryChan chan models.Entry) {
 	}
 }
 
-// LogListFetcher defines a function type for fetching a log list. This allows us to inject different
-// implementations (e.g. for testing).
-type LogListFetcher func() (loglist3.LogList, error)
-
-// googleLogListFetcher fetches the list of all CT logs from Google Chromes CT LogList.
-func googleLogListFetcher() (loglist3.LogList, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
-	httpClient := newHTTPClient()
-
-	req, newReqErr := http.NewRequestWithContext(ctx, http.MethodGet, loglist3.LogListURL, nil)
-	if newReqErr != nil {
-		return loglist3.LogList{}, fmt.Errorf("failed to create loglist request: %w", newReqErr)
-	}
-
-	// Download the list of all logs from ctLogInfo and decode JSON
-	resp, reqErr := httpClient.Do(req)
-	if reqErr != nil {
-		return loglist3.LogList{}, fmt.Errorf("failed to execute loglist request: %w", reqErr)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return loglist3.LogList{}, fmt.Errorf("%w: unexpected status code %d", ErrRequestFailed, resp.StatusCode)
-	}
-
-	bodyBytes, readErr := io.ReadAll(resp.Body)
-	if readErr != nil {
-		return loglist3.LogList{}, fmt.Errorf("failed reading response body: %w", readErr)
-	}
-
-	allLogs, parseErr := loglist3.NewFromJSON(bodyBytes)
-	if parseErr != nil {
-		return loglist3.LogList{}, fmt.Errorf("failed parsing response body: %w", parseErr)
-	}
-
-	return *allLogs, nil
-}
-
 // getAllLogs returns a list of all CT logs - those from the Google list, if not disabled -
 // and additional logs provided via the config.
 func getAllLogs(logListFetcher LogListFetcher) (loglist3.LogList, error) {
@@ -614,10 +573,10 @@ func getAllLogs(logListFetcher LogListFetcher) (loglist3.LogList, error) {
 	if !config.AppConfig.General.DisableDefaultLogs {
 		var err error
 
-		allLogs, err = logListFetcher()
+		allLogs, err = logListFetcher.Fetch()
 		if err != nil {
-			log.Printf("Error fetching log list from Google: %s\n", err)
-			return loglist3.LogList{}, fmt.Errorf("failed to fetch log list from Google: %w", err)
+			log.Printf("Error fetching log list: %s\n", err)
+			return loglist3.LogList{}, fmt.Errorf("failed to fetch log list: %w", err)
 		}
 	}
 

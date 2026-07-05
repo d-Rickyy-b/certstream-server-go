@@ -37,13 +37,20 @@ func buildLogList(operators []struct {
 	return ll
 }
 
+type mockLogListFetcher struct {
+	loglist loglist3.LogList
+	err     error
+}
+
+func (m *mockLogListFetcher) Fetch() (loglist3.LogList, error) {
+	return m.loglist, m.err
+}
+
 // newMockListFetcher returns a function that returns the passed loglist.
 func newMockListFetcher(t *testing.T, loglist loglist3.LogList, err error) LogListFetcher {
 	t.Helper()
 
-	return func() (loglist3.LogList, error) {
-		return loglist, err
-	}
+	return &mockLogListFetcher{loglist: loglist, err: err}
 }
 
 // countLogs returns the total number of classic (non-tiled) logs across all operators.
@@ -182,7 +189,7 @@ func TestGetAllLogs_FetcherError(t *testing.T) {
 
 	config.AppConfig.General.DisableDefaultLogs = false
 
-	_, err := getAllLogs(newMockListFetcher(t, emptyLogList, errors.New("network error")))
+	_, err := getAllLogs(newMockListFetcher(t, emptyLogList, errors.New("mock error - can be ignored in test output")))
 	if err == nil {
 		t.Fatal("expected error when fetcher fails, got nil")
 	}
