@@ -38,7 +38,7 @@ type BufferSizes struct {
 	Websocket        int `mapstructure:"websocket"`
 	CTLog            int `mapstructure:"ctlog"`
 	BroadcastManager int `mapstructure:"broadcastmanager"`
-    Dispatcher       int `mapstructure:"dispatcher"`
+	Dispatcher       int `mapstructure:"dispatcher"`
 }
 
 type Config struct {
@@ -58,13 +58,13 @@ type Config struct {
 		ExposeSystemMetrics bool   `mapstructure:"expose_system_metrics"`
 	}
 	StreamProcessing []struct {
-		Name       string `yaml:"name"`
-		Type       string `yaml:"type"`
-		Enabled    bool   `yaml:"enabled"`
-		ServerAddr string `yaml:"server_addr"`
-		ServerPort int    `yaml:"server_port"`
-		Topic      string `yaml:"topic"`
-	} `yaml:"stream_processing"`
+		Name       string `mapstructure:"name"`
+		Type       string `mapstructure:"type"`
+		Enabled    bool   `mapstructure:"enabled"`
+		ServerAddr string `mapstructure:"server_addr"`
+		ServerPort int    `mapstructure:"server_port"`
+		Topic      string `mapstructure:"topic"`
+	} `mapstructure:"stream_processing"`
 	General struct {
 		// DisableDefaultLogs indicates whether the default logs used in Google Chrome and provided by Google should be disabled.
 		DisableDefaultLogs bool `mapstructure:"disable_default_logs"`
@@ -73,10 +73,10 @@ type Config struct {
 		AdditionalTiledLogs []LogConfig `mapstructure:"additional_tiled_logs"`
 		ExcludedLogs        []LogConfig `mapstructure:"excluded_logs"`
 		// BufferSizes contains the buffer sizes for the different components of the server. They usually don't need any adjustments.
-		BufferSizes         BufferSizes `mapstructure:"buffer_sizes"`
+		BufferSizes BufferSizes `mapstructure:"buffer_sizes"`
 		// DropOldLogs indicates whether downloading CT-Logs should start at the latest index (true) or should from the beginning (false).
-		DropOldLogs         *bool       `mapstructure:"drop_old_logs"`
-		Recovery            struct {
+		DropOldLogs *bool `mapstructure:"drop_old_logs"`
+		Recovery    struct {
 			Enabled     bool   `mapstructure:"enabled"`
 			CTIndexFile string `mapstructure:"ct_index_file"`
 		} `mapstructure:"recovery"`
