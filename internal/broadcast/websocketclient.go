@@ -13,24 +13,25 @@ import (
 
 const idChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
-const (
-	SubTypeFull SubscriptionType = iota
-	SubTypeLite
-	SubTypeDomain
-)
-
-type SubscriptionType int
-
 // WebsocketClient represents a single WebSocket client's connection to the server.
 type WebsocketClient struct {
-	conn *websocket.Conn
+	conn             *websocket.Conn
+	userAgent        string
+	hostIP           string
+	hostPort         string
+	realIPFromHeader string
+
 	*BaseClient
 }
 
 // NewWebsocketClient creates a new WebSocket client from the given connection.
-func NewWebsocketClient(conn *websocket.Conn, subType SubscriptionType, name string, certBufferSize int) *WebsocketClient {
+func NewWebsocketClient(conn *websocket.Conn, subType SubscriptionType, name, userAgent, hostIP, hostPort, realIPFromHeader string, certBufferSize int) *WebsocketClient {
 	c := &WebsocketClient{
-		conn: conn,
+		conn:             conn,
+		userAgent:        userAgent,
+		hostIP:           hostIP,
+		hostPort:         hostPort,
+		realIPFromHeader: realIPFromHeader,
 		BaseClient: &BaseClient{
 			broadcastChan: make(chan []byte, certBufferSize),
 			name:          name,
@@ -177,19 +178,14 @@ func sanitizeInput(s string) string {
 }
 
 // Name returns the name/identifier for this client.
-func (c *client) Name() string {
-	var clientName string
+func (c *WebsocketClient) Name() string {
+	clientName := fmt.Sprintf("[%s] - ", c.name)
 
-	clientName = fmt.Sprintf("[%s] - ", c.id)
-
-	connIP := sanitizeInput(c.connectionIP)
-	connPort := sanitizeInput(c.connectionPort)
 	realIP := sanitizeInput(c.realIPFromHeader)
-
-	socket := net.JoinHostPort(connIP, connPort)
+	socket := net.JoinHostPort(c.hostIP, c.hostPort)
 
 	// If the realIP is set and if it differs from the connection IP, return both the connection IP and the real IP.
-	if realIP != "" && realIP != connIP {
+	if realIP != "" && realIP != c.hostIP {
 		clientName += fmt.Sprintf("%s (via %s)", socket, realIP)
 	} else {
 		clientName += socket

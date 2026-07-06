@@ -64,34 +64,21 @@ func (pm *PrometheusExporter) RegisterGaugeMetricInt(label string, callback func
 }
 
 // RegisterClient registers a new gauge metric for the client with the given name.
-func (pm *PrometheusExporter) RegisterClient(id, connIP, connPort, realIP, useragent string, skippedCertsCallback func() float64) {
+func (pm *PrometheusExporter) RegisterClient(id string, skippedCertsCallback func() float64) {
 	argMap := make(map[string]string)
 	argMap["id"] = id
-	argMap["conn_ip"] = connIP
-	argMap["conn_port"] = connPort
-	argMap["real_ip"] = realIP
-	argMap["useragent"] = useragent
 
 	label := createMetric("certstreamservergo_skipped_certs", argMap)
 
-	// label := fmt.Sprintf("certstreamservergo_skipped_certs{id=\"%s\",conn_ip=\"%s\",conn_port=\"%s\",real_ip=\"%s\",useragent=\"%s\"}",
-	//		id, connIP, connPort, realIP, useragent)
 	metrics.GetOrCreateGauge(label, skippedCertsCallback)
 }
 
 // UnregisterClient unregisters the metric for the client with the given name.
-func (pm *PrometheusExporter) UnregisterClient(id, connIP, connPort, realIP, useragent string) {
+func (pm *PrometheusExporter) UnregisterClient(id string) {
 	argMap := make(map[string]string)
 	argMap["id"] = id
-	argMap["conn_ip"] = connIP
-	argMap["conn_port"] = connPort
-	argMap["real_ip"] = realIP
-	argMap["useragent"] = useragent
 
 	label := createMetric("certstreamservergo_skipped_certs", argMap)
-
-	// label := fmt.Sprintf("certstreamservergo_skipped_certs{id=\"%s\",conn_ip=\"%s\",conn_port=\"%s\",real_ip=\"%s\",useragent=\"%s\"}",
-	// 	id, connIP, connPort, realIP, useragent)
 
 	ok := metrics.UnregisterMetric(label)
 	if !ok {

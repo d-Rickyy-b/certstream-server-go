@@ -224,7 +224,7 @@ func initFullWebsocket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	setupClient(connection, broadcast.SubTypeFull, r.RemoteAddr)
+	setupClient(connection, broadcast.SubTypeFull, r.RemoteAddr, r)
 }
 
 // initLiteWebsocket is called when a client connects to the / endpoint.
@@ -236,7 +236,7 @@ func initLiteWebsocket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	setupClient(connection, broadcast.SubTypeLite, r.RemoteAddr)
+	setupClient(connection, broadcast.SubTypeLite, r.RemoteAddr, r)
 }
 
 // initDomainWebsocket is called when a client connects to the /domains-only endpoint.
@@ -248,7 +248,7 @@ func initDomainWebsocket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	setupClient(connection, broadcast.SubTypeDomain, r.RemoteAddr)
+	setupClient(connection, broadcast.SubTypeDomain, r.RemoteAddr, r)
 }
 
 // upgradeConnection upgrades the connection to a websocket and returns the connection.
@@ -279,7 +279,7 @@ func upgradeConnection(w http.ResponseWriter, r *http.Request) (*websocket.Conn,
 }
 
 // setupClient initializes a client struct and starts the broadcastHandler and websocket listener.
-func setupClient(connection *websocket.Conn, subscriptionType broadcast.SubscriptionType, name string) {
+func setupClient(connection *websocket.Conn, subscriptionType broadcast.SubscriptionType, name string, r *http.Request) {
 	// Extract data from request
 	origConnAddr, _ := r.Context().Value(origConnAddrKey).(string)
 
@@ -294,14 +294,7 @@ func setupClient(connection *websocket.Conn, subscriptionType broadcast.Subscrip
 		realIPFromHeader = r.RemoteAddr
 	}
 
-	data := clientData{
-		userAgent:        r.Header.Get("User-Agent"),
-		connectionIP:     hostIP,
-		connectionPort:   hostPort,
-		realIPFromHeader: realIPFromHeader,
-	}
-
-	c := broadcast.NewWebsocketClient(connection, subscriptionType, name, config.AppConfig.General.BufferSizes.Websocket)
+	c := broadcast.NewWebsocketClient(connection, subscriptionType, name, r.Header.Get("User-Agent"), hostIP, hostPort, realIPFromHeader, config.AppConfig.General.BufferSizes.Websocket)
 	broadcast.ClientHandler.RegisterClient(c)
 }
 

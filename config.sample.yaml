@@ -23,8 +23,6 @@ webserver:
   cert_key_path: ""
   # specify if the server should attempt to negotiate per message compression (RFC 7692)
   compression_enabled: false
-  whitelist:
-    - "127.0.0.1/8"
 
 prometheus:
   enabled: true

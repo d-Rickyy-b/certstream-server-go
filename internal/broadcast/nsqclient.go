@@ -1,10 +1,10 @@
 package broadcast
 
 import (
-	"github.com/nsqio/go-nsq"
-
 	"log"
 	"time"
+
+	"github.com/nsqio/go-nsq"
 )
 
 // NSQClient connects to a NSQ server in order to provide it with certificates.
