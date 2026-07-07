@@ -83,6 +83,7 @@ func NewCertstreamServer(config config.Config) (*Certstream, error) {
 				addr,
 				streamProcessor.Name,
 				streamProcessor.Topic,
+				streamProcessor.Compression,
 				config.General.BufferSizes.Websocket,
 			)
 			broadcast.ClientHandler.RegisterClient(kc)

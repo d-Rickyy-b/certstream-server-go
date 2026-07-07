@@ -58,12 +58,13 @@ type Config struct {
 		ExposeSystemMetrics bool   `mapstructure:"expose_system_metrics"`
 	}
 	StreamProcessing []struct {
-		Name       string `mapstructure:"name"`
-		Type       string `mapstructure:"type"`
-		Enabled    bool   `mapstructure:"enabled"`
-		ServerAddr string `mapstructure:"server_addr"`
-		ServerPort int    `mapstructure:"server_port"`
-		Topic      string `mapstructure:"topic"`
+		Name        string `mapstructure:"name"`
+		Type        string `mapstructure:"type"`
+		Enabled     bool   `mapstructure:"enabled"`
+		ServerAddr  string `mapstructure:"server_addr"`
+		ServerPort  int    `mapstructure:"server_port"`
+		Topic       string `mapstructure:"topic"`
+		Compression string `mapstructure:"compression"`
 	} `mapstructure:"stream_processing"`
 	General struct {
 		// DisableDefaultLogs indicates whether the default logs used in Google Chrome and provided by Google should be disabled.
@@ -300,6 +301,13 @@ func validateConfig(config *Config) bool {
 			}
 
 			validTiledLogs = append(validTiledLogs, ctLog)
+		}
+	}
+
+	if len(config.StreamProcessing) > 0 {
+		for _, streamProcessing := range config.StreamProcessing {
+			streamProcessing.Type = strings.ToLower(streamProcessing.Type)
+			streamProcessing.Compression = strings.ToLower(streamProcessing.Compression)
 		}
 	}
 

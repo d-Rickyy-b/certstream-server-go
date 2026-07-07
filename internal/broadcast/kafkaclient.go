@@ -17,12 +17,13 @@ type KafkaClient struct {
 	conn        *kafka.Conn // Kafka connection
 	addr        string
 	topic       string
+	compression kafka.Compression
 	isConnected bool
 	BaseClient
 }
 
 // NewKafkaClient creates a new Kafka client that immediately connects to the configured Kafka server.
-func NewKafkaClient(subType SubscriptionType, addr, name, topic string, certBufferSize int) *KafkaClient {
+func NewKafkaClient(subType SubscriptionType, addr, name, topic, compression string, certBufferSize int) *KafkaClient {
 	// Connect to the Kafka server
 	conn, err := kafka.DialLeader(context.Background(), "tcp", addr, topic, 0)
 	if err != nil {
@@ -39,6 +40,18 @@ func NewKafkaClient(subType SubscriptionType, addr, name, topic string, certBuff
 			name:          name,
 			subType:       subType,
 		},
+	}
+
+	switch compression {
+	case "gzip":
+		kc.compression = kafka.Gzip
+	case "snappy":
+		kc.compression = kafka.Snappy
+	case "lz4":
+		kc.compression = kafka.Lz4
+	case "none":
+	default:
+		log.Println("invalid compression type:", compression)
 	}
 
 	go kc.broadcastHandler()
