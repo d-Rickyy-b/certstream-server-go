@@ -9,7 +9,9 @@ import (
 )
 
 const (
-	TOPIC = "certstream"
+	maxBatchSize = 50
+	maxBatchWait = 60 * time.Second
+	writeWait    = 60 * time.Second
 )
 
 // KafkaClient connects to a Kafka server in order to provide it with certificates.
@@ -97,8 +99,6 @@ func (c *KafkaClient) reconnectHandler() {
 
 // Each client has a broadcastHandler that runs in the background and sends out the broadcast messages to the client.
 func (c *KafkaClient) broadcastHandler() {
-	writeWait := 60 * time.Second
-
 	defer func() {
 		log.Println("Closing broadcast handler for kafka producer:", c.addr)
 		if err := c.conn.Close(); err != nil {
@@ -108,25 +108,49 @@ func (c *KafkaClient) broadcastHandler() {
 		ClientHandler.UnregisterClient(c.name)
 	}()
 
+	batch := make([]kafka.Message, 0, maxBatchSize)
+	t := time.NewTimer(maxBatchWait)
+
 	for {
 		select {
 		case <-c.stopChan:
 			return
 		case message := <-c.broadcastChan:
+			// Drop messages if not connected
 			if !c.isConnected {
 				continue
 			}
 
-			_ = c.conn.SetWriteDeadline(time.Now().Add(writeWait))
+			msg := kafka.Message{Value: message}
+			batch = append(batch, msg)
 
-			c.conn.Broker()
-			_, err := c.conn.WriteMessages(
-				kafka.Message{Value: message},
-			)
-			if err != nil {
-				c.isConnected = false
-				log.Println("Failed to write messages to kafka:", err)
+			// Write batch if it reaches max size
+			if len(batch) >= maxBatchSize {
+				c.writeBatch(batch)
+				batch = batch[:0]
+				t.Reset(maxBatchWait)
 			}
+		case <-t.C:
+			if len(batch) == 0 {
+				continue
+			}
+
+			// Write any remaining batch after maxBatchWait
+			c.writeBatch(batch)
+			batch = batch[:0]
 		}
+	}
+}
+
+func (c *KafkaClient) writeBatch(batch []kafka.Message) {
+	if len(batch) == 0 {
+		return
+	}
+
+	_ = c.conn.SetWriteDeadline(time.Now().Add(writeWait))
+	_, err := c.conn.WriteMessages(batch...)
+	if err != nil {
+		c.isConnected = false
+		log.Println("Failed to write messages to kafka:", err)
 	}
 }
