@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"net"
 	"regexp"
 	"strings"
 
@@ -12,76 +11,20 @@ import (
 )
 
 var (
+	// AppConfig holds the parsed configuration.
 	AppConfig Config
 	Version   = "1.9.0"
 
 	ErrInvalidConfig = errors.New("invalid configuration")
+	URLPathRegex     = regexp.MustCompile(`^(/[a-zA-Z0-9\-._]+)+$`)
+	URLRegex         = regexp.MustCompile(`^https?://[a-zA-Z0-9\-._]+(:[0-9]+)?(/[a-zA-Z0-9\-._]+)*/?$`)
 )
 
-type ServerConfig struct {
-	ListenAddr     string   `mapstructure:"listen_addr"`
-	ListenPort     int      `mapstructure:"listen_port"`
-	CertPath       string   `mapstructure:"cert_path"`
-	CertKeyPath    string   `mapstructure:"cert_key_path"`
-	RealIP         bool     `mapstructure:"real_ip"`
-	TrustedProxies []string `mapstructure:"trusted_proxies"`
-	Whitelist      []string `mapstructure:"whitelist"`
-}
-
-type LogConfig struct {
-	Operator    string `mapstructure:"operator"`
-	URL         string `mapstructure:"url"`
-	Description string `mapstructure:"description"`
-}
-
-type BufferSizes struct {
-	Websocket        int `mapstructure:"websocket"`
-	CTLog            int `mapstructure:"ctlog"`
-	BroadcastManager int `mapstructure:"broadcastmanager"`
-	Dispatcher       int `mapstructure:"dispatcher"`
-}
-
 type Config struct {
-	Webserver struct {
-		ServerConfig `mapstructure:",squash"`
-
-		FullURL            string `mapstructure:"full_url"`
-		LiteURL            string `mapstructure:"lite_url"`
-		DomainsOnlyURL     string `mapstructure:"domains_only_url"`
-		CompressionEnabled bool   `mapstructure:"compression_enabled"`
-	}
-	Prometheus struct {
-		ServerConfig `mapstructure:",squash"`
-
-		Enabled             bool   `mapstructure:"enabled"`
-		MetricsURL          string `mapstructure:"metrics_url"`
-		ExposeSystemMetrics bool   `mapstructure:"expose_system_metrics"`
-	}
-	StreamProcessing []struct {
-		Name        string `mapstructure:"name"`
-		Type        string `mapstructure:"type"`
-		Enabled     bool   `mapstructure:"enabled"`
-		ServerAddr  string `mapstructure:"server_addr"`
-		ServerPort  int    `mapstructure:"server_port"`
-		Topic       string `mapstructure:"topic"`
-		Compression string `mapstructure:"compression"`
-	} `mapstructure:"stream_processing"`
-	General struct {
-		// DisableDefaultLogs indicates whether the default logs used in Google Chrome and provided by Google should be disabled.
-		DisableDefaultLogs bool `mapstructure:"disable_default_logs"`
-		// AdditionalLogs contains additional logs provided by the user that can be used in addition to the default logs.
-		AdditionalLogs      []LogConfig `mapstructure:"additional_logs"`
-		AdditionalTiledLogs []LogConfig `mapstructure:"additional_tiled_logs"`
-		ExcludedLogs        []LogConfig `mapstructure:"excluded_logs"`
-		// BufferSizes contains the buffer sizes for the different components of the server. They usually don't need any adjustments.
-		BufferSizes BufferSizes `mapstructure:"buffer_sizes"`
-		// DropOldLogs indicates whether downloading CT-Logs should start at the latest index (true) or should from the beginning (false).
-		DropOldLogs *bool `mapstructure:"drop_old_logs"`
-		Recovery    struct {
-			Enabled     bool   `mapstructure:"enabled"`
-			CTIndexFile string `mapstructure:"ct_index_file"`
-		} `mapstructure:"recovery"`
-	}
+	Webserver        Webserver
+	Prometheus       Prometheus
+	StreamProcessing []StreamProcessor `mapstructure:"stream_processing"`
+	General          General
 }
 
 // ReadConfig reads the configuration using Viper and returns a filled Config struct.
@@ -185,188 +128,24 @@ func loadConfigFromViper(v *viper.Viper) (Config, error) {
 // validateConfig validates the config values and sets defaults for missing values.
 func validateConfig(config *Config) bool {
 	// Still matches invalid IP addresses but good enough for detecting completely wrong formats
-	URLPathRegex := regexp.MustCompile(`^(/[a-zA-Z0-9\-._]+)+$`)
-	URLRegex := regexp.MustCompile(`^https?://[a-zA-Z0-9\-._]+(:[0-9]+)?(/[a-zA-Z0-9\-._]+)*/?$`)
 
 	// Check webserver config
-	if config.Webserver.ListenAddr == "" || net.ParseIP(config.Webserver.ListenAddr) == nil {
-		log.Fatalln("Webhook listen IP is not a valid IP: ", config.Webserver.ListenAddr)
+	if !config.Webserver.Valid() {
 		return false
 	}
 
-	if config.Webserver.ListenPort == 0 {
-		log.Fatalln("Webhook listen port is not set")
+	if !config.Prometheus.Valid() {
 		return false
 	}
 
-	if config.Webserver.FullURL == "" || !URLPathRegex.MatchString(config.Webserver.FullURL) {
-		log.Println("Webhook full URL is not set or does not match pattern '/...'")
-
-		config.Webserver.FullURL = "/full-stream"
-	}
-
-	if config.Webserver.LiteURL == "" || !URLPathRegex.MatchString(config.Webserver.FullURL) {
-		log.Println("Webhook lite URL is not set or does not match pattern '/...'")
-
-		config.Webserver.LiteURL = "/"
-	}
-
-	if config.Webserver.DomainsOnlyURL == "" || !URLPathRegex.MatchString(config.Webserver.DomainsOnlyURL) {
-		log.Println("Webhook domains only URL is not set or does not match pattern '/...'")
-
-		config.Webserver.FullURL = "/domains-only"
-	}
-
-	if config.Webserver.FullURL == config.Webserver.LiteURL {
-		log.Fatalln("Webhook full URL is the same as lite URL - please fix the config!")
-	}
-
-	if config.Webserver.DomainsOnlyURL == "" {
-		config.Webserver.FullURL = "/domains-only"
-	}
-
-	for _, ip := range config.Webserver.TrustedProxies {
-		if net.ParseIP(ip) != nil {
-			continue
-		}
-
-		_, _, err := net.ParseCIDR(ip)
-		if err != nil {
-			log.Fatalln("Invalid IP/CIDR in webserver trusted_proxies: ", ip)
+	for _, processor := range config.StreamProcessing {
+		if !processor.Valid() {
 			return false
 		}
 	}
 
-	//nolint:nestif
-	if config.Prometheus.Enabled {
-		if config.Prometheus.ListenAddr == "" || net.ParseIP(config.Prometheus.ListenAddr) == nil {
-			log.Fatalln("Metrics export IP is not a valid IP")
-			return false
-		}
-
-		if config.Prometheus.ListenPort == 0 {
-			log.Fatalln("Metrics export port is not set")
-			return false
-		}
-
-		if config.Prometheus.Whitelist == nil {
-			config.Prometheus.Whitelist = []string{}
-		}
-
-		// Check if IPs in whitelist match pattern
-		for _, ip := range config.Prometheus.Whitelist {
-			if net.ParseIP(ip) != nil {
-				continue
-			}
-
-			// Provided entry is not an IP, check if it's a CIDR range
-			_, _, err := net.ParseCIDR(ip)
-			if err != nil {
-				log.Fatalln("Invalid IP in metrics whitelist: ", ip)
-				return false
-			}
-		}
-
-		for _, ip := range config.Prometheus.TrustedProxies {
-			if net.ParseIP(ip) != nil {
-				continue
-			}
-
-			_, _, err := net.ParseCIDR(ip)
-			if err != nil {
-				log.Fatalln("Invalid IP/CIDR in prometheus trusted_proxies: ", ip)
-				return false
-			}
-		}
-	}
-
-	var validLogs, validTiledLogs, validExcludedLogs []LogConfig
-
-	if len(config.General.AdditionalLogs) > 0 {
-		for _, ctLog := range config.General.AdditionalLogs {
-			if !URLRegex.MatchString(ctLog.URL) {
-				log.Println("Ignoring invalid additional log URL: ", ctLog.URL)
-				continue
-			}
-
-			validLogs = append(validLogs, ctLog)
-		}
-	}
-
-	if len(config.General.AdditionalTiledLogs) > 0 {
-		for _, ctLog := range config.General.AdditionalTiledLogs {
-			if !URLRegex.MatchString(ctLog.URL) {
-				log.Println("Ignoring invalid additional log URL: ", ctLog.URL)
-				continue
-			}
-
-			validTiledLogs = append(validTiledLogs, ctLog)
-		}
-	}
-
-	if len(config.StreamProcessing) > 0 {
-		for _, streamProcessing := range config.StreamProcessing {
-			streamProcessing.Type = strings.ToLower(streamProcessing.Type)
-			streamProcessing.Compression = strings.ToLower(streamProcessing.Compression)
-		}
-	}
-
-	if len(config.General.ExcludedLogs) > 0 {
-		for _, excludedLog := range config.General.ExcludedLogs {
-			excludedLog.Operator = strings.TrimSpace(excludedLog.Operator)
-			excludedLog.URL = strings.TrimSpace(excludedLog.URL)
-
-			if excludedLog.Operator == "" && excludedLog.URL == "" {
-				log.Println("Ignoring empty excluded_logs entry. Set operator and/or url.")
-				continue
-			}
-
-			if excludedLog.URL != "" && !URLRegex.MatchString(excludedLog.URL) {
-				log.Println("Ignoring invalid excluded log URL: ", excludedLog.URL)
-				continue
-			}
-
-			validExcludedLogs = append(validExcludedLogs, excludedLog)
-		}
-	}
-
-	config.General.AdditionalLogs = validLogs
-	config.General.AdditionalTiledLogs = validTiledLogs
-	config.General.ExcludedLogs = validExcludedLogs
-
-	if len(config.General.AdditionalLogs) == 0 && len(config.General.AdditionalTiledLogs) == 0 && config.General.DisableDefaultLogs {
-		log.Fatalln("Default logs are disabled, but no additional logs are configured. Please add at least one log to the config or enable default logs.")
-	}
-
-	if config.General.BufferSizes.Websocket <= 0 {
-		config.General.BufferSizes.Websocket = 300
-	}
-
-	if config.General.BufferSizes.CTLog <= 0 {
-		config.General.BufferSizes.CTLog = 1000
-	}
-
-	// For backward compatibility, copy value from deprecated BroadcastManager field
-	if config.General.BufferSizes.BroadcastManager != 0 {
-		config.General.BufferSizes.Dispatcher = config.General.BufferSizes.BroadcastManager
-	}
-
-	if config.General.BufferSizes.Dispatcher <= 0 {
-		config.General.BufferSizes.Dispatcher = 10000
-	}
-
-	// If the cleanup flag is not set, default to true
-	if config.General.DropOldLogs == nil {
-		log.Println("drop_old_logs is not set, defaulting to true")
-
-		defaultCleanup := true
-		config.General.DropOldLogs = &defaultCleanup
-	}
-
-	if config.General.Recovery.Enabled && config.General.Recovery.CTIndexFile == "" {
-		log.Println("Recovery enabled but no index file specified. Defaulting to ./ct_index.json")
-
-		config.General.Recovery.CTIndexFile = "./ct_index.json"
+	if !config.General.Valid() {
+		return false
 	}
 
 	return true
