@@ -58,7 +58,7 @@ func NewCertstreamServer(cfg config.Config) (*Certstream, error) {
 
 	// Initialize the stream processors if configured and enabled.
 	for _, streamProcessor := range cfg.StreamProcessing {
-		if !streamProcessor.Enabled {
+		if !*streamProcessor.Enabled {
 			continue
 		}
 
