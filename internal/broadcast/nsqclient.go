@@ -31,6 +31,7 @@ func NewNSQClient(subType SubscriptionType, addr, name, topic string, certBuffer
 
 	// Instantiate a producer.
 	conf := nsq.NewConfig()
+
 	conn, err := nsq.NewProducer(addr, conf)
 	if err != nil {
 		log.Println(err)
@@ -66,6 +67,7 @@ func (c *NSQClient) reconnectHandler() {
 		select {
 		case <-c.stopChan:
 			log.Println("Stopping reconnectHandler for nsq producer:", c.addr)
+
 			return
 		default:
 			if c.isConnected {
@@ -73,6 +75,7 @@ func (c *NSQClient) reconnectHandler() {
 				time.Sleep(5 * time.Second)
 				continue
 			}
+
 			// Attempt to connect to the NSQ server
 			err := c.conn.Ping()
 			if err != nil {
@@ -90,19 +93,25 @@ func (c *NSQClient) reconnectHandler() {
 
 // Each client has a broadcastHandler that runs in the background and sends out the broadcast messages to the client.
 func (c *NSQClient) broadcastHandler() {
-	// writeWait := 60 * time.Second
-
 	defer func() {
 		log.Println("Closing broadcast handler for nsq producer:", c.addr)
-		// Gracefully stop the producer when appropriate (e.g. before shutting down the service)
-		c.conn.Stop()
+		if c.conn != nil {
+			// Gracefully stop the producer when appropriate (e.g. before shutting down the service)
+			c.conn.Stop()
+		}
+
 	}()
 
 	for {
 		select {
 		case <-c.stopChan:
 			return
-		case message := <-c.broadcastChan:
+		case message, ok := <-c.broadcastChan:
+			if !ok {
+				log.Println("broadcastChan closed for nsqClient:", c.addr)
+				return
+			}
+
 			if !c.isConnected {
 				continue
 			}
@@ -111,7 +120,7 @@ func (c *NSQClient) broadcastHandler() {
 			// Messages can also be sent asynchronously and/or in batches.
 			err := c.conn.Publish(c.topic, message)
 			if err != nil {
-				log.Println("Error writing to NSQ topic:", err)
+				log.Println("Failed to write messages to NSQ:", err)
 				c.isConnected = false
 			}
 		}
