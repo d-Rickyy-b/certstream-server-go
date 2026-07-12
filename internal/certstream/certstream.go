@@ -35,8 +35,8 @@ func NewRawCertstream(config config.Config) *Certstream {
 }
 
 // NewCertstreamServer creates a new Certstream server from a config struct.
-func NewCertstreamServer(config config.Config) (*Certstream, error) {
-	cs := NewRawCertstream(config)
+func NewCertstreamServer(cfg config.Config) (*Certstream, error) {
+	cs := NewRawCertstream(cfg)
 
 	// Start the broadcast dispatcher
 	broadcast.NewDispatcher()
@@ -45,10 +45,10 @@ func NewCertstreamServer(config config.Config) (*Certstream, error) {
 	// TODO: add support do disable websocket Server
 	// Initialize the webserver used for the websocket server
 	webserver := web.NewWebsocketServer(
-		config.Webserver.ListenAddr,
-		config.Webserver.ListenPort,
-		config.Webserver.CertPath,
-		config.Webserver.CertKeyPath,
+		cfg.Webserver.ListenAddr,
+		cfg.Webserver.ListenPort,
+		cfg.Webserver.CertPath,
+		cfg.Webserver.CertKeyPath,
 	)
 	cs.webserver = webserver
 	cs.watcher = certificatetransparency.NewWatcher()
@@ -57,7 +57,7 @@ func NewCertstreamServer(config config.Config) (*Certstream, error) {
 	cs.setupMetrics(webserver)
 
 	// Initialize the stream processors if configured and enabled.
-	for _, streamProcessor := range config.StreamProcessing {
+	for _, streamProcessor := range cfg.StreamProcessing {
 		if !streamProcessor.Enabled {
 			continue
 		}
@@ -73,7 +73,7 @@ func NewCertstreamServer(config config.Config) (*Certstream, error) {
 				addr,
 				streamProcessor.Name,
 				streamProcessor.Topic,
-				config.General.BufferSizes.Websocket,
+				cfg.General.BufferSizes.Websocket,
 			)
 			broadcast.ClientHandler.RegisterClient(nc)
 		case "kafka":
@@ -83,9 +83,10 @@ func NewCertstreamServer(config config.Config) (*Certstream, error) {
 				addr,
 				streamProcessor.Name,
 				streamProcessor.Topic,
-				streamProcessor.Compression,
-				config.General.BufferSizes.Websocket,
+				string(streamProcessor.Compression),
+				cfg.General.BufferSizes.Websocket,
 			)
+
 			broadcast.ClientHandler.RegisterClient(kc)
 		default:
 			log.Printf("Unknown stream processor type '%s' for %s. Skipping...\n", streamProcessor.Type, streamProcessor.Name)
