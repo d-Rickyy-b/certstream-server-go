@@ -7,6 +7,11 @@ import (
 	"github.com/nsqio/go-nsq"
 )
 
+const (
+	nsqMaxBatchSize = 50
+	nsqMaxBatchWait = 1 * time.Second
+)
+
 // NSQClient connects to a NSQ server in order to provide it with certificates.
 type NSQClient struct {
 	conn        *nsq.Producer // nsq connection
@@ -104,6 +109,9 @@ func (c *NSQClient) broadcastHandler() {
 		ClientHandler.UnregisterClient(c.name)
 	}()
 
+	batch := make([][]byte, 0, nsqMaxBatchSize)
+	t := time.NewTicker(nsqMaxBatchWait)
+
 	for {
 		select {
 		case <-c.stopChan:
@@ -120,13 +128,46 @@ func (c *NSQClient) broadcastHandler() {
 				continue
 			}
 
-			// Synchronously publish a single message to the specified topic.
-			// Messages can also be sent asynchronously and/or in batches.
-			err := c.conn.Publish(c.topic, message)
+			batch = append(batch, message)
+
+			// Write batch if it reaches max size
+			if len(batch) >= nsqMaxBatchSize {
+				err := c.writeBatch(batch)
+				if err != nil {
+					log.Println("Failed to write messages to NSQ:", err)
+					c.isConnected = false
+				}
+				batch = batch[:0]
+				t.Reset(kafkaMaxBatchWait)
+			}
+		case <-t.C:
+			// If batch size has not reached nsqMaxBatchSize, write the batch after nsqMaxBatchWait
+			if len(batch) == 0 {
+				continue
+			}
+
+			err := c.writeBatch(batch)
 			if err != nil {
 				log.Println("Failed to write messages to NSQ:", err)
 				c.isConnected = false
 			}
+			batch = batch[:0]
 		}
 	}
+}
+
+func (c *NSQClient) writeBatch(batch [][]byte) error {
+	if len(batch) == 0 {
+		return nil
+	}
+
+	// Synchronously publish a batch of messages to the specified topic.
+	err := c.conn.MultiPublish(c.topic, batch)
+	if err != nil {
+		log.Println("Failed to write messages to NSQ:", err)
+		c.isConnected = false
+		return err
+	}
+
+	return nil
 }
