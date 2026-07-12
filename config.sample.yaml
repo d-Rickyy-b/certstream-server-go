@@ -39,14 +39,29 @@ prometheus:
 
 # Configuration related to external stream processing tools go here.
 stream_processing:
-  - name: "kafka"
-    enabled: false
+  # List of stream processing configurations.
+  # Each configuration specifies a stream processing tool to use and its settings.
+  - name: "kafka-prod"
+    # Type describes the type of stream processing tool to use.
+    # Supported types: "kafka", "nqs"
+    type: "kafka"
+    # The stream type can be any of "full", "lite", "domains-only" - same as the certstream websocket urls
+    # Default is "full"
+    stream: "full"
+    # Enable or disable this stream processing configuration.
+    enabled: true
+    # The server address and port to connect to the stream processing tool
     server_addr: "127.0.0.1"
     server_port: 9092
     topic: "certstream"
+    # Available compression types depend on the stream processing tool.
+    # E.g. for Kafka, supported types are "none" / "", "gzip", "snappy", "lz4", "zstd"
+    compression: ""
 
-  - name: "nqs"
-    enabled: true
+  - name: "nqs-prod"
+    type: "nqs"
+    stream: "lite"
+    enabled: false
     server_addr: "127.0.0.1"
     server_port: 9092
     topic: "certstream"
