@@ -65,11 +65,21 @@ func NewCertstreamServer(cfg config.Config) (*Certstream, error) {
 		addr := net.JoinHostPort(streamProcessor.ServerAddr, strconv.Itoa(streamProcessor.ServerPort))
 		log.Printf("Initializing stream processor: %s at %s\n", streamProcessor.Name, addr)
 
+		var subscriptionType broadcast.SubscriptionType
+		switch streamProcessor.Stream {
+		case config.StreamTypeFull:
+			subscriptionType = broadcast.SubTypeFull
+		case config.StreamTypeLite:
+			subscriptionType = broadcast.SubTypeLite
+		case config.StreamTypeDomainsOnly:
+			subscriptionType = broadcast.SubTypeDomain
+		}
+
 		switch streamProcessor.Type {
 		case "nsq":
 			log.Println("Initializing NSQ client...")
 			nc := broadcast.NewNSQClient(
-				broadcast.SubTypeFull,
+				subscriptionType,
 				addr,
 				streamProcessor.Name,
 				streamProcessor.Topic,
@@ -79,7 +89,7 @@ func NewCertstreamServer(cfg config.Config) (*Certstream, error) {
 		case "kafka":
 			log.Println("Initializing Kafka client...")
 			kc := broadcast.NewKafkaClient(
-				broadcast.SubTypeFull,
+				subscriptionType,
 				addr,
 				streamProcessor.Name,
 				streamProcessor.Topic,
