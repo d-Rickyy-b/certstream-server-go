@@ -67,6 +67,7 @@ func (c *NSQClient) reconnectHandler() {
 		select {
 		case <-c.stopChan:
 			log.Println("Stopping reconnectHandler for nsq producer:", c.addr)
+			c.conn.Stop()
 
 			return
 		default:
@@ -100,6 +101,7 @@ func (c *NSQClient) broadcastHandler() {
 			c.conn.Stop()
 		}
 
+		ClientHandler.UnregisterClient(c.name)
 	}()
 
 	for {
@@ -112,7 +114,9 @@ func (c *NSQClient) broadcastHandler() {
 				return
 			}
 
+			// Drop messages if not connected
 			if !c.isConnected {
+				time.Sleep(5 * time.Second)
 				continue
 			}
 
