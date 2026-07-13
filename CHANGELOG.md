@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Added
+- Support for stream processing tools like kafka or nsq
 - Option to configure trusted_proxies for which the X-Forwarded-For and X-Real-IP headers are used as client IP (b062edca)
 - Added multiple unit tests for ensuring correct functionality
 - Add `excluded_logs` config option to skip specific logs and operators. Works both for classic and tiled logs.

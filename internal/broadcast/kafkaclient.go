@@ -2,16 +2,19 @@ package broadcast
 
 import (
 	"context"
+	"errors"
 	"log"
+	"net"
 	"time"
 
+	"github.com/d-Rickyy-b/certstream-server-go/internal/backoff"
 	"github.com/segmentio/kafka-go"
 )
 
-const (
-	maxBatchSize = 50
-	maxBatchWait = 60 * time.Second
-	writeWait    = 60 * time.Second
+var (
+	kafkaMaxBatchSize = 100
+	kafkaMaxBatchWait = 1 * time.Second
+	kafkaConnTimeout  = 5 * time.Second
 )
 
 // KafkaClient connects to a Kafka server in order to provide it with certificates.
@@ -27,10 +30,13 @@ type KafkaClient struct {
 // NewKafkaClient creates a new Kafka client that immediately connects to the configured Kafka server.
 func NewKafkaClient(subType SubscriptionType, addr, name, topic, compression string, certBufferSize int) *KafkaClient {
 	// Connect to the Kafka server
-	conn, err := kafka.DialLeader(context.Background(), "tcp", addr, topic, 0)
+	ctx, cancel := context.WithTimeout(context.Background(), kafkaConnTimeout)
+	defer cancel()
+	conn, err := kafka.DialLeader(ctx, "tcp", addr, topic, 0)
 	if err != nil {
 		log.Println("failed to connect to kafka:", err)
 	}
+	// TODO implement explicit topic creation
 
 	kc := &KafkaClient{
 		conn:  conn,
@@ -44,17 +50,20 @@ func NewKafkaClient(subType SubscriptionType, addr, name, topic, compression str
 		},
 	}
 
+	var kafkaCompression kafka.Compression
 	switch compression {
 	case "gzip":
-		kc.compression = kafka.Gzip
+		kafkaCompression = kafka.Gzip
 	case "snappy":
-		kc.compression = kafka.Snappy
+		kafkaCompression = kafka.Snappy
 	case "lz4":
-		kc.compression = kafka.Lz4
-	case "none":
+		kafkaCompression = kafka.Lz4
+	case "none", "":
 	default:
 		log.Println("invalid compression type:", compression)
 	}
+
+	kc.compression = kafkaCompression
 
 	go kc.broadcastHandler()
 	go kc.reconnectHandler()
@@ -79,7 +88,9 @@ func (c *KafkaClient) reconnectHandler() {
 			}
 
 			// Attempt to connect to the Kafka server
-			conn, err := kafka.DialLeader(context.Background(), "tcp", c.addr, c.topic, 0)
+			ctx, cancel := context.WithTimeout(context.Background(), kafkaConnTimeout)
+			defer cancel()
+			conn, err := kafka.DialLeader(ctx, "tcp", c.addr, c.topic, 0)
 			if err != nil {
 				log.Printf("Reconnect failed: %v. Retrying in 5s...", err)
 				time.Sleep(5 * time.Second)
@@ -90,6 +101,7 @@ func (c *KafkaClient) reconnectHandler() {
 			if c.conn != nil {
 				_ = c.conn.Close()
 			}
+
 			c.conn = conn
 			c.isConnected = true
 			log.Println("Reconnected to Kafka at", c.addr)
@@ -101,23 +113,33 @@ func (c *KafkaClient) reconnectHandler() {
 func (c *KafkaClient) broadcastHandler() {
 	defer func() {
 		log.Println("Closing broadcast handler for kafka producer:", c.addr)
-		if err := c.conn.Close(); err != nil {
-			log.Println("failed to close writer:", err)
+		if c.conn != nil {
+			if err := c.conn.Close(); err != nil {
+				log.Println("failed to close conn:", err)
+				return
+			}
 		}
 
 		ClientHandler.UnregisterClient(c.name)
 	}()
 
-	batch := make([]kafka.Message, 0, maxBatchSize)
-	t := time.NewTimer(maxBatchWait)
+	backoffHandler := backoff.NewBackoff(60 * time.Second)
+	batch := make([]kafka.Message, 0, kafkaMaxBatchSize)
+	t := time.NewTimer(kafkaMaxBatchWait)
 
 	for {
 		select {
 		case <-c.stopChan:
 			return
-		case message := <-c.broadcastChan:
+		case message, ok := <-c.broadcastChan:
+			if !ok {
+				log.Println("broadcastChan closed for kafkaClient:", c.addr)
+				return
+			}
+
 			// Drop messages if not connected
 			if !c.isConnected {
+				time.Sleep(5 * time.Second)
 				continue
 			}
 
@@ -125,32 +147,75 @@ func (c *KafkaClient) broadcastHandler() {
 			batch = append(batch, msg)
 
 			// Write batch if it reaches max size
-			if len(batch) >= maxBatchSize {
-				c.writeBatch(batch)
+			if len(batch) >= kafkaMaxBatchSize {
+				err := c.writeBatch(batch)
+				if err != nil {
+					// Without using a backoff strategy, the errors would massively spam the log
+					backoffHandler(func() {
+						var netErr *net.OpError
+						if errors.As(err, &netErr) {
+							c.isConnected = false
+						}
+
+						log.Printf("Error writing messages to kafka: %v", err)
+					})
+				}
+
 				batch = batch[:0]
-				t.Reset(maxBatchWait)
+				t.Reset(kafkaMaxBatchWait)
 			}
 		case <-t.C:
+			// If batch size has not reached kafkaMaxBatchSize, write the batch after kafkaMaxBatchWait
 			if len(batch) == 0 {
 				continue
 			}
 
-			// Write any remaining batch after maxBatchWait
-			c.writeBatch(batch)
+			err := c.writeBatch(batch)
+			if err != nil {
+				// Without using a backoff strategy, the errors would massively spam the log
+				backoffHandler(func() {
+					var netErr *net.OpError
+					if errors.As(err, &netErr) {
+						c.isConnected = false
+					}
+
+					log.Printf("Error writing messages to kafka: %v", err)
+				})
+			}
+
 			batch = batch[:0]
 		}
 	}
 }
 
-func (c *KafkaClient) writeBatch(batch []kafka.Message) {
+// writeBatch writes a batch of messages to Kafka, handling exponential backoff and connection state
+func (c *KafkaClient) writeBatch(batch []kafka.Message) error {
 	if len(batch) == 0 {
-		return
+		return nil
 	}
 
-	_ = c.conn.SetWriteDeadline(time.Now().Add(writeWait))
-	_, err := c.conn.WriteMessages(batch...)
-	if err != nil {
-		c.isConnected = false
-		log.Println("Failed to write messages to kafka:", err)
+	if c.conn == nil || !c.isConnected {
+		return errors.New("no connection to kafka")
 	}
+
+	_ = c.conn.SetWriteDeadline(time.Now().Add(kafkaConnTimeout))
+
+	_, err := c.conn.WriteCompressedMessages(
+		c.compression.Codec(),
+		batch...,
+	)
+	if err != nil {
+		// Treat kafka errors specially
+		var kafkaErr kafka.Error
+		if errors.As(err, &kafkaErr) {
+			if errors.Is(kafkaErr, kafka.MessageSizeTooLarge) {
+				log.Printf("Message size is too large for kafka broker '%s' - reducing batch size to %d", c.addr, kafkaMaxBatchSize/2)
+				kafkaMaxBatchSize = kafkaMaxBatchSize / 2
+				// TODO: currently there is no retry mechanism implemented. We should try to resend the current batch with the reduced batch size.
+			}
+		}
+
+		return err
+	}
+	return nil
 }
