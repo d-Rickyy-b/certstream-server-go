@@ -1,4 +1,4 @@
-package web
+package broadcast
 
 import (
 	"fmt"
@@ -13,41 +13,35 @@ import (
 
 const idChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
-const (
-	SubTypeFull SubscriptionType = iota
-	SubTypeLite
-	SubTypeDomain
-)
-
-type SubscriptionType int
-
-// client represents a single client's connection to the server.
-type client struct {
-	clientData
-
-	id            string
-	conn          *websocket.Conn
-	broadcastChan chan []byte
-	subType       SubscriptionType
-	skippedCerts  uint64
-}
-
-type clientData struct {
+// WebsocketClient represents a single WebSocket client's connection to the server.
+type WebsocketClient struct {
+	conn             *websocket.Conn
 	userAgent        string
-	connectionIP     string
-	connectionPort   string
+	hostIP           string
+	hostPort         string
 	realIPFromHeader string
+
+	*BaseClient
 }
 
-// newClient creates a new client struct that holds information about a connected client.
-func newClient(conn *websocket.Conn, subType SubscriptionType, data clientData, certBufferSize int) *client {
-	return &client{
-		clientData:    data,
-		id:            generateClientID(),
-		conn:          conn,
-		broadcastChan: make(chan []byte, certBufferSize),
-		subType:       subType,
+// NewWebsocketClient creates a new WebSocket client from the given connection.
+func NewWebsocketClient(conn *websocket.Conn, subType SubscriptionType, name, userAgent, hostIP, hostPort, realIPFromHeader string, certBufferSize int) *WebsocketClient {
+	c := &WebsocketClient{
+		conn:             conn,
+		userAgent:        userAgent,
+		hostIP:           hostIP,
+		hostPort:         hostPort,
+		realIPFromHeader: realIPFromHeader,
+		BaseClient: &BaseClient{
+			broadcastChan: make(chan []byte, certBufferSize),
+			name:          name,
+			subType:       subType,
+		},
 	}
+	go c.broadcastHandler()
+	go c.listenWebsocket()
+
+	return c
 }
 
 // generateClientID generates a random 8-char identifier for the client.
@@ -62,7 +56,7 @@ func generateClientID() string {
 }
 
 // Each client has a broadcastHandler that runs in the background and sends out the broadcast messages to the client.
-func (c *client) broadcastHandler() {
+func (c *WebsocketClient) broadcastHandler() {
 	writeWait := 60 * time.Second
 	pingTicker := time.NewTicker(30 * time.Second)
 
@@ -109,10 +103,10 @@ func (c *client) broadcastHandler() {
 // listenWebsocket is running in the background on a goroutine and listens for messages from the client.
 // It responds to ping messages with a pong message. It closes the connection if the client sends
 // a close message or no ping is received within 65 seconds.
-func (c *client) listenWebsocket() {
+func (c *WebsocketClient) listenWebsocket() {
 	defer func() {
 		_ = c.conn.Close()
-		ClientHandler.unregisterClient(c)
+		ClientHandler.UnregisterClient(c.name)
 	}()
 
 	readWait := 65 * time.Second
@@ -184,19 +178,14 @@ func sanitizeInput(s string) string {
 }
 
 // Name returns the name/identifier for this client.
-func (c *client) Name() string {
-	var clientName string
+func (c *WebsocketClient) Name() string {
+	clientName := fmt.Sprintf("[%s] - ", c.name)
 
-	clientName = fmt.Sprintf("[%s] - ", c.id)
-
-	connIP := sanitizeInput(c.connectionIP)
-	connPort := sanitizeInput(c.connectionPort)
 	realIP := sanitizeInput(c.realIPFromHeader)
-
-	socket := net.JoinHostPort(connIP, connPort)
+	socket := net.JoinHostPort(c.hostIP, c.hostPort)
 
 	// If the realIP is set and if it differs from the connection IP, return both the connection IP and the real IP.
-	if realIP != "" && realIP != connIP {
+	if realIP != "" && realIP != c.hostIP {
 		clientName += fmt.Sprintf("%s (via %s)", socket, realIP)
 	} else {
 		clientName += socket

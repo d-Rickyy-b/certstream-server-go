@@ -15,6 +15,11 @@ tasks:
     cmds:
       - go test -v ./...
 
+  run:
+    desc: Run the server binary.
+    cmds:
+      - go run ./cmd/certstream-server-go
+
   build:
     desc: Build the server binary for your current OS and architecture.
     cmds:

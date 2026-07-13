@@ -1,19 +1,17 @@
-package web
+package broadcast
 
 import (
 	"fmt"
 	"testing"
 )
 
-func newTestClient(id, connectionIP, connectionPort, realIP, userAgent string) *client {
-	c := &client{
-		clientData: clientData{
-			connectionIP:     connectionIP,
-			connectionPort:   connectionPort,
-			realIPFromHeader: realIP,
-			userAgent:        userAgent,
-		},
-		id: id,
+func newTestClient(name, connectionIP, connectionPort, realIP, userAgent string) *WebsocketClient {
+	c := &WebsocketClient{
+		hostIP:           connectionIP,
+		hostPort:         connectionPort,
+		realIPFromHeader: realIP,
+		userAgent:        userAgent,
+		BaseClient:       &BaseClient{name: name},
 	}
 	return c
 }

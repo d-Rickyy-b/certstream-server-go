@@ -65,7 +65,7 @@ func main() {
 		log.Fatalln("Error getting entry from CT log: ", getEntryErr)
 	}
 
-	// Loop over entries and pars each one.
+	// Loop over entries and parse each one.
 	for _, leafEntry := range entries.Entries {
 		rawLogEntry, err := ct.RawLogEntryFromLeaf(certID, &leafEntry)
 		if err != nil {

@@ -7,10 +7,13 @@ package certstream
 import (
 	"fmt"
 	"log"
+	"net"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 
+	"github.com/d-Rickyy-b/certstream-server-go/internal/broadcast"
 	"github.com/d-Rickyy-b/certstream-server-go/internal/certificatetransparency"
 	"github.com/d-Rickyy-b/certstream-server-go/internal/config"
 	"github.com/d-Rickyy-b/certstream-server-go/internal/metrics"
@@ -32,21 +35,73 @@ func NewRawCertstream(config config.Config) *Certstream {
 }
 
 // NewCertstreamServer creates a new Certstream server from a config struct.
-func NewCertstreamServer(config config.Config) (*Certstream, error) {
-	cs := NewRawCertstream(config)
+func NewCertstreamServer(cfg config.Config) (*Certstream, error) {
+	cs := NewRawCertstream(cfg)
 
+	// Start the broadcast dispatcher
+	broadcast.NewDispatcher()
+	broadcast.ClientHandler.Start()
+
+	// TODO: add support do disable websocket Server
 	// Initialize the webserver used for the websocket server
 	webserver := web.NewWebsocketServer(
-		config.Webserver.ListenAddr,
-		config.Webserver.ListenPort,
-		config.Webserver.CertPath,
-		config.Webserver.CertKeyPath,
+		cfg.Webserver.ListenAddr,
+		cfg.Webserver.ListenPort,
+		cfg.Webserver.CertPath,
+		cfg.Webserver.CertKeyPath,
 	)
 	cs.webserver = webserver
 	cs.watcher = certificatetransparency.NewWatcher()
 
 	// Setup metrics server
 	cs.setupMetrics(webserver)
+
+	// Initialize the stream processors if configured and enabled.
+	for _, streamProcessor := range cfg.StreamProcessing {
+		if !*streamProcessor.Enabled {
+			continue
+		}
+
+		addr := net.JoinHostPort(streamProcessor.ServerAddr, strconv.Itoa(streamProcessor.ServerPort))
+		log.Printf("Initializing stream processor: %s at %s\n", streamProcessor.Name, addr)
+
+		var subscriptionType broadcast.SubscriptionType
+		switch streamProcessor.Stream {
+		case config.StreamTypeFull:
+			subscriptionType = broadcast.SubTypeFull
+		case config.StreamTypeLite:
+			subscriptionType = broadcast.SubTypeLite
+		case config.StreamTypeDomainsOnly:
+			subscriptionType = broadcast.SubTypeDomain
+		}
+
+		switch streamProcessor.Type {
+		case "nsq":
+			log.Println("Initializing NSQ client...")
+			nc := broadcast.NewNSQClient(
+				subscriptionType,
+				addr,
+				streamProcessor.Name,
+				streamProcessor.Topic,
+				cfg.General.BufferSizes.Websocket,
+			)
+			broadcast.ClientHandler.RegisterClient(nc)
+		case "kafka":
+			log.Println("Initializing Kafka client...")
+			kc := broadcast.NewKafkaClient(
+				subscriptionType,
+				addr,
+				streamProcessor.Name,
+				streamProcessor.Topic,
+				string(streamProcessor.Compression),
+				cfg.General.BufferSizes.Websocket,
+			)
+
+			broadcast.ClientHandler.RegisterClient(kc)
+		default:
+			log.Printf("Unknown stream processor type '%s' for %s. Skipping...\n", streamProcessor.Type, streamProcessor.Name)
+		}
+	}
 
 	return cs, nil
 }
