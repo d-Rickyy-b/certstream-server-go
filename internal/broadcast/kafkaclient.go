@@ -12,7 +12,7 @@ import (
 )
 
 var (
-	kafkaMaxBatchSize = 100
+	kafkaMaxBatchSize = 50
 	kafkaMaxBatchWait = 1 * time.Second
 	kafkaConnTimeout  = 5 * time.Second
 )
