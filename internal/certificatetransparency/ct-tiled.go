@@ -312,7 +312,7 @@ func (s *StaticCTClient) fetchAndProcessTiles(ctx context.Context, foundCert, fo
 	}
 
 	// Process entries from current index to new tree size
-	startTile := (s.ctIndex + 1) / TileSize
+	startTile := s.ctIndex / TileSize
 	endTile := currentTreeSize / TileSize
 
 	// Process full tiles
@@ -380,7 +380,7 @@ func (s *StaticCTClient) processTile(ctx context.Context, tileIndex, partialWidt
 		entryIndex := baseIndex + uint64(i)
 
 		// Skip entries we've already processed
-		if entryIndex <= s.ctIndex {
+		if entryIndex < s.ctIndex {
 			continue
 		}
 
@@ -398,7 +398,7 @@ func (s *StaticCTClient) processTile(ctx context.Context, tileIndex, partialWidt
 		}
 
 		// Update the index
-		s.ctIndex = entryIndex
+		s.ctIndex = entryIndex + 1
 	}
 
 	return nil
