@@ -1,6 +1,9 @@
 package broadcast
 
-import "log"
+import (
+	"log"
+	"sync"
+)
 
 // BaseClient defines the basic structure for a client that can receive broadcast messages.
 // Other client types can embed this struct to inherit its functionality.
@@ -10,12 +13,20 @@ type BaseClient struct {
 	name          string
 	subType       SubscriptionType
 	skippedCerts  uint64
+	closeOnce     sync.Once
 }
 
 // Close cleans up the client's resources by closing the stop and broadcast channels.
 func (c *BaseClient) Close() {
-	close(c.stopChan)
-	close(c.broadcastChan)
+	c.closeOnce.Do(func() {
+		if c.stopChan != nil {
+			close(c.stopChan)
+		}
+
+		if c.broadcastChan != nil {
+			close(c.broadcastChan)
+		}
+	})
 }
 
 // Name returns the name of the client.

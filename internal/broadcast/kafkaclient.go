@@ -120,7 +120,7 @@ func (c *KafkaClient) broadcastHandler() {
 			}
 		}
 
-		ClientHandler.UnregisterClient(c.name)
+		ClientHandler.UnregisterClient(c)
 	}()
 
 	backoffHandler := backoff.NewBackoff(60 * time.Second)

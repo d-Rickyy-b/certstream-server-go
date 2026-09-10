@@ -43,11 +43,11 @@ func (bm *Dispatcher) RegisterClient(c CertProcessor) {
 
 // UnregisterClient removes a client from the list of clients of the Dispatcher.
 // The client will no longer receive certificate broadcasts right after unregistering.
-func (bm *Dispatcher) UnregisterClient(clientName string) {
+func (bm *Dispatcher) UnregisterClient(clientToRemove CertProcessor) {
 	bm.clientLock.Lock()
 
 	for i, client := range bm.clients {
-		if clientName == client.Name() {
+		if clientToRemove == client {
 			// Copy the last element of the slice to the position of the removed element
 			// Then remove the last element by re-slicing
 			bm.clients[i] = bm.clients[len(bm.clients)-1]

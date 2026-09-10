@@ -106,7 +106,7 @@ func (c *NSQClient) broadcastHandler() {
 			c.conn.Stop()
 		}
 
-		ClientHandler.UnregisterClient(c.name)
+		ClientHandler.UnregisterClient(c)
 	}()
 
 	batch := make([][]byte, 0, nsqMaxBatchSize)

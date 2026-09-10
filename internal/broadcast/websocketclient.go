@@ -34,6 +34,7 @@ func NewWebsocketClient(conn *websocket.Conn, subType SubscriptionType, name, us
 		realIPFromHeader: realIPFromHeader,
 		BaseClient: &BaseClient{
 			broadcastChan: make(chan []byte, certBufferSize),
+			stopChan:      make(chan struct{}),
 			name:          name,
 			subType:       subType,
 		},
@@ -106,7 +107,7 @@ func (c *WebsocketClient) broadcastHandler() {
 func (c *WebsocketClient) listenWebsocket() {
 	defer func() {
 		_ = c.conn.Close()
-		ClientHandler.UnregisterClient(c.name)
+		ClientHandler.UnregisterClient(c)
 	}()
 
 	readWait := 65 * time.Second
