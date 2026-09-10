@@ -373,6 +373,10 @@ func (w *worker) startDownloadingCerts(ctx context.Context) {
 	w.mu.Unlock()
 
 	for {
+		// reload the CT index from metrics before restarting the worker
+		lastCTIndex := metrics.Metrics.GetCTIndex(normalizeCtlogURL(w.ctURL))
+		w.ctIndex = lastCTIndex
+
 		log.Printf("Starting worker for CT log: %s\n", w.ctURL)
 
 		var workerErr error
