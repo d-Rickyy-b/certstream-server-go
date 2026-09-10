@@ -481,8 +481,8 @@ func (w *worker) runTiledWorker(ctx context.Context) error {
 	staticCTClient := NewStaticCTClient(w.ctURL, httpClient, UserAgent, w.ctIndex)
 
 	// If recovery is enabled and the CT index is set, we start at the saved index. Otherwise, we start at the latest checkpoint.
-	validSavedCTIndexExists := config.AppConfig.General.Recovery.Enabled
-	if !validSavedCTIndexExists {
+	recoveryEnabled := config.AppConfig.General.Recovery.Enabled
+	if !recoveryEnabled {
 		checkpoint, err := staticCTClient.FetchCheckpoint(ctx)
 		if err != nil {
 			log.Printf("Could not get checkpoint for '%s': %s\n", w.ctURL, err)
