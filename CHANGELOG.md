@@ -38,6 +38,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Use proper websocket close code (1008) instead of 1005, which wasn't sent to the client (76ff240)
 - Respect ct_index path in config file for the `create-index` command (67838a9)
 - Ensure all additionalLog entries are processed correctly (c8bd735)
+- Reload CT index from metrics before restarting the worker (85e90bf)
 
 ## [1.9.0] - 2026-04-03
 
