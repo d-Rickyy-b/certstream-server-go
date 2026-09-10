@@ -75,20 +75,20 @@ func NewCertstreamServer(cfg config.Config) (*Certstream, error) {
 			subscriptionType = broadcast.SubTypeDomain
 		}
 
+		var c broadcast.CertProcessor
 		switch streamProcessor.Type {
 		case "nsq":
 			log.Println("Initializing NSQ client...")
-			nc := broadcast.NewNSQClient(
+			c = broadcast.NewNSQClient(
 				subscriptionType,
 				addr,
 				streamProcessor.Name,
 				streamProcessor.Topic,
 				cfg.General.BufferSizes.Websocket,
 			)
-			broadcast.ClientHandler.RegisterClient(nc)
 		case "kafka":
 			log.Println("Initializing Kafka client...")
-			kc := broadcast.NewKafkaClient(
+			c = broadcast.NewKafkaClient(
 				subscriptionType,
 				addr,
 				streamProcessor.Name,
@@ -101,6 +101,9 @@ func NewCertstreamServer(cfg config.Config) (*Certstream, error) {
 		default:
 			log.Printf("Unknown stream processor type '%s' for %s. Skipping...\n", streamProcessor.Type, streamProcessor.Name)
 		}
+
+		log.Println(c)
+		broadcast.ClientHandler.RegisterClient(c)
 	}
 
 	return cs, nil
