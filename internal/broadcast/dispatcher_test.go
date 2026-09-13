@@ -14,6 +14,18 @@ func newDispatcherTestWebsocketClient(name string) *WebsocketClient {
 	}
 }
 
+func TestDispatcherRegisterClientTwice(t *testing.T) {
+	d := &Dispatcher{}
+	client := newDispatcherTestWebsocketClient("client-1")
+
+	d.RegisterClient(client)
+	d.RegisterClient(client)
+
+	if got := len(d.clients); got != 1 {
+		t.Fatalf("expected 1 registered client after duplicate register, got %d", got)
+	}
+}
+
 func TestDispatcherUnregisterWebsocketClient(t *testing.T) {
 	d := &Dispatcher{}
 	client := newDispatcherTestWebsocketClient("client-1")
