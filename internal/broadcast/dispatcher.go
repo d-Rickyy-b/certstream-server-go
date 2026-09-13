@@ -33,12 +33,19 @@ func NewDispatcher() *Dispatcher {
 // RegisterClient adds a client to the list of clients of the Dispatcher.
 // The client will receive certificate broadcasts right after registration.
 func (bm *Dispatcher) RegisterClient(c CertProcessor) {
-	// TODO: check if the client is already registered
 	bm.clientLock.Lock()
+	defer bm.clientLock.Unlock()
+
+	for _, client := range bm.clients {
+		if client == c {
+			log.Printf("Client already registered: %s\n", c.Name())
+			return
+		}
+	}
+
 	bm.clients = append(bm.clients, c)
 	log.Printf("Added new client. Clients: %d, Capacity: %d\n", len(bm.clients), cap(bm.clients))
 	metrics.Prometheus.RegisterClient(c.Name(), func() float64 { return float64(c.SkippedCerts()) })
-	bm.clientLock.Unlock()
 }
 
 // UnregisterClient removes a client from the list of clients of the Dispatcher.

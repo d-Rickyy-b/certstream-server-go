@@ -55,11 +55,13 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Run GoReleaser (dev snapshot)
+      - name: Run GoReleaser (dev)
         if: github.ref == 'refs/heads/dev'
         uses: goreleaser/goreleaser-action@v7
         with:
           version: latest
-          args: release --snapshot --clean --config .github/goreleaser.yml
+          args: release --clean --config .github/goreleaser.yml --skip=validate
         env:
+          GORELEASER_CURRENT_TAG: dev
+          
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

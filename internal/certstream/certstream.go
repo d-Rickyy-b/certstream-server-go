@@ -96,8 +96,6 @@ func NewCertstreamServer(cfg config.Config) (*Certstream, error) {
 				string(streamProcessor.Compression),
 				cfg.General.BufferSizes.Websocket,
 			)
-
-			broadcast.ClientHandler.RegisterClient(c)
 		default:
 			log.Printf("Unknown stream processor type '%s' for %s. Skipping...\n", streamProcessor.Type, streamProcessor.Name)
 		}
