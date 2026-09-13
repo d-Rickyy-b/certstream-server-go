@@ -20,6 +20,15 @@ import (
 
 const TileSize = 256
 
+// tileKind identifies the kind of tile to fetch from a static CT log.
+// Tiles of both kinds share the same index and width, they only differ in the
+// path they are served under and in the encoding of their entries.
+type tileKind string
+
+const (
+	tileKindData tileKind = "data"
+)
+
 // TiledCheckpoint represents the checkpoint information from a tiled CT log.
 type TiledCheckpoint struct {
 	Origin string
@@ -27,7 +36,7 @@ type TiledCheckpoint struct {
 	Hash   string
 }
 
-// TileLeaf represents a single entry in a tile.
+// TileLeaf represents a single entry in a data tile.
 type TileLeaf struct {
 	Timestamp     uint64
 	EntryType     uint16
@@ -36,6 +45,15 @@ type TileLeaf struct {
 	Chain         [][]byte
 	IssuerKeyHash [32]byte
 }
+
+// TileEntry is a single entry read from a tile, together with its index in the log.
+type TileEntry struct {
+	Index uint64
+	Leaf *TileLeaf
+}
+
+// TileEntryHandler is called once for every entry read from a tile.
+type TileEntryHandler func(TileEntry)
 
 var (
 	EntryTypeCert    uint16
@@ -269,9 +287,9 @@ func NewStaticCTClient(url string, httpClient *http.Client, userAgent string, st
 }
 
 // Monitor continuously monitors the tiled CT log for new entries, starting from the current ctIndex.
-func (s *StaticCTClient) Monitor(ctx context.Context, foundCert, foundPrecert func(*ct.RawLogEntry)) error {
+func (s *StaticCTClient) Monitor(ctx context.Context, handleEntry TileEntryHandler) error {
 	for {
-		hadNewEntries, err := s.fetchAndProcessTiles(ctx, foundCert, foundPrecert)
+		hadNewEntries, err := s.fetchAndProcessTiles(ctx, handleEntry)
 		if err != nil {
 			log.Printf("Error processing tiled log updates for '%s': %s\n", s.url, err)
 			return err
@@ -298,7 +316,7 @@ func (s *StaticCTClient) Monitor(ctx context.Context, foundCert, foundPrecert fu
 
 // fetchAndProcessTiles checks for new entries in the tiled log and processes them.
 // It returns true if at least one full tile was fetched.
-func (s *StaticCTClient) fetchAndProcessTiles(ctx context.Context, foundCert, foundPrecert func(*ct.RawLogEntry)) (bool, error) {
+func (s *StaticCTClient) fetchAndProcessTiles(ctx context.Context, handleEntry TileEntryHandler) (bool, error) {
 	// Fetch current checkpoint
 	checkpoint, fetchErr := s.FetchCheckpoint(ctx)
 	if fetchErr != nil {
@@ -318,7 +336,7 @@ func (s *StaticCTClient) fetchAndProcessTiles(ctx context.Context, foundCert, fo
 	// Process full tiles
 	fetchedFullTiles := false
 	for tileIndex := startTile; tileIndex < endTile; tileIndex++ {
-		if err := s.processTile(ctx, tileIndex, 0, foundCert, foundPrecert); err != nil {
+		if err := s.processTile(ctx, tileIndex, 0, handleEntry); err != nil {
 			return false, fmt.Errorf("processing tile %d: %w", tileIndex, err)
 		}
 
@@ -346,7 +364,7 @@ func (s *StaticCTClient) fetchAndProcessTiles(ctx context.Context, foundCert, fo
 		case time.Since(s.partialTileFirstSeen) >= s.maxPartialWait:
 			// The partial tile has been pending too long – fetch it now to prevent
 			// extreme processing delays on slow-growing logs.
-			if err := s.processTile(ctx, endTile, partialSize, foundCert, foundPrecert); err != nil {
+			if err := s.processTile(ctx, endTile, partialSize, handleEntry); err != nil {
 				log.Printf("Warning: error processing partial tile %d: %s\n", endTile, err)
 			}
 
@@ -367,60 +385,77 @@ func (s *StaticCTClient) fetchAndProcessTiles(ctx context.Context, foundCert, fo
 
 // processTile processes a single tile from the tiled log.
 // partialWidth of 0 means full tile, otherwise fetch partial tile with that width.
-func (s *StaticCTClient) processTile(ctx context.Context, tileIndex, partialWidth uint64, foundCert, foundPrecert func(*ct.RawLogEntry)) error {
-	leaves, err := s.fetchTile(ctx, tileIndex, partialWidth)
+func (s *StaticCTClient) processTile(ctx context.Context, tileIndex, partialWidth uint64, handleEntry TileEntryHandler) error {
+	entries, err := s.fetchTileEntries(ctx, tileIndex, partialWidth)
 	if err != nil {
-		return fmt.Errorf("fetching tile: %w", err)
+		return err
 	}
 
 	// Calculate the starting index for entries in this tile
 	baseIndex := tileIndex * TileSize
 
-	for i, leaf := range leaves {
-		entryIndex := baseIndex + uint64(i)
+	for i, entry := range entries {
+		entry.Index = baseIndex + uint64(i)
 
 		// Skip entries we've already processed
-		if entryIndex < s.ctIndex {
+		if entry.Index < s.ctIndex {
 			continue
 		}
 
-		// Convert TileLeaf to RawLogEntry for compatibility with existing parsing
-		rawEntry := ConvertTileLeafToRawLogEntry(leaf, entryIndex)
-
-		// Process the entry using existing callbacks
-		switch leaf.EntryType {
-		case EntryTypeCert:
-			foundCert(rawEntry)
-		case EntryTypePrecert:
-			foundPrecert(rawEntry)
-		default:
-			log.Printf("Unknown entry type %d in tile %d, skipping entry at index %d\n", leaf.EntryType, tileIndex, entryIndex)
-		}
+		handleEntry(entry)
 
 		// Update the index
-		s.ctIndex = entryIndex + 1
+		s.ctIndex = entry.Index + 1
 	}
 
 	return nil
 }
 
-// fetchTile fetches a tile from the tiled CT log using the provided client.
-// If partialWidth > 0, fetches a partial tile with that width (1-255).
-func (s *StaticCTClient) fetchTile(ctx context.Context, tileIndex, partialWidth uint64) ([]TileLeaf, error) {
+// fetchTileEntries fetches a single tile and parses it into TileEntry values.
+// The Index field of the returned entries is relative to the tile and has to be
+// offset by the caller.
+func (s *StaticCTClient) fetchTileEntries(ctx context.Context, tileIndex, partialWidth uint64) ([]TileEntry, error) {
+	data, err := s.fetchTile(ctx, tileKindData, tileIndex, partialWidth)
+	if err != nil {
+		return nil, fmt.Errorf("fetching tile: %w", err)
+	}
+
+	leaves, parseErr := ParseTileData(data)
+	if parseErr != nil {
+		return nil, fmt.Errorf("parsing data tile %d: %w", tileIndex, parseErr)
+	}
+
+	entries := make([]TileEntry, len(leaves))
+	for i := range leaves {
+		entries[i] = TileEntry{Leaf: &leaves[i]}
+	}
+
+	return entries, nil
+}
+
+// tileURL builds the URL of the given tile of the given kind.
+// If partialWidth > 0, the URL points to a partial tile with that width (1-255).
+func (s *StaticCTClient) tileURL(kind tileKind, tileIndex, partialWidth uint64) string {
 	tilePath := encodeTilePath(tileIndex)
 
 	if partialWidth > 0 {
 		tilePath = fmt.Sprintf("%s.p/%d", tilePath, partialWidth)
 	}
 
-	url := fmt.Sprintf("%s/tile/data/%s", s.url, tilePath)
+	return fmt.Sprintf("%s/tile/%s/%s", s.url, kind, tilePath)
+}
+
+// fetchTile fetches the raw body of a tile from the tiled CT log.
+// If partialWidth > 0, fetches a partial tile with that width (1-255).
+func (s *StaticCTClient) fetchTile(ctx context.Context, kind tileKind, tileIndex, partialWidth uint64) ([]byte, error) {
+	url := s.tileURL(kind, tileIndex, partialWidth)
 
 	req, newReqErr := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if newReqErr != nil {
 		return nil, fmt.Errorf("failed to create tile request: %w", newReqErr)
 	}
 
-	req.Header.Set("User-Agent", UserAgent)
+	req.Header.Set("User-Agent", s.userAgent)
 
 	resp, reqErr := s.httpClient.Do(req)
 	if reqErr != nil {
@@ -437,7 +472,7 @@ func (s *StaticCTClient) fetchTile(ctx context.Context, tileIndex, partialWidth 
 		return nil, fmt.Errorf("reading tile data: %w", err)
 	}
 
-	return ParseTileData(data)
+	return data, nil
 }
 
 // FetchCheckpoint fetches the checkpoint from a tiled CT log using the provided client.
@@ -449,7 +484,7 @@ func (s *StaticCTClient) FetchCheckpoint(ctx context.Context) (*TiledCheckpoint,
 		return nil, fmt.Errorf("failed to create checkpoint request: %w", newReqErr)
 	}
 
-	req.Header.Set("User-Agent", UserAgent)
+	req.Header.Set("User-Agent", s.userAgent)
 
 	resp, reqErr := s.httpClient.Do(req)
 	if reqErr != nil {
