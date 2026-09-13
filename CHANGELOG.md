@@ -15,6 +15,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+## [1.10.1] - 2026-09-13
+
+### Fixed
+
+- Prevent duplicate client registration by checking if the client is already registered before adding it (#116)
+
 ## [1.10.0] - 2026-09-13
 
 ### Added
@@ -255,7 +261,8 @@ Fixed the connection issue due to the offline Google loglist urls.
 
 Initial release! First stable version of certstream-server-go is published as v1.0.0
 
-[unreleased]: https://github.com/d-Rickyy-b/certstream-server-go/compare/v1.10.0...HEAD
+[unreleased]: https://github.com/d-Rickyy-b/certstream-server-go/compare/v1.10.1...HEAD
+[1.10.1]: https://github.com/d-Rickyy-b/certstream-server-go/compare/v1.10.0...v1.10.1
 [1.10.0]: https://github.com/d-Rickyy-b/certstream-server-go/compare/v1.9.0...v1.10.0
 [1.9.0]: https://github.com/d-Rickyy-b/certstream-server-go/compare/v1.8.2...v1.9.0
 [1.8.2]: https://github.com/d-Rickyy-b/certstream-server-go/compare/v1.8.1...v1.8.2
