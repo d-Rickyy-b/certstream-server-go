@@ -10,7 +10,6 @@ import (
 	"sync"
 	"testing"
 
-	ct "github.com/google/certificate-transparency-go"
 	"golang.org/x/crypto/cryptobyte"
 )
 
@@ -189,15 +188,19 @@ func (l *fakeTiledLog) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func runPoll(t *testing.T, c *StaticCTClient) (indexes []uint64, hadNewEntries bool) {
 	t.Helper()
 
-	found := func(e *ct.RawLogEntry) {
-		if uint64(e.Index) != e.Leaf.TimestampedEntry.Timestamp {
-			t.Errorf("entry index %d does not match tile content %d", e.Index, e.Leaf.TimestampedEntry.Timestamp)
+	found := func(e TileEntry) {
+		if e.Leaf == nil {
+			t.Fatalf("entry %d has no data tile leaf", e.Index)
 		}
 
-		indexes = append(indexes, uint64(e.Index))
+		if e.Index != e.Leaf.Timestamp {
+			t.Errorf("entry index %d does not match tile content %d", e.Index, e.Leaf.Timestamp)
+		}
+
+		indexes = append(indexes, e.Index)
 	}
 
-	hadNewEntries, err := c.fetchAndProcessTiles(context.Background(), found, found)
+	hadNewEntries, err := c.fetchAndProcessTiles(context.Background(), found)
 	if err != nil {
 		t.Fatalf("fetchAndProcessTiles: %v", err)
 	}

@@ -496,12 +496,32 @@ func (w *worker) runTiledWorker(ctx context.Context) error {
 		staticCTClient.ctIndex = checkpoint.Size
 	}
 
-	err := staticCTClient.Monitor(ctx, w.foundCertCallback, w.foundPrecertCallback)
+	err := staticCTClient.Monitor(ctx, w.handleTileEntry)
 	if err != nil {
 		return fmt.Errorf("error scanning for certificates: %w", err)
 	}
 
 	return nil
+}
+
+// handleTileEntry handles a single entry read from a tile of a static CT log and
+// forwards it to the callback matching its entry type.
+func (w *worker) handleTileEntry(entry TileEntry) {
+	if entry.Leaf == nil {
+		log.Printf("Tile entry at index %d contains no data, skipping\n", entry.Index)
+		return
+	}
+
+	rawEntry := ConvertTileLeafToRawLogEntry(*entry.Leaf, entry.Index)
+
+	switch entry.Leaf.EntryType {
+	case EntryTypeCert:
+		w.foundCertCallback(rawEntry)
+	case EntryTypePrecert:
+		w.foundPrecertCallback(rawEntry)
+	default:
+		log.Printf("Unknown entry type %d, skipping entry at index %d\n", entry.Leaf.EntryType, entry.Index)
+	}
 }
 
 // foundCertCallback is the callback that handles cases where new regular certs are found.
