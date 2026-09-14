@@ -71,55 +71,6 @@ func encodeTilePath(index uint64) string {
 	return builder.String()
 }
 
-// FetchCheckpoint fetches the checkpoint from a tiled CT log using the provided client.
-func FetchCheckpoint(ctx context.Context, client *http.Client, baseURL string) (*TiledCheckpoint, error) {
-	baseURL = strings.TrimRight(baseURL, "/")
-	url := baseURL + "/checkpoint"
-
-	req, newReqErr := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-	if newReqErr != nil {
-		return nil, fmt.Errorf("failed to create checkpoint request: %w", newReqErr)
-	}
-
-	req.Header.Set("User-Agent", UserAgent)
-
-	resp, reqErr := client.Do(req)
-	if reqErr != nil {
-		return nil, fmt.Errorf("failed to execute checkpoint request: %w", reqErr)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("%w: unexpected status code %d", ErrRequestFailed, resp.StatusCode)
-	}
-
-	lines := make([]string, 0, 3)
-
-	scanner := bufio.NewScanner(resp.Body)
-	for scanner.Scan() {
-		lines = append(lines, scanner.Text())
-	}
-
-	if scanErr := scanner.Err(); scanErr != nil {
-		return nil, fmt.Errorf("failed reading response body: %w", scanErr)
-	}
-
-	if len(lines) < 3 {
-		return nil, fmt.Errorf("%w: invalid checkpoint format: expected at least 3 lines, got %d", ErrCheckpointInvalidFormat, len(lines))
-	}
-
-	size, parseErr := strconv.ParseUint(lines[1], 10, 64)
-	if parseErr != nil {
-		return nil, fmt.Errorf("failed parsing tree size: %w", parseErr)
-	}
-
-	return &TiledCheckpoint{
-		Origin: lines[0],
-		Size:   size,
-		Hash:   lines[2],
-	}, nil
-}
-
 // ParseTileData parses the binary tile data into TileLeaf entries using cryptobyte.
 func ParseTileData(data []byte) ([]TileLeaf, error) {
 	var leaves []TileLeaf
