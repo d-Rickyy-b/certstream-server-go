@@ -5,6 +5,9 @@ before:
   hooks:
     - go mod download
 
+release:
+  disable: "{{ eq .Tag \"v0.0.0-dev\" }}"
+
 builds:
   - main: ./cmd/certstream-server-go
     ldflags: -s -w -X github.com/d-Rickyy-b/certstream-server-go/internal/config.Version={{.Version}}
