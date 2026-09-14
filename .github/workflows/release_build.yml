@@ -55,6 +55,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Create temporary tag for dev branch
+        if: github.ref == 'refs/heads/dev'
+        run: git tag -f v0.0.0-dev "$GITHUB_SHA"
+
       - name: Run GoReleaser (dev)
         if: github.ref == 'refs/heads/dev'
         uses: goreleaser/goreleaser-action@v7
@@ -62,6 +66,4 @@ jobs:
           version: latest
           args: release --clean --config .github/goreleaser.yml --skip=validate
         env:
-          GORELEASER_CURRENT_TAG: dev
-          
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
