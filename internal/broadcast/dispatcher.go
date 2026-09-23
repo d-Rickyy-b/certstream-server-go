@@ -1,6 +1,7 @@
 package broadcast
 
 import (
+	"fmt"
 	"log"
 	"sync"
 
@@ -116,30 +117,53 @@ func (bm *Dispatcher) GetSkippedCerts() map[string]uint64 {
 	return skippedCerts
 }
 
+func entryBytesComputer(entry *models.Entry) func(subType SubscriptionType) ([]byte, error) {
+	var dataLite, dataFull, dataDomain []byte
+	var isDataLiteComputed, isDataFullComputed, isDataDomainComputed bool
+
+	return func(subType SubscriptionType) ([]byte, error) {
+		switch subType {
+		case SubTypeLite:
+			if !isDataLiteComputed {
+				dataLite = entry.JSONLite()
+				isDataLiteComputed = true
+			}
+			return dataLite, nil
+
+		case SubTypeFull:
+			if !isDataFullComputed {
+				dataFull = entry.JSON()
+				isDataFullComputed = true
+			}
+			return dataFull, nil
+
+		case SubTypeDomain:
+			if !isDataDomainComputed {
+				dataDomain = entry.JSONDomains()
+				isDataDomainComputed = true
+			}
+			return dataDomain, nil
+
+		default:
+			return []byte{}, fmt.Errorf("Unknown subscription type '%d'", subType)
+		}
+	}
+}
+
 // broadcaster is run in a goroutine and handles the dispatching of certs to clients.
 func (bm *Dispatcher) broadcaster() {
 	for {
-		var data []byte
-
 		// Take entry out of broadcast channel and generate JSON representations for the entry.
 		entry := <-bm.MessageQueue
-		dataLite := entry.JSONLite()
-		dataFull := entry.JSON()
-		dataDomain := entry.JSONDomains()
+		computeBytes := entryBytesComputer(&entry)
 
 		bm.clientLock.RLock()
 
 		for _, c := range bm.clients {
-			switch c.SubType() {
-			case SubTypeLite:
-				data = dataLite
-			case SubTypeFull:
-				data = dataFull
-			case SubTypeDomain:
-				data = dataDomain
-			default:
-				// This should never happen, but if it does, we log it and skip the client.
-				log.Printf("Unknown subscription type '%d' for client '%s'. Skipping this client!\n", c.SubType(), c.Name())
+			data, err := computeBytes(c.SubType())
+			// This should never happen, but if it does, we log it and skip the client.
+			if err != nil {
+				log.Printf("%s on client '%s'. Skipping this client!\n", err.Error(), c.Name())
 				continue
 			}
 
