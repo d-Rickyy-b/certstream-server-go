@@ -2,7 +2,6 @@ package config
 
 import (
 	"log"
-	"net"
 )
 
 // StreamProcessorType represents the type of stream processing tool to use.
@@ -93,10 +92,11 @@ func (s *StreamProcessor) setDefaults() {
 
 func (s *StreamProcessor) Valid() bool {
 	s.setDefaults()
-	
-	ip := net.ParseIP(s.ServerAddr)
-	if ip == nil {
-		log.Fatalln("Invalid IP for stream processor:", s.ServerAddr)
+
+	// kafka client would throw a error if a address is unreachable
+	// we only check if the address is specified
+	if s.ServerAddr == "" {
+		log.Fatalln("Invalid server address for stream processor:", s.ServerAddr)
 		return false
 	}
 
