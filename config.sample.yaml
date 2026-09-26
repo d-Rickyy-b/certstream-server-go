@@ -43,7 +43,7 @@ stream_processing:
   # Each configuration specifies a stream processing tool to use and its settings.
   - name: "kafka-prod"
     # Type describes the type of stream processing tool to use.
-    # Supported types: "kafka", "nqs"
+    # Supported types: "kafka", "nsq"
     type: "kafka"
     # The stream type can be any of "full", "lite", "domains-only" - same as the certstream websocket urls
     # Default is "full"
@@ -58,8 +58,8 @@ stream_processing:
     # E.g. for Kafka, supported types are "none" / "", "gzip", "snappy", "lz4", "zstd"
     compression: ""
 
-  - name: "nqs-prod"
-    type: "nqs"
+  - name: "nsq-prod"
+    type: "nsq"
     stream: "lite"
     enabled: false
     server_addr: "127.0.0.1"

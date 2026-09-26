@@ -6,12 +6,12 @@ import (
 )
 
 // StreamProcessorType represents the type of stream processing tool to use.
-// Supported types are "kafka" and "nqs".
+// Supported types are "kafka" and "nsq".
 type StreamProcessorType string
 
 const (
 	StreamProcessorTypeKafka StreamProcessorType = "kafka"
-	StreamProcessorTypeNQS   StreamProcessorType = "nqs"
+	StreamProcessorTypeNSQ   StreamProcessorType = "nsq"
 )
 
 // StreamType represents the type of stream to process.
@@ -63,7 +63,7 @@ func (c Compression) SupportedBy(t StreamProcessorType) bool {
 	switch t {
 	case StreamProcessorTypeKafka:
 		return c == CompressionNone || c == CompressionGzip || c == CompressionSnappy || c == CompressionZstd || c == CompressionLz4
-	case StreamProcessorTypeNQS:
+	case StreamProcessorTypeNSQ:
 		return c == CompressionNone || c == CompressionDeflate || c == CompressionSnappy
 	default:
 		return false
@@ -106,7 +106,7 @@ func (s *StreamProcessor) Valid() bool {
 	}
 
 	switch s.Type {
-	case StreamProcessorTypeKafka, StreamProcessorTypeNQS:
+	case StreamProcessorTypeKafka, StreamProcessorTypeNSQ:
 	default:
 		log.Fatalf("Invalid stream processor type '%s' for name '%s'\n", s.Type, s.Name)
 		return false
