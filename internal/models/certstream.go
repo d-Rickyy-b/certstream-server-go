@@ -7,10 +7,11 @@ import (
 )
 
 type Entry struct {
-	Data           Data   `json:"data"`
-	MessageType    string `json:"message_type"`
-	cachedJSON     []byte
-	cachedJSONLite []byte
+	Data              Data   `json:"data"`
+	MessageType       string `json:"message_type"`
+	cachedJSON        []byte
+	cachedJSONLite    []byte
+	cachedJSONDomains []byte
 }
 
 // Clone returns a new copy of the Entry.
@@ -61,6 +62,10 @@ func (e *Entry) JSONLiteNoCache() []byte {
 
 // JSONDomains returns the JSON encoded domains (DomainsEntry) as byte slice.
 func (e *Entry) JSONDomains() []byte {
+	if len(e.cachedJSONDomains) > 0 {
+		return e.cachedJSONDomains
+	}
+
 	domainsEntry := DomainsEntry{
 		Data:        e.Data.LeafCert.AllDomains,
 		MessageType: "dns_entries",
@@ -70,6 +75,8 @@ func (e *Entry) JSONDomains() []byte {
 	if err != nil {
 		log.Println(err)
 	}
+
+	e.cachedJSONDomains = domainsEntryBytes
 
 	return domainsEntryBytes
 }
