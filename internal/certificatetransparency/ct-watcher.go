@@ -548,7 +548,11 @@ func certHandler(entryChan chan models.Entry) {
 	var processed uint64
 
 	for {
-		entry := <-entryChan
+		entry, ok := <-entryChan
+		if !ok { // channel is closed, nothing else to receive, exit the loop
+			break
+		}
+
 		processed++
 
 		if processed%1000 == 0 {
