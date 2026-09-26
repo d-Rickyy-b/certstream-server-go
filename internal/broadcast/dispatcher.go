@@ -118,32 +118,14 @@ func (bm *Dispatcher) GetSkippedCerts() map[string]uint64 {
 }
 
 func entryBytesComputer(entry *models.Entry) func(subType SubscriptionType) ([]byte, error) {
-	var dataLite, dataFull, dataDomain []byte
-	var isDataLiteComputed, isDataFullComputed, isDataDomainComputed bool
-
 	return func(subType SubscriptionType) ([]byte, error) {
 		switch subType {
 		case SubTypeLite:
-			if !isDataLiteComputed {
-				dataLite = entry.JSONLite()
-				isDataLiteComputed = true
-			}
-			return dataLite, nil
-
+			return entry.JSONLite(), nil
 		case SubTypeFull:
-			if !isDataFullComputed {
-				dataFull = entry.JSON()
-				isDataFullComputed = true
-			}
-			return dataFull, nil
-
+			return entry.JSON(), nil
 		case SubTypeDomain:
-			if !isDataDomainComputed {
-				dataDomain = entry.JSONDomains()
-				isDataDomainComputed = true
-			}
-			return dataDomain, nil
-
+			return entry.JSONDomains(), nil
 		default:
 			return []byte{}, fmt.Errorf("Unknown subscription type '%d'", subType)
 		}
