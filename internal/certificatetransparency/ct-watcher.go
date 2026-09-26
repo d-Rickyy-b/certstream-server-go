@@ -549,7 +549,7 @@ func certHandler(entryChan chan models.Entry) {
 
 	for {
 		entry, ok := <-entryChan
-		if !ok { // channel is closed, nothing else to receive, exit the look
+		if !ok { // channel is closed, nothing else to receive, exit the loop
 			break
 		}
 
