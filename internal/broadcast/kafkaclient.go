@@ -88,23 +88,27 @@ func (c *KafkaClient) reconnectHandler() {
 			}
 
 			// Attempt to connect to the Kafka server
-			ctx, cancel := context.WithTimeout(context.Background(), kafkaConnTimeout)
-			defer cancel()
-			conn, err := kafka.DialLeader(ctx, "tcp", c.addr, c.topic, 0)
-			if err != nil {
-				log.Printf("Reconnect failed: %v. Retrying in 5s...", err)
-				time.Sleep(5 * time.Second)
+			func() {
+				ctx, cancel := context.WithTimeout(context.Background(), kafkaConnTimeout)
+				defer cancel()
 
-				continue
-			}
-			// Close old connection if exists
-			if c.conn != nil {
-				_ = c.conn.Close()
-			}
+				conn, err := kafka.DialLeader(ctx, "tcp", c.addr, c.topic, 0)
+				if err != nil {
+					log.Printf("Reconnect failed: %v. Retrying in 5s...", err)
+					time.Sleep(5 * time.Second)
 
-			c.conn = conn
-			c.isConnected = true
-			log.Println("Reconnected to Kafka at", c.addr)
+					return
+				}
+
+				// Close old connection if exists
+				if c.conn != nil {
+					_ = c.conn.Close()
+				}
+
+				c.conn = conn
+				c.isConnected = true
+				log.Println("Reconnected to Kafka at", c.addr)
+			}()
 		}
 	}
 }
