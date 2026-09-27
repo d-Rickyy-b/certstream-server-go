@@ -1,7 +1,6 @@
 package broadcast
 
 import (
-	"fmt"
 	"log"
 	"sync"
 
@@ -117,38 +116,28 @@ func (bm *Dispatcher) GetSkippedCerts() map[string]uint64 {
 	return skippedCerts
 }
 
-func entryBytesComputer(entry *models.Entry) func(subType SubscriptionType) ([]byte, error) {
-	return func(subType SubscriptionType) ([]byte, error) {
-		switch subType {
-		case SubTypeLite:
-			return entry.JSONLite(), nil
-		case SubTypeFull:
-			return entry.JSON(), nil
-		case SubTypeDomain:
-			return entry.JSONDomains(), nil
-		default:
-			return []byte{}, fmt.Errorf("Unknown subscription type '%d'", subType)
-		}
-	}
-}
-
 // broadcaster is run in a goroutine and handles the dispatching of certs to clients.
 func (bm *Dispatcher) broadcaster() {
 	for {
 		// Take entry out of broadcast channel and generate JSON representations for the entry.
 		entry := <-bm.MessageQueue
-		computeBytes := entryBytesComputer(&entry)
 
 		bm.clientLock.RLock()
 
+		var data []byte
 		for _, c := range bm.clients {
-			data, err := computeBytes(c.SubType())
-			// This should never happen, but if it does, we log it and skip the client.
-			if err != nil {
-				log.Printf("%s on client '%s'. Skipping this client!\n", err.Error(), c.Name())
+			subType := c.SubType()
+			switch subType {
+			case SubTypeLite:
+				data = entry.JSONLite()
+			case SubTypeFull:
+				data = entry.JSON()
+			case SubTypeDomain:
+				data = entry.JSONDomains()
+			default:
+				log.Printf("Unknown subscription type '%d' on client '%s'. Skipping this client!\n", subType, c.Name())
 				continue
 			}
-
 			c.Write(data)
 		}
 

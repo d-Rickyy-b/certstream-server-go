@@ -17,10 +17,11 @@ type Entry struct {
 // Clone returns a new copy of the Entry.
 func (e *Entry) Clone() Entry {
 	return Entry{
-		Data:           e.Data,
-		MessageType:    e.MessageType,
-		cachedJSON:     e.cachedJSON,
-		cachedJSONLite: e.cachedJSONLite,
+		Data:              e.Data,
+		MessageType:       e.MessageType,
+		cachedJSON:        e.cachedJSON,
+		cachedJSONLite:    e.cachedJSONLite,
+		cachedJSONDomains: e.cachedJSONDomains,
 	}
 }
 
