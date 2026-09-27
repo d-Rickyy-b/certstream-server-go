@@ -123,26 +123,21 @@ func (bm *Dispatcher) broadcaster() {
 
 		// Take entry out of broadcast channel and generate JSON representations for the entry.
 		entry := <-bm.MessageQueue
-		dataLite := entry.JSONLite()
-		dataFull := entry.JSON()
-		dataDomain := entry.JSONDomains()
 
 		bm.clientLock.RLock()
 
 		for _, c := range bm.clients {
 			switch c.SubType() {
 			case SubTypeLite:
-				data = dataLite
+				data = entry.JSONLite()
 			case SubTypeFull:
-				data = dataFull
+				data = entry.JSON()
 			case SubTypeDomain:
-				data = dataDomain
+				data = entry.JSONDomains()
 			default:
-				// This should never happen, but if it does, we log it and skip the client.
-				log.Printf("Unknown subscription type '%d' for client '%s'. Skipping this client!\n", c.SubType(), c.Name())
+				log.Printf("Unknown subscription type '%d' on client '%s'. Skipping this client!\n", c.SubType(), c.Name())
 				continue
 			}
-
 			c.Write(data)
 		}
 
