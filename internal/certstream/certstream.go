@@ -98,6 +98,7 @@ func NewCertstreamServer(cfg config.Config) (*Certstream, error) {
 			)
 		default:
 			log.Printf("Unknown stream processor type '%s' for %s. Skipping...\n", streamProcessor.Type, streamProcessor.Name)
+			continue
 		}
 
 		log.Println(c)
