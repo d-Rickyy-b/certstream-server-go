@@ -446,3 +446,33 @@ func ParseCertstreamEntry(rawEntry *ct.RawLogEntry, operatorName, logname, ctURL
 
 	return entry, nil
 }
+
+// ParseNamesEntry creates an Entry from a names tile entry. It only contains the domains, so
+// it is only useful for the domains-only stream. Names tiles don't say whether an entry is a
+// precertificate, so UpdateType is left empty.
+func ParseNamesEntry(namesEntry NamesEntry, index uint64, operatorName, logName, ctURL string) models.Entry {
+	domains := make([]string, 0, len(namesEntry.DNS)+1)
+	domains = append(domains, namesEntry.DNS...)
+
+	if cn := namesEntry.Subject.CommonName; cn != "" && !slices.Contains(domains, cn) {
+		domains = append(domains, cn)
+	}
+
+	return models.Entry{
+		Data: models.Data{
+			CertIndex: index,
+			Seen:      float64(time.Now().UnixMilli()) / 1_000,
+			Source: models.Source{
+				Name:          logName,
+				URL:           ctURL,
+				Timestamp:     float64(namesEntry.Timestamp) / 1_000,
+				Operator:      operatorName,
+				NormalizedURL: normalizeCtlogURL(ctURL),
+				Type:          models.SourceIsTiled,
+			},
+			LeafCert: models.LeafCert{AllDomains: domains},
+		},
+		MessageType: "certificate_update",
+		DomainsOnly: true,
+	}
+}

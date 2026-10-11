@@ -9,6 +9,7 @@ import (
 type Entry struct {
 	Data              Data   `json:"data"`
 	MessageType       string `json:"message_type"`
+	DomainsOnly       bool   `json:"-"` // built from a names tile, so there is no certificate
 	cachedJSON        []byte
 	cachedJSONLite    []byte
 	cachedJSONDomains []byte
@@ -19,6 +20,7 @@ func (e *Entry) Clone() Entry {
 	return Entry{
 		Data:              e.Data,
 		MessageType:       e.MessageType,
+		DomainsOnly:       e.DomainsOnly,
 		cachedJSON:        e.cachedJSON,
 		cachedJSONLite:    e.cachedJSONLite,
 		cachedJSONDomains: e.cachedJSONDomains,
