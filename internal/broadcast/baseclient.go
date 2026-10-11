@@ -16,15 +16,13 @@ type BaseClient struct {
 	closeOnce     sync.Once
 }
 
-// Close cleans up the client's resources by closing the stop and broadcast channels.
+// Close signals the client's goroutines to stop by closing the stop channel.
+// The broadcast channel is intentionally never closed, so that a concurrent Write can never send on a closed channel.
+// It is garbage collected once the client is no longer referenced.
 func (c *BaseClient) Close() {
 	c.closeOnce.Do(func() {
 		if c.stopChan != nil {
 			close(c.stopChan)
-		}
-
-		if c.broadcastChan != nil {
-			close(c.broadcastChan)
 		}
 	})
 }
@@ -45,8 +43,15 @@ func (c *BaseClient) SkippedCerts() uint64 {
 }
 
 // Write sends a message to the client's broadcast channel.
+// If the client has been closed, the message is dropped.
 // If the channel is full, it increments the skippedCerts counter and logs a message.
 func (c *BaseClient) Write(data []byte) {
+	select {
+	case <-c.stopChan:
+		return
+	default:
+	}
+
 	select {
 	case c.broadcastChan <- data:
 	default:

@@ -61,7 +61,7 @@ func (bm *Dispatcher) UnregisterClient(clientToRemove CertProcessor) {
 			bm.clients[len(bm.clients)-1] = nil
 			bm.clients = bm.clients[:len(bm.clients)-1]
 
-			// Close the broadcast channel of the client, otherwise this leads to a memory leak
+			// Signal the client's goroutines to stop, otherwise this leads to a goroutine leak
 			client.Close()
 
 			metrics.Prometheus.UnregisterClient(client.Name())
@@ -119,29 +119,33 @@ func (bm *Dispatcher) GetSkippedCerts() map[string]uint64 {
 // broadcaster is run in a goroutine and handles the dispatching of certs to clients.
 func (bm *Dispatcher) broadcaster() {
 	for {
+		// Take entry out of broadcast channel and dispatch it to all clients.
+		entry := <-bm.MessageQueue
+		bm.dispatch(entry)
+	}
+}
+
+// dispatch generates the JSON representations for the entry and writes them to all registered clients.
+func (bm *Dispatcher) dispatch(entry models.Entry) {
+	bm.clientLock.RLock()
+	defer bm.clientLock.RUnlock()
+
+	for _, c := range bm.clients {
 		var data []byte
 
-		// Take entry out of broadcast channel and generate JSON representations for the entry.
-		entry := <-bm.MessageQueue
-
-		bm.clientLock.RLock()
-
-		for _, c := range bm.clients {
-			switch c.SubType() {
-			case SubTypeLite:
-				data = entry.JSONLite()
-			case SubTypeFull:
-				data = entry.JSON()
-			case SubTypeDomain:
-				data = entry.JSONDomains()
-			default:
-				log.Printf("Unknown subscription type '%d' on client '%s'. Skipping this client!\n", c.SubType(), c.Name())
-				continue
-			}
-			c.Write(data)
+		switch c.SubType() {
+		case SubTypeLite:
+			data = entry.JSONLite()
+		case SubTypeFull:
+			data = entry.JSON()
+		case SubTypeDomain:
+			data = entry.JSONDomains()
+		default:
+			log.Printf("Unknown subscription type '%d' on client '%s'. Skipping this client!\n", c.SubType(), c.Name())
+			continue
 		}
 
-		bm.clientLock.RUnlock()
+		c.Write(data)
 	}
 }
 

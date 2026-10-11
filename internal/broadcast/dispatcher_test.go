@@ -1,6 +1,11 @@
 package broadcast
 
-import "testing"
+import (
+	"testing"
+	"time"
+
+	"github.com/d-Rickyy-b/certstream-server-go/internal/models"
+)
 
 func newDispatcherTestWebsocketClient(name string) *WebsocketClient {
 	return &WebsocketClient{
@@ -54,4 +59,26 @@ func TestDispatcherUnregisterWebsocketClientDoesNotPanicOnNilStopChan(t *testing
 	}()
 
 	d.UnregisterClient(client)
+}
+
+func TestDispatcherDispatchReleasesLockForUnknownSubType(t *testing.T) {
+	d := &Dispatcher{}
+	client := newDispatcherTestWebsocketClient("client-3")
+	client.subType = SubscriptionType(99)
+
+	d.RegisterClient(client)
+	d.dispatch(models.Entry{})
+
+	done := make(chan struct{})
+	go func() {
+		d.clientLock.Lock()
+		d.clientLock.Unlock()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("clientLock was not released after dispatching to a client with an unknown subscription type")
+	}
 }
