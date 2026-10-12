@@ -33,7 +33,7 @@ func (w *Webserver) Valid() bool {
 		w.FullURL = "/full-stream"
 	}
 
-	if w.LiteURL == "" || !URLPathRegex.MatchString(w.FullURL) {
+	if w.LiteURL == "" || !URLPathRegex.MatchString(w.LiteURL) {
 		log.Println("Webhook lite URL is not set or does not match pattern '/...'")
 
 		w.LiteURL = "/"
@@ -42,7 +42,7 @@ func (w *Webserver) Valid() bool {
 	if w.DomainsOnlyURL == "" || !URLPathRegex.MatchString(w.DomainsOnlyURL) {
 		log.Println("Webhook domains only URL is not set or does not match pattern '/...'")
 
-		w.FullURL = "/domains-only"
+		w.DomainsOnlyURL = "/domains-only"
 	}
 
 	if w.FullURL == w.LiteURL {
@@ -50,7 +50,7 @@ func (w *Webserver) Valid() bool {
 	}
 
 	if w.DomainsOnlyURL == "" {
-		w.FullURL = "/domains-only"
+		w.DomainsOnlyURL = "/domains-only"
 	}
 
 	for _, ip := range w.TrustedProxies {
