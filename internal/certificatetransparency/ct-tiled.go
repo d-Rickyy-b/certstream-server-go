@@ -227,8 +227,8 @@ func NewStaticCTClient(url string, httpClient *http.Client, userAgent string, st
 		httpClient: httpClient,
 		backoff: backoff.Backoff{
 			Min:    2 * time.Second,
-			Max:    15 * time.Second,
-			Factor: 1.3,
+			Max:    30 * time.Second,
+			Factor: 1.5,
 			Jitter: true,
 		},
 		userAgent:      userAgent,
