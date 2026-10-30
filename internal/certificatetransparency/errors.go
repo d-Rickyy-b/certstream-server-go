@@ -7,6 +7,7 @@ var (
 	ErrFetchingSTHFailed       = errors.New("failed to fetch STH")
 	ErrCheckpointInvalidFormat = errors.New("invalid checkpoint format: expected at least 3 lines")
 	ErrInvalidDataTile         = errors.New("invalid data tile precert_entry")
+	ErrInvalidNamesTile        = errors.New("invalid names tile")
 	ErrRequestFailed           = errors.New("request failed")
 	ErrUnknownEntryType        = errors.New("unknown entry type")
 	ErrInvalidFingerprint      = errors.New("invalid fingerprint")
